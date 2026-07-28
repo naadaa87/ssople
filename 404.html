@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>페이지를 찾을 수 없어요 — 쏘플파티룸</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23e8352e'/%3E%3Cstop offset='1' stop-color='%23ff6a4e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root{
+    --clay:#e8352e; --clay-deep:#c4241e; --gold:#f08c3c;
+    --ink:#17181c; --text:#4a4c54; --muted:#84868f;
+    --paper:#ffffff; --sand:#f1f2f6; --line:#eceef2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    background:var(--paper); color:var(--ink);
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    -webkit-font-smoothing:antialiased; padding:24px;
+  }
+  .wrap{ text-align:center; max-width:520px; }
+  .badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:600; color:var(--clay);
+    background:#fdece7; border-radius:999px; padding:8px 16px; margin-bottom:28px;
+  }
+  .badge span{
+    width:18px; height:18px; border-radius:5px;
+    background:linear-gradient(135deg,#e8352e,#ff6a4e);
+    display:inline-block;
+  }
+  .code{
+    font-size:clamp(88px,22vw,150px); font-weight:800; line-height:.95;
+    letter-spacing:-.04em;
+    background:linear-gradient(135deg,#e8352e,#f08c3c);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom:12px;
+  }
+  h1{ font-size:clamp(22px,5vw,28px); font-weight:700; letter-spacing:-.02em; margin-bottom:14px; }
+  p{ font-size:16px; color:var(--text); line-height:1.75; margin-bottom:36px; }
+  .actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:15px 28px; border-radius:14px; font-size:15px; font-weight:600;
+    text-decoration:none; transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#e8352e,#c4241e); color:#fff;
+    box-shadow:0 10px 30px rgba(232,53,46,.28);
+  }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 14px 38px rgba(232,53,46,.36); }
+  .btn-ghost{
+    background:var(--sand); color:var(--ink); border:1px solid var(--line);
+  }
+  .btn-ghost:hover{ transform:translateY(-2px); }
+  .links{ margin-top:40px; padding-top:28px; border-top:1px solid var(--line);
+    display:flex; gap:22px; justify-content:center; flex-wrap:wrap; }
+  .links a{ font-size:14px; color:var(--muted); text-decoration:none; font-weight:500; }
+  .links a:hover{ color:var(--clay); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="badge"><span></span>쏘플파티룸</div>
+    <div class="code">404</div>
+    <h1>찾으시는 공간이 여기엔 없네요</h1>
+    <p>주소가 바뀌었거나 사라진 페이지일 수 있어요.<br />아래에서 원하시는 공간을 다시 찾아보세요.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/index.html">홈으로 돌아가기</a>
+      <a class="btn btn-ghost" href="/rooms.html">공간 둘러보기</a>
+    </div>
+    <div class="links">
+      <a href="/locations.html">지점 안내</a>
+      <a href="/guide.html">이용안내</a>
+      <a href="/reviews.html">이용후기</a>
+      <a href="/booking.html">예약하기</a>
+    </div>
+  </div>
+</body>
+</html>
