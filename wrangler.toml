@@ -12,12 +12,12 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "ssople"
-database_id = "여기에_호스트와_같은_D1_ID를_넣으세요"
+database_id = "1c81ebe1-77db-4518-900a-0ffd11a3b646"
 
 # 세션 · 예약 홀드
 [[kv_namespaces]]
 binding = "KV"
-id = "여기에_KV_생성_후_받은_ID를_넣으세요"
+id = "907572e04c75401d8ae2fd25a5dc4a1b"
 
 # 후기 사진 (선택)
 [[r2_buckets]]
