@@ -11,7 +11,7 @@ pages_build_output_dir = "."
 
 [[d1_databases]]
 binding = "DB"
-database_name = "ssople"
+database_name = "ssople-host"
 database_id = "1c81ebe1-77db-4518-900a-0ffd11a3b646"
 
 # 세션 · 예약 홀드
