@@ -1,0 +1,12 @@
+# 홈페이지 정기 작업 실행기 (Pages와 별도 배포)
+#   cd cron-worker && npx wrangler deploy
+#   npx wrangler secret put CRON_SECRET   (홈페이지와 같은 값)
+name = "ssople-front-cron"
+main = "index.js"
+compatibility_date = "2026-07-01"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+SITE_URL = "https://ssople-front.pages.dev"

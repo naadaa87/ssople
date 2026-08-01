@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /booking.html
+Disallow: /login.html
+Disallow: /signup.html
+Disallow: /reservation-complete.html
+Disallow: /reservation-failed.html
+Disallow: /review-write.html
 
-# 배포 후 아래 도메인을 실제 주소로 바꿔주세요
-Sitemap: https://ssople.pages.dev/sitemap.xml
+Sitemap: https://www.ssople.co.kr/sitemap.xml

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>결제를 마치지 못했습니다 — 쏘플파티룸</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="/assets/app.css" />
+<style>
+  .wrap{max-width:560px;margin:0 auto;padding:60px 20px 80px;text-align:center}
+  .mark{width:74px;height:74px;border-radius:50%;background:var(--bad-bg);color:var(--bad);
+    display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 24px}
+  h1{font-size:24px;font-weight:900;letter-spacing:-.03em;margin-bottom:10px}
+  .lead{color:var(--muted);font-size:15px;margin-bottom:26px;line-height:1.7}
+  .why{background:var(--bad-bg);border-radius:12px;padding:16px 18px;font-size:14px;
+    color:var(--bad);font-weight:600;margin-bottom:26px;text-align:left}
+  .acts{display:flex;gap:10px}
+  .acts .btn{flex:1}
+  .help{margin-top:28px;font-size:13.5px;color:var(--muted);line-height:1.8;text-align:left}
+</style>
+<link rel="stylesheet" href="/assets/wire.css" />
+</head>
+<body>
+<div class="wrap">
+  <div class="mark">!</div>
+  <h1>결제를 마치지 못했습니다</h1>
+  <p class="lead">결제가 진행되지 않아 예약이 잡히지 않았습니다.<br>금액이 빠져나갔다면 자동으로 되돌아갑니다.</p>
+  <div class="why" id="why" hidden></div>
+  <div class="acts" id="acts"></div>
+  <div class="help">
+    <b style="color:var(--ink)">다시 시도해도 안 되면</b><br>
+    · 카드 한도와 해외결제 차단 여부를 확인해 주세요<br>
+    · 다른 결제 수단으로 시도해 보세요<br>
+    · 그래도 안 되면 고객센터로 알려주세요
+  </div>
+</div>
+<script src="/assets/app.js"></script>
+<script>
+const p = new URLSearchParams(location.search);
+const reason = p.get('reason');
+const space = p.get('branch');
+if(reason){
+  const el = document.getElementById('why');
+  el.textContent = reason;
+  el.hidden = false;
+}
+document.getElementById('acts').innerHTML = space
+  ? `<a class="btn btn-line" href="/rooms.html">공간 찾기</a><a class="btn btn-clay" href="/room-detail.html?id=${esc(space)}">다시 예약하기</a>`
+  : `<a class="btn btn-clay btn-block" href="/rooms.html">공간 찾기</a>`;
+</script>
+<script src="/assets/chat.js"></script>
+</body>
+</html>

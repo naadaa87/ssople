@@ -1,0 +1,171 @@
+/* ============================================================
+   기존 페이지에 없는 컴포넌트만 더한다.
+   기존 .btn / .badge / .card / .slot 등은 페이지 정의를 그대로 쓴다.
+   ============================================================ */
+
+/* 폼 */
+.wf .field{margin-bottom:16px}
+.wf label,.book label{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.input{width:100%;padding:13px 14px;border:1.5px solid var(--line-2);border-radius:12px;
+  background:#fff;color:var(--ink);font-family:inherit;font-size:15px;transition:.15s}
+.input:focus{outline:none;border-color:var(--clay);box-shadow:0 0 0 3px rgba(232,53,46,.1)}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
+  linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 55%,calc(100% - 13px) 55%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:38px}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.err-msg{color:#b3261e;font-size:12.5px;margin-top:6px;font-weight:600}
+
+/* 예약 위젯 시간대 */
+.book .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:2px}
+.book .slot{padding:11px 4px;border:1.5px solid var(--line-2);border-radius:10px;font-size:13px;
+  font-weight:700;text-align:center;background:#fff;transition:.12s;cursor:pointer;
+  font-family:inherit;color:var(--ink);line-height:1.2}
+.book .slot:hover:not(:disabled){border-color:var(--muted-2)}
+.book .slot:disabled{background:var(--sand);color:#b8bac2;border-color:var(--line);
+  cursor:not-allowed;text-decoration:line-through}
+.book .slot.sel{background:var(--clay);border-color:var(--clay);color:#fff}
+.book .slot.edge{background:#fdefee;border-color:var(--clay);color:#c4241e}
+.bk-price{font-size:23px;font-weight:900;letter-spacing:-.02em;line-height:1.3}
+.bk-price small{font-size:13px;color:var(--muted);font-weight:600}
+
+/* 알림 박스 */
+.note{border-left:3px solid var(--clay);background:#fdefee;padding:15px 17px;
+  border-radius:0 12px 12px 0;font-size:13.5px;color:var(--text);line-height:1.65}
+.note-warn{border-color:#a85b00;background:#fff4e2}
+.note-ok{border-color:#1e7a46;background:#e9f6ee}
+.note b{color:var(--ink)}
+
+/* 빈 상태 · 로딩 */
+.empty{padding:48px 20px;text-align:center;color:var(--muted);font-size:14px}
+.empty b{display:block;color:var(--ink);font-size:15px;font-weight:800;margin-bottom:6px}
+.skel{background:linear-gradient(90deg,var(--sand) 25%,#e8eaef 50%,var(--sand) 75%);
+  background-size:200% 100%;animation:wsk 1.4s infinite;border-radius:8px}
+@keyframes wsk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+  border-radius:50%;animation:wsp .7s linear infinite;display:inline-block}
+@keyframes wsp{to{transform:rotate(360deg)}}
+
+/* 상태 뱃지 (기존 .badge 위에 색만 얹는다) */
+.badge-ok{background:#e9f6ee;color:#1e7a46}
+.badge-warn{background:#fff4e2;color:#a85b00}
+.badge-bad{background:#fdeaea;color:#b3261e}
+.badge-ink{background:var(--sand);color:var(--ink-2)}
+
+/* 작은 버튼 */
+.btn-xs{padding:8px 13px;font-size:12.5px;border-radius:9px}
+
+/* 토스트 */
+.toast-wrap{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:9999;
+  display:flex;flex-direction:column;gap:9px;align-items:center;pointer-events:none}
+.toast{background:var(--ink);color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;
+  font-weight:600;box-shadow:0 24px 60px rgba(23,24,28,.24);max-width:90vw}
+.toast.bad{background:#b3261e}
+.toast.ok{background:#1e7a46}
+
+/* 모달 */
+.modal-mask{position:fixed;inset:0;background:rgba(23,24,28,.45);z-index:10000;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:20px;max-width:520px;width:100%;
+  max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(23,24,28,.24)}
+.modal-h{padding:22px 26px 0}
+.modal-h h3{font-size:18px;font-weight:900;line-height:1.4}
+.modal-b{padding:18px 26px}
+.modal-f{padding:0 26px 24px;display:flex;gap:9px}
+.modal-f .btn{flex:1}
+
+@media(max-width:760px){
+  .book .slots{grid-template-columns:repeat(4,1fr)}
+}
+
+/* ============================================================
+   타임(낮/밤) 선택 · 챗봇 위젯
+   ============================================================ */
+.slotpick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.slotcard{border:1.5px solid var(--line-2);border-radius:14px;padding:15px 14px;background:#fff;
+  text-align:left;transition:.15s;cursor:pointer;font-family:inherit;color:var(--ink);width:100%}
+.slotcard:hover:not(:disabled){border-color:var(--muted-2)}
+.slotcard:disabled{background:var(--sand);color:#b8bac2;border-color:var(--line);cursor:not-allowed}
+.slotcard.sel{border-color:var(--clay);background:#fdefee}
+.slotcard .sn{font-weight:800;font-size:15px;display:flex;align-items:center;gap:6px}
+.slotcard .st{font-size:12.5px;color:var(--muted);margin-top:3px}
+.slotcard .sp{font-weight:900;font-size:16px;margin-top:8px;letter-spacing:-.02em}
+.slotcard:disabled .sp{color:#b8bac2}
+.slotcard .sx{font-size:12px;color:var(--clay-deep);font-weight:700;margin-top:4px}
+.slotcard.sel .sn{color:var(--clay-deep)}
+
+.paybox{background:var(--paper-2);border-radius:12px;padding:14px 16px;margin-top:14px}
+.paybox .pr{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13.5px}
+.paybox .pr .k{color:var(--muted)}
+.paybox .pt{display:flex;justify-content:space-between;gap:12px;padding:10px 0 0;margin-top:8px;
+  border-top:1px solid var(--line-2);font-weight:800}
+.paybox .pt .v{color:var(--clay-deep);font-size:17px}
+
+@media(max-width:520px){
+  .cw{right:14px;bottom:14px}
+  .cw-panel{width:calc(100vw - 28px);height:min(70vh,480px)}
+  .slotpick{grid-template-columns:1fr}
+}
+
+/* ============================================================
+   상담 챗봇 "쏘플이"
+   - 페이지에 이미 상담창이 있으면 그 페이지 스타일을 그대로 씁니다.
+   - 아래는 상담창이 없는 페이지에 넣는 창(.spc-*)과, 두 경우 공통인 것만.
+   ============================================================ */
+
+/* 공통 — 답변 안의 바로가기 링크, 추천 질문 줄, 로딩 점 */
+.spc-link{display:inline-block;margin-top:8px;font-size:13px;font-weight:700;
+  color:var(--clay-deep,#c4241e);text-decoration:underline;text-underline-offset:3px}
+.spc-qrow{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.spc-dots i{display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:var(--muted-2,#b8bac2);margin-right:3px;animation:spcb 1.2s infinite}
+.spc-dots i:nth-child(2){animation-delay:.15s}
+.spc-dots i:nth-child(3){animation-delay:.3s}
+@keyframes spcb{0%,60%,100%{opacity:.3}30%{opacity:1}}
+
+/* 주입형 창 */
+.spc{position:fixed;right:20px;bottom:20px;z-index:9000;display:flex;
+  flex-direction:column;align-items:flex-end;gap:12px;font-family:var(--sans,sans-serif)}
+.spc-fab{width:56px;height:56px;border-radius:50%;background:var(--clay,#e8352e);color:#fff;
+  font-size:21px;border:none;cursor:pointer;box-shadow:0 10px 30px rgba(232,53,46,.32);
+  transition:.2s;display:flex;align-items:center;justify-content:center}
+.spc-fab:hover{transform:translateY(-2px)}
+.spc-panel{width:346px;max-width:calc(100vw - 32px);height:min(520px,72vh);background:#fff;
+  border-radius:18px;border:1px solid var(--line,#eceef2);box-shadow:0 24px 60px rgba(23,24,28,.2);
+  display:none;flex-direction:column;overflow:hidden}
+.spc.open .spc-panel{display:flex}
+.spc-h{padding:14px 16px;border-bottom:1px solid var(--line,#eceef2);display:flex;
+  align-items:center;gap:10px}
+.spc-av{width:34px;height:34px;border-radius:50%;background:var(--clay,#e8352e);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+.spc-t{flex:1;min-width:0}
+.spc-t b{display:block;font-size:14.5px;font-weight:800;color:var(--ink,#17181c)}
+.spc-t span{display:block;font-size:11.5px;color:var(--muted,#84868f);margin-top:1px}
+.spc-x{background:none;border:none;color:var(--muted,#84868f);font-size:20px;
+  line-height:1;cursor:pointer;padding:0 2px}
+.spc-b{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;
+  background:var(--paper-2,#f7f8fa)}
+.spc-m{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.65;
+  white-space:pre-wrap;word-break:break-word}
+.spc-m.bot{background:#fff;border:1px solid var(--line,#eceef2);align-self:flex-start;
+  border-bottom-left-radius:4px;color:var(--ink,#17181c)}
+.spc-m.user{background:var(--clay,#e8352e);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.spc-m.bot .spc-link{color:var(--clay-deep,#c4241e)}
+.spc-q{padding:0 12px;background:var(--paper-2,#f7f8fa)}
+.spc-q:not(:empty){padding:10px 12px}
+.spc-qb{border:1px solid var(--line-2,#dfe1e8);background:#fff;border-radius:99px;
+  padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--ink,#17181c);
+  cursor:pointer;font-family:inherit}
+.spc-qb:hover{border-color:var(--clay,#e8352e);color:var(--clay-deep,#c4241e)}
+.spc-i{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line,#eceef2);background:#fff}
+.spc-i input{flex:1;border:1.5px solid var(--line-2,#dfe1e8);border-radius:99px;
+  padding:10px 15px;font-size:13.5px;font-family:inherit;outline:none;min-width:0}
+.spc-i input:focus{border-color:var(--clay,#e8352e)}
+.spc-i button{width:38px;height:38px;border-radius:50%;background:var(--clay,#e8352e);
+  color:#fff;border:none;cursor:pointer;font-size:15px;flex:none}
+.spc-i button:disabled{opacity:.4;cursor:not-allowed}
+
+@media(max-width:520px){
+  .spc{right:14px;bottom:14px}
+  .spc-panel{width:calc(100vw - 28px);height:min(70vh,480px)}
+}

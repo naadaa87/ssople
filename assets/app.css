@@ -1,0 +1,167 @@
+/* ============================================================
+   쏘플파티룸 — 공통 스타일
+   기존 사이트의 디자인 토큰을 그대로 쓰고, 여기에
+   예약 위젯 / 점주·관리자 콘솔에 필요한 것만 더한다.
+   ============================================================ */
+
+:root{
+  --ink:#17181c; --ink-2:#2a2c33;
+  --paper:#ffffff; --paper-2:#f7f8fa; --sand:#f1f2f6; --card:#ffffff;
+  --text:#4a4c54; --muted:#84868f; --muted-2:#b8bac2;
+  --line:#eceef2; --line-2:#dfe1e8;
+  --clay:#e8352e; --clay-deep:#c4241e; --clay-50:#fdefee;
+  --gold:#f08c3c;
+  --ok:#1e7a46; --ok-bg:#e9f6ee;
+  --warn:#a85b00; --warn-bg:#fff4e2;
+  --bad:#b3261e; --bad-bg:#fdeaea;
+  --sans:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo',sans-serif;
+  --sh-sm:0 1px 2px rgba(23,24,28,.04),0 4px 14px rgba(23,24,28,.05);
+  --sh-md:0 10px 34px rgba(23,24,28,.09);
+  --sh-lg:0 24px 60px rgba(23,24,28,.14);
+  --r-xs:8px; --r-sm:12px; --r:16px; --r-lg:20px; --r-xl:26px;
+  --maxw:1280px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:15px}
+img{max-width:100%;display:block}
+ul{list-style:none}
+::selection{background:var(--clay);color:#fff}
+:focus-visible{outline:2px solid var(--clay);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- 버튼 (기존과 동일 규격) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;
+  font-size:14.5px;padding:15px 26px;border-radius:12px;transition:.2s;white-space:nowrap;line-height:1}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-clay{background:var(--clay);color:#fff;box-shadow:0 8px 22px rgba(232,53,46,.28)}
+.btn-clay:hover:not(:disabled){background:var(--clay-deep)}
+.btn-ink{background:var(--ink);color:#fff}
+.btn-line{border:1.5px solid var(--line-2);color:var(--ink);background:var(--card)}
+.btn-line:hover{border-color:var(--muted-2)}
+.btn-ghost{color:var(--muted)}
+.btn-sm{padding:10px 16px;font-size:13.5px;border-radius:10px}
+.btn-xs{padding:7px 12px;font-size:12.5px;border-radius:8px}
+.btn-block{width:100%}
+.btn-danger{background:var(--bad);color:#fff}
+
+/* ---------- 폼 ---------- */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:7px}
+.field .hint{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.input,select.input,textarea.input{width:100%;padding:14px 15px;border:1.5px solid var(--line-2);
+  border-radius:12px;background:#fff;color:var(--ink);transition:.15s}
+.input:focus{outline:none;border-color:var(--clay);box-shadow:0 0 0 3px rgba(232,53,46,.1)}
+.input.err{border-color:var(--bad)}
+textarea.input{min-height:120px;resize:vertical;line-height:1.7}
+.err-msg{color:var(--bad);font-size:12.5px;margin-top:6px;font-weight:600}
+.row{display:flex;gap:12px}
+.row>*{flex:1}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--text);cursor:pointer;padding:9px 0}
+.check input{margin-top:4px;width:17px;height:17px;accent-color:var(--clay);flex:none}
+
+/* ---------- 뱃지 ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;
+  font-size:12px;font-weight:700;line-height:1.4}
+.badge-ok{background:var(--ok-bg);color:var(--ok)}
+.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-bad{background:var(--bad-bg);color:var(--bad)}
+.badge-ink{background:var(--sand);color:var(--ink-2)}
+.badge-clay{background:var(--clay-50);color:var(--clay-deep)}
+
+/* ---------- 카드 ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.card-pad{padding:28px}
+.card h3{font-size:16px;font-weight:800;margin-bottom:14px}
+
+/* ---------- 알림 박스 ---------- */
+.note{border-left:3px solid var(--clay);background:var(--clay-50);padding:16px 18px;
+  border-radius:0 12px 12px 0;font-size:14px;color:var(--text);line-height:1.65}
+.note-warn{border-color:var(--warn);background:var(--warn-bg)}
+.note-ok{border-color:var(--ok);background:var(--ok-bg)}
+.note b{color:var(--ink)}
+
+/* ============================================================
+   예약 위젯 (CU-04)
+   ============================================================ */
+.bk{position:sticky;top:96px;background:#fff;border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:22px;box-shadow:var(--sh-md)}
+.bk-price{font-size:24px;font-weight:900;letter-spacing:-.02em}
+.bk-price small{font-size:13px;color:var(--muted);font-weight:600}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.slot{padding:11px 4px;border:1.5px solid var(--line-2);border-radius:10px;font-size:13px;
+  font-weight:700;text-align:center;transition:.12s;background:#fff}
+.slot:disabled{background:var(--sand);color:var(--muted-2);border-color:var(--line);
+  cursor:not-allowed;text-decoration:line-through}
+.slot.sel{background:var(--clay);border-color:var(--clay);color:#fff}
+.slot.edge{background:var(--clay-50);border-color:var(--clay);color:var(--clay-deep)}
+
+/* 진행 단계 (CU-05) */
+.steps{display:flex;gap:8px;margin-bottom:28px}
+.step{flex:1;text-align:center;padding:13px 6px;border-radius:12px;background:var(--sand);
+  font-size:13px;font-weight:700;color:var(--muted)}
+.step.on{background:var(--ink);color:#fff}
+.step.done{background:var(--clay-50);color:var(--clay-deep)}
+
+/* 홀드 타이머 */
+.timer{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--ink);color:#fff;padding:13px 18px;border-radius:12px;margin-bottom:22px}
+.timer b{font-variant-numeric:tabular-nums;font-size:17px}
+.timer.warn{background:var(--bad)}
+
+/* 환불 규정 스크롤 동의 (CU-05 STEP3) */
+.policy-box{max-height:180px;overflow-y:auto;border:1.5px solid var(--line-2);border-radius:12px;
+  padding:16px;font-size:13.5px;line-height:1.75;color:var(--text);background:var(--paper-2)}
+.policy-box table{width:100%;border-collapse:collapse;margin:10px 0}
+.policy-box th,.policy-box td{padding:8px 10px;border-bottom:1px solid var(--line-2);text-align:left}
+.policy-box th{font-weight:700;color:var(--ink);background:#fff}
+
+/* 토스트 */
+.toast-wrap{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:9999;
+  display:flex;flex-direction:column;gap:9px;align-items:center;pointer-events:none}
+.toast{background:var(--ink);color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;
+  font-weight:600;box-shadow:var(--sh-lg);max-width:90vw}
+.toast.bad{background:var(--bad)}
+.toast.ok{background:var(--ok)}
+
+/* 모달 */
+.modal-mask{position:fixed;inset:0;background:rgba(23,24,28,.45);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:var(--r-lg);max-width:520px;width:100%;
+  max-height:88vh;overflow-y:auto;box-shadow:var(--sh-lg)}
+.modal-h{padding:22px 26px 0}
+.modal-h h3{font-size:18px;font-weight:900}
+.modal-b{padding:20px 26px}
+.modal-f{padding:0 26px 24px;display:flex;gap:9px}
+.modal-f .btn{flex:1}
+
+/* 로딩 */
+.skel{background:linear-gradient(90deg,var(--sand) 25%,#e8eaef 50%,var(--sand) 75%);
+  background-size:200% 100%;animation:sk 1.4s infinite;border-radius:8px}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.spin{width:17px;height:17px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+  border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 모바일 */
+@media(max-width:900px){
+  .console{flex-direction:column}
+  .side{width:100%;height:auto;position:relative;padding:14px 0;display:flex;
+    overflow-x:auto;gap:2px;align-items:center}
+  .side-brand,.side-sec,.side-foot{display:none}
+  .side a{padding:9px 15px;white-space:nowrap;border-radius:9px;font-size:13.5px}
+  .topbar{padding:15px 18px;position:relative}
+  .content{padding:18px 16px 48px}
+  .diff{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:10px}
+  .kpi{padding:15px 16px}
+  .kpi .v{font-size:22px}
+  table.tbl{font-size:12.5px}
+  table.tbl th,table.tbl td{padding:10px 11px}
+  .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .bk{position:static}
+}

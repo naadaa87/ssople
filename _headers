@@ -1,13 +1,11 @@
-# Cloudflare Pages 헤더 설정
-# 문법: https://developers.cloudflare.com/pages/configuration/headers/
-
-# 모든 페이지 공통 보안 헤더
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Permissions-Policy: geolocation=(self), microphone=(), camera=()
 
-# HTML 문서는 항상 최신본을 받도록 (배포 후 즉시 반영)
-/*.html
-  Cache-Control: public, max-age=0, must-revalidate
+/assets/*
+  Cache-Control: public, max-age=3600
+
+/api/*
+  Cache-Control: no-store

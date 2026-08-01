@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>로그인 — 쏘플파티룸</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e8352e'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="/assets/app.css" />
+<style>
+  .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;background:var(--paper-2)}
+  .auth-box{width:100%;max-width:420px}
+  .auth-brand{text-align:center;margin-bottom:30px}
+  .auth-brand .bm{color:var(--clay);font-size:26px}
+  .auth-brand .bn{display:block;font-weight:900;letter-spacing:.08em;font-size:19px;margin-top:6px}
+  .auth-brand .bs{font-size:13px;color:var(--muted);font-weight:600}
+  .auth-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:32px;box-shadow:var(--sh-sm)}
+  .auth-card h1{font-size:22px;font-weight:900;letter-spacing:-.02em;margin-bottom:6px}
+  .auth-card .lead{font-size:14px;color:var(--muted);margin-bottom:26px}
+  .auth-foot{text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted)}
+  .auth-foot a{color:var(--clay);font-weight:700}
+  .back{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted);margin-top:18px}
+</style>
+<link rel="stylesheet" href="/assets/wire.css" />
+</head>
+<body>
+<div class="auth">
+  <div class="auth-box">
+    <div class="auth-brand">
+      <span class="bm">✦</span>
+      <span class="bn">SSOPLE</span>
+      <span class="bs">쏘플파티룸</span>
+    </div>
+
+    <div class="auth-card">
+      <h1>로그인</h1>
+      <p class="lead">예약 조회와 관리를 위해 로그인해 주세요.</p>
+
+      <form id="f" novalidate>
+        <div class="field">
+          <label for="id">휴대폰 번호</label>
+          <input class="input" id="id" type="text" autocomplete="tel" required
+                 placeholder="01012345678" inputmode="numeric" />
+        </div>
+        <div class="field">
+          <label for="pw">비밀번호</label>
+          <input class="input" id="pw" type="password" autocomplete="current-password" required />
+          <div class="err-msg" id="err" hidden></div>
+        </div>
+        <button class="btn btn-clay btn-block" id="submit" type="submit">로그인</button>
+      </form>
+
+      <div class="auth-foot">
+        아직 회원이 아니신가요? <a href="/signup.html">회원가입</a>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px">
+          비회원 예약은 <a href="/lookup.html">예약 조회</a>에서 확인하실 수 있습니다.<br>
+          <span style="color:var(--muted-2)">점주님은 호스트 사이트에서 로그인해 주세요.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center"><a href="/" class="back">← 홈으로</a></div>
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const next = params.get('next');
+
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit');
+  const err = document.getElementById('err');
+  err.hidden = true;
+
+  const id = document.getElementById('id').value.trim();
+  const pw = document.getElementById('pw').value;
+  if (!id || !pw) {
+    err.textContent = '휴대폰 번호와 비밀번호를 입력해 주세요.';
+    err.hidden = false;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>';
+  try {
+    const r = await API.post('/api/auth/login', { phone: id, password: pw }, { silent: true });
+    location.href = next || r.redirect || '/mypage.html';
+  } catch (e) {
+    err.textContent = e.message;
+    err.hidden = false;
+    btn.disabled = false;
+    btn.textContent = '로그인';
+  }
+});
+
+/* 이미 로그인되어 있으면 돌려보낸다 */
+whoami().then((me) => {
+  if (me.authenticated) location.href = next || '/mypage.html';
+});
+</script>
+<script src="/assets/chat.js"></script>
+</body>
+</html>

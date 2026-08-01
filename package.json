@@ -1,0 +1,17 @@
+{
+  "name": "ssople-front",
+  "version": "1.0.0",
+  "private": true,
+  "description": "쏘플파티룸 홈페이지(고객) — 호스트·대시보드·챗봇과 같은 D1을 씁니다",
+  "scripts": {
+    "dev": "wrangler pages dev . --d1 DB --kv KV --compatibility-date=2026-07-01",
+    "db:shared": "wrangler d1 execute ssople --remote --file=./schema/000_shared.sql",
+    "db:alter":  "wrangler d1 execute ssople --remote --file=./schema/000_alter.sql",
+    "db:init":   "wrangler d1 execute ssople --remote --file=./schema/001_customer.sql",
+    "db:seed":   "wrangler d1 execute ssople --remote --file=./schema/002_seed.sql",
+    "db:local":  "wrangler d1 execute ssople --local --file=./schema/000_shared.sql && wrangler d1 execute ssople --local --file=./schema/000_alter.sql && wrangler d1 execute ssople --local --file=./schema/001_customer.sql && wrangler d1 execute ssople --local --file=./schema/002_seed.sql",
+    "check": "node tools/check.mjs",
+    "test:chat": "node tools/test-chat.mjs"
+  },
+  "devDependencies": { "wrangler": "^3.90.0" }
+}

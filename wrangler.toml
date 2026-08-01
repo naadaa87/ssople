@@ -1,0 +1,41 @@
+# ============================================================
+# 쏘플파티룸 홈페이지(고객) — Cloudflare Pages 설정
+#
+# 중요: D1은 호스트 홈페이지(ssople-host)와 같은 데이터베이스를 씁니다.
+# 데이터베이스를 따로 만들면 예약이 서로 안 보이고 이중 예약이 납니다.
+# 호스트 쪽 wrangler.toml 의 database_id 를 그대로 넣으세요.
+# ============================================================
+name = "ssople-front"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ssople"
+database_id = "여기에_호스트와_같은_D1_ID를_넣으세요"
+
+# 세션 · 예약 홀드
+[[kv_namespaces]]
+binding = "KV"
+id = "여기에_KV_생성_후_받은_ID를_넣으세요"
+
+# 후기 사진 (선택)
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "ssople-photos"
+
+[vars]
+PG_MODE = "test"            # PG 계약 전 test / 계약 후 live
+ALIMTALK_MODE = "test"      # 대행사 계약 전 test / 이후 live
+CS_PHONE = "1544-3523"
+CS_HOURS = "평일 10:00 ~ 19:00"
+KAKAO_CHANNEL_URL = "http://pf.kakao.com/_ssople/chat"
+
+# 챗봇 서버 (ssople-chatbot 워커)
+# 주소가 바뀌면 여기만 고치고 다시 배포하면 됩니다.
+CHATBOT_URL = "https://ssople-chatbot.naadaa87.workers.dev"
+CHATBOT_PATH = "/skill"
+
+# 다른 시스템 주소 (푸터·안내 링크에 씁니다)
+HOST_URL = "https://host.ssople.co.kr"
+ADMIN_URL = "https://admin.ssople.co.kr"

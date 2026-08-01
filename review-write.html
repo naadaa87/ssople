@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>후기 쓰기 — 쏘플파티룸</title><meta name="robots" content="noindex" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="/assets/app.css" />
+<style>
+  .bar{background:#fff;border-bottom:1px solid var(--line);padding:16px 0}
+  .bar .in{max-width:640px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:9px}
+  .bar .bm{color:var(--clay)} .bar .bn{font-weight:900;letter-spacing:.06em;font-size:15px}
+  .page{max-width:640px;margin:0 auto;padding:34px 20px 80px}
+  h1{font-size:23px;font-weight:900;letter-spacing:-.03em;margin-bottom:8px}
+  .lead{color:var(--muted);font-size:14.5px;margin-bottom:28px}
+  .stars{display:flex;gap:6px;justify-content:center;margin:8px 0 4px}
+  .st{font-size:38px;color:var(--line-2);transition:.12s;line-height:1}
+  .st.on{color:var(--gold)}
+  .st-label{text-align:center;font-size:14px;font-weight:700;color:var(--muted);min-height:22px}
+</style>
+<link rel="stylesheet" href="/assets/wire.css" />
+</head>
+<body>
+<div class="bar"><div class="in"><a href="/" style="display:flex;gap:8px;align-items:center">
+  <span class="bm">✦</span><span class="bn">SSOPLE</span></a></div></div>
+<div class="page" id="page"></div>
+<script src="/assets/app.js"></script>
+<script>
+const RES = Number(new URLSearchParams(location.search).get('res'));
+const LABELS = ['','많이 아쉬웠어요','아쉬웠어요','괜찮았어요','좋았어요','정말 좋았어요'];
+let rating = 0;
+
+(async () => {
+  const me = await whoami();
+  if (!me.authenticated) {
+    location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search);
+    return;
+  }
+  const p = document.getElementById('page');
+  if (!RES) { p.innerHTML = emptyState('어떤 이용에 대한 후기인가요?','마이페이지에서 후기 쓰기를 눌러주세요.')
+    + '<div style="text-align:center"><a class="btn btn-clay" href="/mypage.html">마이페이지</a></div>'; return; }
+
+  const d = await API.get('/api/reservations/me', { silent: true });
+  const r = [...d.past, ...d.upcoming].find(x => x.id === RES);
+  if (!r) { p.innerHTML = emptyState('예약을 찾을 수 없습니다',''); return; }
+  if (!r.canReview) {
+    p.innerHTML = emptyState('후기를 남길 수 없는 예약입니다','이용이 끝난 예약에만 후기를 남기실 수 있습니다.')
+      + '<div style="text-align:center"><a class="btn btn-clay" href="/mypage.html">마이페이지</a></div>';
+    return;
+  }
+
+  p.innerHTML = `
+    <h1>이용은 어떠셨나요?</h1>
+    <p class="lead">${esc(r.branchName)}<br>
+      ${dateLabel(r.useDate)} ${esc(r.slotLabel)}</p>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="stars" id="stars">
+        ${[1,2,3,4,5].map(n=>`<button type="button" class="st" data-n="${n}" aria-label="${n}점">★</button>`).join('')}
+      </div>
+      <div class="st-label" id="slabel">별점을 눌러주세요</div>
+    </div>
+
+    <div class="field">
+      <label for="ct">어떤 점이 좋았고, 무엇이 아쉬웠나요?</label>
+      <textarea class="input" id="ct" placeholder="다음에 오실 분들께 도움이 될 이야기를 들려주세요." minlength="10"></textarea>
+      <div class="hint"><span id="len">0</span>자 · 10자 이상 써주세요</div>
+    </div>
+    <div class="err-msg" id="err" hidden></div>
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <a class="btn btn-line" style="flex:1" href="/mypage.html">나중에</a>
+      <button class="btn btn-clay" style="flex:1" id="go">후기 남기기</button>
+    </div>`;
+
+  document.querySelectorAll('.st').forEach(b => {
+    b.onclick = () => {
+      rating = Number(b.dataset.n);
+      document.querySelectorAll('.st').forEach(x =>
+        x.classList.toggle('on', Number(x.dataset.n) <= rating));
+      document.getElementById('slabel').textContent = LABELS[rating];
+    };
+  });
+
+  const ct = document.getElementById('ct');
+  ct.addEventListener('input', () => document.getElementById('len').textContent = ct.value.trim().length);
+
+  document.getElementById('go').onclick = async () => {
+    const err = document.getElementById('err');
+    err.hidden = true;
+    if (!rating) { err.textContent = '별점을 선택해 주세요.'; err.hidden = false; return; }
+    if (ct.value.trim().length < 10) { err.textContent = '내용을 10자 이상 써주세요.'; err.hidden = false; return; }
+    const b = document.getElementById('go');
+    b.disabled = true; b.innerHTML = '<span class="spin"></span>';
+    try {
+      await API.post('/api/reviews', { reservationId: RES, rating, content: ct.value.trim() }, { silent: true });
+      toast('후기를 남겼습니다. 고맙습니다.', 'ok');
+      setTimeout(() => location.href = '/mypage.html', 800);
+    } catch (e) {
+      err.textContent = e.message; err.hidden = false;
+      b.disabled = false; b.textContent = '후기 남기기';
+    }
+  };
+})();
+</script>
+<script src="/assets/chat.js"></script>
+</body>
+</html>

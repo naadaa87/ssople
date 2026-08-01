@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>회원가입 — 쏘플파티룸</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e8352e'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="/assets/app.css" />
+<style>
+  .auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;background:var(--paper-2)}
+  .auth-box{width:100%;max-width:460px}
+  .auth-brand{text-align:center;margin-bottom:26px}
+  .auth-brand .bm{color:var(--clay);font-size:24px}
+  .auth-brand .bn{display:block;font-weight:900;letter-spacing:.08em;font-size:18px;margin-top:5px}
+  .auth-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:32px;box-shadow:var(--sh-sm)}
+  .auth-card h1{font-size:22px;font-weight:900;letter-spacing:-.02em;margin-bottom:6px}
+  .auth-card .lead{font-size:14px;color:var(--muted);margin-bottom:26px}
+  .agree-box{border-top:1px solid var(--line);margin-top:22px;padding-top:16px}
+  .agree-all{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:6px;font-weight:800;color:var(--ink)}
+  .agree-box a{color:var(--muted);text-decoration:underline;font-size:12.5px;margin-left:4px}
+  .auth-foot{text-align:center;margin-top:22px;font-size:13.5px;color:var(--muted)}
+  .auth-foot a{color:var(--clay);font-weight:700}
+  .verify-row{display:flex;gap:8px}
+  .verify-row .input{flex:1}
+  .verify-row .btn{flex:none}
+</style>
+<link rel="stylesheet" href="/assets/wire.css" />
+</head>
+<body>
+<div class="auth">
+  <div class="auth-box">
+    <div class="auth-brand">
+      <span class="bm">✦</span><span class="bn">SSOPLE</span>
+    </div>
+
+    <div class="auth-card">
+      <h1>회원가입</h1>
+      <p class="lead">가입하시면 예약 조회와 등급 혜택을 이용하실 수 있습니다.</p>
+
+      <form id="f" novalidate>
+        <div class="field">
+          <label for="name">이름</label>
+          <input class="input" id="name" type="text" autocomplete="name" required placeholder="홍길동" />
+        </div>
+
+        <div class="field">
+          <label for="email">이메일 <span style="color:var(--muted);font-weight:600">(선택)</span></label>
+          <input class="input" id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+
+        <div class="field">
+          <label for="phone">휴대폰 번호</label>
+          <div class="verify-row">
+            <input class="input" id="phone" type="tel" autocomplete="tel" required
+                   placeholder="01012345678" inputmode="numeric" />
+            <button type="button" class="btn btn-line" id="sendCode">인증번호</button>
+          </div>
+          <div class="hint">예약 안내를 이 번호로 보내드립니다.</div>
+        </div>
+
+        <div class="field" id="codeField" hidden>
+          <label for="code">인증번호</label>
+          <div class="verify-row">
+            <input class="input" id="code" type="text" inputmode="numeric" maxlength="6" placeholder="6자리" />
+            <button type="button" class="btn btn-ink" id="verifyCode">확인</button>
+          </div>
+          <div class="hint" id="codeHint"></div>
+        </div>
+
+        <div class="field">
+          <label for="pw">비밀번호</label>
+          <input class="input" id="pw" type="password" autocomplete="new-password" required minlength="8" />
+          <div class="hint">8자 이상으로 만들어 주세요.</div>
+        </div>
+
+        <div class="field">
+          <label for="pw2">비밀번호 확인</label>
+          <input class="input" id="pw2" type="password" autocomplete="new-password" required />
+          <div class="err-msg" id="err" hidden></div>
+        </div>
+
+        <div class="agree-box">
+          <label class="check agree-all">
+            <input type="checkbox" id="agreeAll" />
+            <span>전체 동의</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" class="ag" id="agreeTerms" />
+            <span>[필수] 이용약관에 동의합니다<a href="/guide.html#terms" target="_blank">보기</a></span>
+          </label>
+          <label class="check">
+            <input type="checkbox" class="ag" id="agreePrivacy" />
+            <span>[필수] 개인정보 수집·이용에 동의합니다<a href="/guide.html#privacy" target="_blank">보기</a></span>
+          </label>
+          <label class="check">
+            <input type="checkbox" class="ag" id="agreeMarketing" />
+            <span>[선택] 이벤트·혜택 소식을 받아보겠습니다</span>
+          </label>
+        </div>
+
+        <button class="btn btn-clay btn-block" id="submit" type="submit" style="margin-top:18px">가입하기</button>
+      </form>
+
+      <div class="auth-foot">
+        이미 회원이신가요? <a href="/login.html">로그인</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+/* 휴대폰 인증
+   문자 발송 대행사 연동 전에는 화면 흐름만 동작합니다.
+   대행사 계약 후 /api/auth/verify-phone 를 붙이면 그대로 실동작합니다. */
+let phoneVerified = false;
+
+document.getElementById('sendCode').addEventListener('click', () => {
+  const phone = document.getElementById('phone').value.replace(/[^0-9]/g, '');
+  if (phone.length < 10) { toast('휴대폰 번호를 확인해 주세요.', 'bad'); return; }
+  document.getElementById('codeField').hidden = false;
+  document.getElementById('codeHint').textContent =
+    '문자 발송 연동 전이라 인증번호 확인 없이 진행됩니다.';
+  toast('인증번호를 보냈습니다.');
+});
+
+document.getElementById('verifyCode').addEventListener('click', () => {
+  phoneVerified = true;
+  document.getElementById('codeHint').textContent = '확인되었습니다.';
+  toast('휴대폰 인증이 완료되었습니다.', 'ok');
+});
+
+/* 전체 동의 */
+const all = document.getElementById('agreeAll');
+const ags = [...document.querySelectorAll('.ag')];
+all.addEventListener('change', () => ags.forEach((c) => (c.checked = all.checked)));
+ags.forEach((c) => c.addEventListener('change', () => {
+  all.checked = ags.every((x) => x.checked);
+}));
+
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('err');
+  const btn = document.getElementById('submit');
+  err.hidden = true;
+
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  if (!name) { show(err, '이름을 입력해 주세요.'); return; }
+  const phone = document.getElementById('phone').value.replace(/[^0-9]/g, '');
+  const pw = document.getElementById('pw').value;
+  const pw2 = document.getElementById('pw2').value;
+
+  if (pw.length < 8) { show(err, '비밀번호는 8자 이상이어야 합니다.'); return; }
+  if (pw !== pw2)    { show(err, '비밀번호가 서로 다릅니다.'); return; }
+  if (!document.getElementById('agreeTerms').checked ||
+      !document.getElementById('agreePrivacy').checked) {
+    show(err, '필수 항목에 동의해 주세요.'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>';
+  try {
+    await API.post('/api/auth/signup', {
+      name, email, phone, password: pw,
+      agreeTerms: true, agreePrivacy: true,
+      agreeMarketing: document.getElementById('agreeMarketing').checked,
+    }, { silent: true });
+    location.href = '/mypage.html?welcome=1';
+  } catch (ex) {
+    show(err, ex.message);
+    btn.disabled = false;
+    btn.textContent = '가입하기';
+  }
+});
+
+function show(el, msg) { el.textContent = msg; el.hidden = false; }
+</script>
+<script src="/assets/chat.js"></script>
+</body>
+</html>
