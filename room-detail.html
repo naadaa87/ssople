@@ -489,9 +489,9 @@ ul{list-style:none}
 
 <main>
   <div class="wrap">
-    <nav class="crumb"><a href="index.html">홈</a><span class="sep">›</span><a href="rooms.html">공간 찾기</a><span class="sep">›</span><span class="cur" id="cbName">상수동 루프탑</span></nav>
+    <nav class="crumb"><a href="index.html">홈</a><span class="sep">›</span><a href="rooms.html">공간 찾기</a><span class="sep">›</span><span class="cur" id="cbName">공간</span></nav>
     <div class="gallery">
-      <div class="g-main"><div class="ph" id="gMain" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div><div class="g-badges" id="gBadges"><span class="badge badge-clay">Editor's Pick</span></div></div>
+      <div class="g-main"><div class="ph" id="gMain" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div><div class="g-badges" id="gBadges"></div></div>
       <div class="g-side">
         <div class="g-cell"><div class="ph" id="gS1" style="background:linear-gradient(150deg,#3a2230,#a85068)"></div></div>
         <div class="g-cell"><div class="ph" id="gS2" style="background:linear-gradient(150deg,#2b2740,#7d6a9c)"></div></div>
@@ -501,44 +501,28 @@ ul{list-style:none}
     <div class="dt-body">
       <div>
         <div class="dt-title">
-          <span class="dt-tagline" id="dTag">해가 지면 도시가 무대가 되는 곳</span>
-          <h1 id="dName">상수동 루프탑, 도시의 밤</h1>
+          <span class="dt-tagline" id="dTag"></span>
+          <h1 id="dName">공간 정보를 불러오는 중…</h1>
           <div class="dt-meta">
-            <span class="rating"><span class="star">★</span>&nbsp;<b id="dRate">4.9</b>&nbsp;<span class="cnt" id="dRev">(312개 후기)</span></span>
-            <span>📍 <span id="dArea">홍대·상수</span></span>
-            <span>· 최대 <span id="dCap">12</span>명</span>
+            <span class="rating"><span class="star">★</span>&nbsp;<b id="dRate">-</b>&nbsp;<span class="cnt" id="dRev"></span></span>
+            <span>📍 <span id="dArea"></span></span>
+            <span>· 최대 <span id="dCap">-</span>명</span>
           </div>
         </div>
-        <div class="dt-sec"><h3>공간 소개</h3><p class="dt-desc" id="dDesc">상수역에서 3분, 탁 트인 루프탑 위로 밤이 내려앉습니다. 노래와 불빛, 그리고 바베큐 연기 사이에서 오늘의 축하가 시작됩니다.</p></div>
+        <div class="dt-sec"><h3>공간 소개</h3><p class="dt-desc" id="dDesc"></p></div>
         <div class="dt-sec"><h3>편의시설</h3><div class="amen" id="dAmen"></div></div>
         <div class="dt-sec"><h3>이용 후기</h3>
-          <div class="rvbar"><div class="rvnum" id="rvNum">4.9</div><div><div class="rating"><span class="star">★★★★★</span></div><div class="muted" style="font-size:13px;margin-top:4px" id="rvCnt">312개의 후기</div></div></div>
+          <div class="rvbar"><div class="rvnum" id="rvNum">-</div><div><div class="rating"><span class="star">★★★★★</span></div><div class="muted" style="font-size:13px;margin-top:4px" id="rvCnt"></div></div></div>
           <div class="rvlist" id="dReviews"></div>
         </div>
       </div>
 
       <aside>
         <div class="book">
-          <div class="bprice"><span id="bUnit">₩4,500</span><small> / 2시간 기준</small></div>
-          <div class="muted" style="font-size:13px">타임당 요금 · 인원 추가 시 변동</div>
-          <div class="brow"><label>이용 날짜</label><input type="date" id="bDate" /></div>
-          <div class="brow"><label>시간대</label>
-            <div class="slots">
-              <div class="slot" onclick="pickSlot(this,'낮 12–2시')">낮 12–2시</div>
-              <div class="slot on" onclick="pickSlot(this,'오후 3–5시')">오후 3–5시</div>
-              <div class="slot" onclick="pickSlot(this,'저녁 6–8시')">저녁 6–8시</div>
-              <div class="slot" onclick="pickSlot(this,'밤 9–11시')">밤 9–11시</div>
-            </div>
-          </div>
-          <div class="brow"><label>인원</label><select id="bPeople" onchange="calc()"><option value="4">4명</option><option value="6" selected>6명</option><option value="8">8명</option><option value="10">10명</option><option value="12">12명</option></select></div>
-          <div class="bsum">
-            <div class="br"><span>기본 요금 (2시간)</span><span id="sBase">₩4,500</span></div>
-            <div class="br"><span>인원 추가</span><span id="sExtra">₩0</span></div>
-            <div class="br"><span>첫 예약 할인</span><span style="color:var(--clay)">−₩5,000</span></div>
-            <div class="bt"><span>합계</span><span id="sTotal">₩4,500</span></div>
-          </div>
-          <a class="btn btn-clay btn-block btn-lg" id="bGo" href="#" style="margin-top:16px" onclick="goBook(event)">예약하기</a>
-          <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">지금은 예약금이 청구되지 않습니다</div>
+          <div class="skel" style="height:26px;width:60%;border-radius:8px"></div>
+          <div class="skel" style="height:16px;width:80%;margin-top:10px;border-radius:8px"></div>
+          <div class="skel" style="height:44px;margin-top:16px;border-radius:12px"></div>
+          <div class="skel" style="height:96px;margin-top:12px;border-radius:12px"></div>
         </div>
       </aside>
     </div>
@@ -759,46 +743,25 @@ function initHeroSlider(slides){
 
 </script>
 <script>
+  /* ============================================================
+     지점 내용은 실제 데이터(assets/wire.js)가 채웁니다.
+     여기서는 실데이터에 없는 장식 요소(갤러리 색·유사 공간)만 그립니다.
+     예전 데모 내용을 덮어쓰지 않도록 텍스트는 건드리지 않습니다.
+     ============================================================ */
   const room = getRoom(qparam('id'));
-  let slot='오후 3–5시';
+  let slot = '';
   function render(){
-    document.title = room.nm + ' — 쏘플파티룸';
-    document.getElementById('cbName').textContent = room.area;
-    document.getElementById('dName').textContent = room.nm;
-    document.getElementById('dTag').textContent = room.tagline;
-    document.getElementById('dArea').textContent = room.area;
-    document.getElementById('dCap').textContent = room.cap;
-    document.getElementById('dRate').textContent = room.rate;
-    document.getElementById('dRev').textContent = '('+room.rev+'개 후기)';
-    document.getElementById('dDesc').textContent = room.desc;
-    document.getElementById('rvNum').textContent = room.rate;
-    document.getElementById('rvCnt').textContent = room.rev+'개의 후기';
-    document.getElementById('bUnit').textContent = '₩'+room.price;
-    document.getElementById('gMain').style.background = GRAD[room.g];
-    document.getElementById('gS1').style.background = GRAD[(room.g+2)%12];
-    document.getElementById('gS2').style.background = GRAD[(room.g+5)%12];
-    document.getElementById('gBadges').innerHTML = (room.badges||[]).map(b=>`<span class="badge badge-${b.c}">${b.t}</span>`).join('');
-    document.getElementById('dAmen').innerHTML = room.amenities.map(a=>`<div><span class="ai">✓</span> ${a}</div>`).join('');
-    // people options up to cap
-    const bp=document.getElementById('bPeople'); bp.innerHTML='';
-    for(let n=4;n<=room.cap;n+=2){bp.innerHTML+=`<option value="${n}" ${n===6?'selected':''}>${n}명</option>`;}
-    // reviews
-    document.getElementById('dReviews').innerHTML = REVIEWS.slice(0,3).map(r=>`<div class="rvitem"><div class="rvh"><div class="rva">${r.av}</div><div><b>${r.nm}</b><span>${r.meta}</span></div></div><p style="font-size:14.5px;color:var(--text);line-height:1.7">${r.txt}</p></div>`).join('');
-    // similar
-    const sim=ROOMS.filter(r=>r.id!==room.id && r.purposes.some(p=>room.purposes.includes(p))).slice(0,4);
-    document.getElementById('similar').innerHTML = (sim.length?sim:ROOMS.filter(r=>r.id!==room.id).slice(0,4)).map(spaceCard).join('');
-    calc();
+    const id = Number(qparam('id')) || 1;
+    const g = id % 12;
+    const gm = document.getElementById('gMain');
+    if (gm) gm.style.background = GRAD[g];
+    const g1 = document.getElementById('gS1');
+    if (g1) g1.style.background = GRAD[(g+2)%12];
+    const g2 = document.getElementById('gS2');
+    if (g2) g2.style.background = GRAD[(g+5)%12];
   }
   function pickSlot(el,s){document.querySelectorAll('.slot').forEach(x=>x.classList.remove('on'));el.classList.add('on');slot=s;}
-  function calc(){
-    const base=parseInt(room.price.replace(/,/g,''));
-    const ppl=+document.getElementById('bPeople').value;
-    const extra=Math.max(0,ppl-6)*3000;
-    const total=base+extra-5000;
-    document.getElementById('sBase').textContent='₩'+base.toLocaleString();
-    document.getElementById('sExtra').textContent='₩'+extra.toLocaleString();
-    document.getElementById('sTotal').textContent='₩'+total.toLocaleString();
-  }
+  function calc(){ /* 요금 계산은 실데이터 위젯이 담당합니다 */ }
   function goBook(e){e.preventDefault();
     const d=document.getElementById('bDate').value||'날짜미정';
     const ppl=document.getElementById('bPeople').value;

@@ -19,7 +19,8 @@
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
-    S.page = location.pathname.split('/').pop() || 'index.html';
+    /* Cloudflare Pages 는 주소에서 .html 을 떼므로 확장자를 빼고 비교합니다 */
+    S.page = (location.pathname.split('/').pop() || 'index').replace(/\.html$/, '') || 'index';
     const existing = document.getElementById('chatbox');
     if (existing) adopt(existing);
     else inject();
@@ -95,7 +96,7 @@
 
   /* ---------- 지점 상세 화면이면 지점명을 물고 갑니다 ---------- */
   function watchBranch() {
-    if (S.page !== 'room-detail.html') return;
+    if (S.page !== 'room-detail') return;
     const pick = () => {
       const n = document.getElementById('dName');
       if (n && n.textContent.trim() && n.textContent.trim() !== '공간명') {

@@ -4,18 +4,21 @@
    ============================================================ */
 
 (function () {
-  const page = location.pathname.split('/').pop() || 'index.html';
+  /* Cloudflare Pages 는 주소에서 .html 을 떼어냅니다.
+     (/room-detail.html 로 들어와도 /room-detail 로 바뀝니다)
+     그래서 확장자를 뺀 이름으로 비교해야 실데이터 연결이 건너뛰이지 않습니다. */
+  const page = (location.pathname.split('/').pop() || 'index').replace(/\.html$/, '') || 'index';
 
   document.addEventListener('DOMContentLoaded', async () => {
     const me = await whoami();
     wireHeader(me);
-    if (page === 'index.html') wireHome();
-    if (page === 'rooms.html') wireRooms();
-    if (page === 'room-detail.html') wireDetail();
-    if (page === 'mypage.html') wireMypage(me);
-    if (page === 'reviews.html') wireReviews();
-    if (page === 'event.html') wireEvents();
-    if (page === 'locations.html') wireLocations();
+    if (page === 'index') wireHome();
+    if (page === 'rooms') wireRooms();
+    if (page === 'room-detail') wireDetail();
+    if (page === 'mypage') wireMypage(me);
+    if (page === 'reviews') wireReviews();
+    if (page === 'event') wireEvents();
+    if (page === 'locations') wireLocations();
   });
 
   /* ---------- 헤더 ---------- */
@@ -320,6 +323,17 @@
       sec.querySelectorAll('td,th').forEach((c) => c.style.padding = '9px 6px');
       sec.querySelectorAll('tbody tr').forEach((r) => r.style.borderTop = '1px solid var(--line)');
       guideBox?.parentNode?.insertBefore(sec, guideBox.nextSibling);
+    }
+
+    /* 이 근처 다른 지점 — 같은 권역에서 */
+    const sim = document.getElementById('similar');
+    if (sim) {
+      try {
+        const near = await API.get(`/api/branches?region=${encodeURIComponent(b.region || '')}`, { silent: true });
+        const list = near.branches.filter((x) => x.id !== b.id).slice(0, 4);
+        sim.innerHTML = list.length ? list.map((x) => card(x)).join('')
+          : `<p class="muted" style="font-size:14px">준비 중입니다.</p>`;
+      } catch { sim.innerHTML = ''; }
     }
 
     /* 후기 (사진 후기 우선) */
