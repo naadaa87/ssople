@@ -8,7 +8,7 @@
 .wf label,.book label{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
 .input{width:100%;padding:13px 14px;border:1.5px solid var(--line-2);border-radius:12px;
   background:#fff;color:var(--ink);font-family:inherit;font-size:15px;transition:.15s}
-.input:focus{outline:none;border-color:var(--clay);box-shadow:0 0 0 3px rgba(232,53,46,.1)}
+.input:focus{outline:none;border-color:var(--clay);box-shadow:0 0 0 3px rgba(232,50,23,.1)}
 select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
   linear-gradient(135deg,var(--muted) 50%,transparent 50%);
   background-position:calc(100% - 18px) 55%,calc(100% - 13px) 55%;
@@ -25,7 +25,7 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 .book .slot:disabled{background:var(--sand);color:#b8bac2;border-color:var(--line);
   cursor:not-allowed;text-decoration:line-through}
 .book .slot.sel{background:var(--clay);border-color:var(--clay);color:#fff}
-.book .slot.edge{background:#fdefee;border-color:var(--clay);color:#c4241e}
+.book .slot.edge{background:#fdefee;border-color:var(--clay);color:#c62912}
 .bk-price{font-size:23px;font-weight:900;letter-spacing:-.02em;line-height:1.3}
 .bk-price small{font-size:13px;color:var(--muted);font-weight:600}
 
@@ -115,7 +115,7 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 
 /* 공통 — 답변 안의 바로가기 링크, 추천 질문 줄, 로딩 점 */
 .spc-link{display:inline-block;margin-top:8px;font-size:13px;font-weight:700;
-  color:var(--clay-deep,#c4241e);text-decoration:underline;text-underline-offset:3px}
+  color:var(--clay-deep,#c62912);text-decoration:underline;text-underline-offset:3px}
 .spc-qrow{display:flex;flex-wrap:wrap;gap:6px;width:100%}
 .spc-dots i{display:inline-block;width:5px;height:5px;border-radius:50%;
   background:var(--muted-2,#b8bac2);margin-right:3px;animation:spcb 1.2s infinite}
@@ -126,8 +126,8 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 /* 주입형 창 */
 .spc{position:fixed;right:20px;bottom:20px;z-index:9000;display:flex;
   flex-direction:column;align-items:flex-end;gap:12px;font-family:var(--sans,sans-serif)}
-.spc-fab{width:56px;height:56px;border-radius:50%;background:var(--clay,#e8352e);color:#fff;
-  font-size:21px;border:none;cursor:pointer;box-shadow:0 10px 30px rgba(232,53,46,.32);
+.spc-fab{width:56px;height:56px;border-radius:50%;background:var(--clay,#E83217);color:#fff;
+  font-size:21px;border:none;cursor:pointer;box-shadow:0 10px 30px rgba(232,50,23,.32);
   transition:.2s;display:flex;align-items:center;justify-content:center}
 .spc-fab:hover{transform:translateY(-2px)}
 .spc-panel{width:346px;max-width:calc(100vw - 32px);height:min(520px,72vh);background:#fff;
@@ -136,7 +136,7 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 .spc.open .spc-panel{display:flex}
 .spc-h{padding:14px 16px;border-bottom:1px solid var(--line,#eceef2);display:flex;
   align-items:center;gap:10px}
-.spc-av{width:34px;height:34px;border-radius:50%;background:var(--clay,#e8352e);color:#fff;
+.spc-av{width:34px;height:34px;border-radius:50%;background:var(--clay,#E83217);color:#fff;
   display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
 .spc-t{flex:1;min-width:0}
 .spc-t b{display:block;font-size:14.5px;font-weight:800;color:var(--ink,#17181c)}
@@ -149,19 +149,19 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
   white-space:pre-wrap;word-break:break-word}
 .spc-m.bot{background:#fff;border:1px solid var(--line,#eceef2);align-self:flex-start;
   border-bottom-left-radius:4px;color:var(--ink,#17181c)}
-.spc-m.user{background:var(--clay,#e8352e);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.spc-m.bot .spc-link{color:var(--clay-deep,#c4241e)}
+.spc-m.user{background:var(--clay,#E83217);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.spc-m.bot .spc-link{color:var(--clay-deep,#c62912)}
 .spc-q{padding:0 12px;background:var(--paper-2,#f7f8fa)}
 .spc-q:not(:empty){padding:10px 12px}
 .spc-qb{border:1px solid var(--line-2,#dfe1e8);background:#fff;border-radius:99px;
   padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--ink,#17181c);
   cursor:pointer;font-family:inherit}
-.spc-qb:hover{border-color:var(--clay,#e8352e);color:var(--clay-deep,#c4241e)}
+.spc-qb:hover{border-color:var(--clay,#E83217);color:var(--clay-deep,#c62912)}
 .spc-i{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line,#eceef2);background:#fff}
 .spc-i input{flex:1;border:1.5px solid var(--line-2,#dfe1e8);border-radius:99px;
   padding:10px 15px;font-size:13.5px;font-family:inherit;outline:none;min-width:0}
-.spc-i input:focus{border-color:var(--clay,#e8352e)}
-.spc-i button{width:38px;height:38px;border-radius:50%;background:var(--clay,#e8352e);
+.spc-i input:focus{border-color:var(--clay,#E83217)}
+.spc-i button{width:38px;height:38px;border-radius:50%;background:var(--clay,#E83217);
   color:#fff;border:none;cursor:pointer;font-size:15px;flex:none}
 .spc-i button:disabled{opacity:.4;cursor:not-allowed}
 

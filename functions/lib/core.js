@@ -113,6 +113,42 @@ export function reservationCode(d = kstNow()) {
 }
 
 /* 감사 로그 — 호스트의 audit_logs 를 그대로 씁니다. 없으면 조용히 넘어갑니다. */
+/* 본사 대시보드에 "이 줄이 바뀌었다"고 알립니다.
+   대시보드는 ops_touch 를 훑어 증분 동기화를 하므로,
+   여기에 도장을 찍지 않으면 홈페이지에서 만든 예약이
+   대시보드 화면에 바로 나타나지 않습니다. */
+export async function touch(env, table, rowId) {
+  if (!rowId) return;
+  try {
+    await env.DB.prepare(
+      `INSERT INTO ops_touch (tbl, rid, up) VALUES (?,?,?)
+       ON CONFLICT(tbl, rid) DO UPDATE SET up=excluded.up`
+    ).bind(table, String(rowId), Date.now()).run();
+  } catch { /* 대시보드 테이블이 아직 없을 수 있습니다 */ }
+}
+
+/* 점주 알림 — 호스트 센터의 종 아이콘에 뜹니다 */
+export async function ownerNotify(env, branchId, { type, title, body = null, link = null }) {
+  if (!branchId) return;
+  try {
+    await env.DB.prepare(
+      `INSERT INTO owner_notifications (branch_id, type, title, body, link, read, created_at)
+       VALUES (?,?,?,?,?,0,datetime('now'))`
+    ).bind(branchId, type, title, body, link).run();
+  } catch { /* 호스트 스키마가 아직 없을 수 있습니다 */ }
+}
+
+/* 예약 변경 이력 — 점주 화면의 "이력" 탭에 남습니다 */
+export async function resLog(env, reservationId, actor, action, detail = null) {
+  if (!reservationId) return;
+  try {
+    await env.DB.prepare(
+      `INSERT INTO reservation_logs (reservation_id, actor, action, detail, created_at)
+       VALUES (?,?,?,?,datetime('now'))`
+    ).bind(reservationId, actor || '홈페이지', action, detail).run();
+  } catch { /* 호스트 스키마가 아직 없을 수 있습니다 */ }
+}
+
 export async function audit(env, { branchId = null, actor, action, detail = null }) {
   try {
     await env.DB.prepare(

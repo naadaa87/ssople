@@ -12,20 +12,59 @@ import { getSetting, kstNow, kstToday } from './core.js';
 export const SLOTS = ['day', 'night'];
 export const SLOT_LABEL = { day: '낮타임', night: '밤타임' };
 
+/* ---------- 요일 차등 요금 ----------
+   price_rules 가 있으면 요일별(월~목 base / 금 / 토 / 일),
+   없으면 단일가(day_price / night_price)로 계산합니다.
+   기획서 3.2절 1단계 「요일 차등 표준가」의 구현입니다. */
+export function slotPrice(branch, slot, dateStr) {
+  const flat = slot === 'night' ? branch.night_price : branch.day_price;
+  if (!branch.price_rules) return flat;
+  let rules; try { rules = JSON.parse(branch.price_rules); } catch { return flat; }
+  const r = rules[slot];
+  if (!r) return flat;
+  if (!dateStr) return r.base ?? flat;
+  const dow = new Date(`${dateStr}T00:00:00Z`).getUTCDay();   /* 0 일 … 6 토 */
+  const key = dow === 5 ? 'fri' : dow === 6 ? 'sat' : dow === 0 ? 'sun' : 'base';
+  return r[key] ?? r.base ?? flat;
+}
+
+/* 지점별 보증금 — 지점 값이 없으면 전사 기본값(web_settings) */
+export async function branchDeposit(env, branch) {
+  if (branch && branch.deposit != null && branch.deposit !== '') return Number(branch.deposit);
+  return Number(await getSetting(env, 'deposit.amount', '80000'));
+}
+
+/* ---------- 결제 방식 ----------
+   FULL    대관료 + 보증금을 온라인에서 한 번에 결제 (기획서 4.3 — 비대면 완결)
+           보증금은 이용 후 이상이 없으면 전액 환급됩니다.
+   DEPOSIT 예약금(보증금 겸)만 먼저 결제하고 잔금은 현장에서 —
+           과거 운영 방식. web_settings 의 payment.mode 로 전환합니다. */
+export async function payMode(env) {
+  const v = (await getSetting(env, 'payment.mode', 'FULL')).toUpperCase();
+  return v === 'DEPOSIT' ? 'DEPOSIT' : 'FULL';
+}
+
+/* 할인 반영 후 실제 결제액과 현장 잔금 */
+export function payBreakdown(mode, rentNet, deposit) {
+  if (mode === 'DEPOSIT')
+    return { payAmount: deposit, balance: Math.max(0, rentNet - deposit) };
+  return { payAmount: rentNet + deposit, balance: 0 };
+}
+
 /* 지점별 타임 시각. 컬럼이 없으면 기본값을 씁니다. */
 export function slotTime(branch, slot) {
   if (slot === 'day') {
-    const s = branch.day_start ?? 12, e = branch.day_end ?? 18;
+    const s = branch.day_start ?? 11, e = branch.day_end ?? 16;
     return { start: s, end: e, label: `${p2(s)}:00 ~ ${p2(e)}:00` };
   }
-  const s = branch.night_start ?? 19, e = branch.night_end ?? 25;
+  const s = branch.night_start ?? 17, e = branch.night_end ?? 22;
   return { start: s, end: e, label: `${p2(s)}:00 ~ ${e > 24 ? '익일 ' + p2(e - 24) : p2(e)}:00` };
 }
 const p2 = (n) => String(n % 24).padStart(2, '0');
 
 /* ---------- 요금 계산 ---------- */
-export function calcAmount(branch, slot, people) {
-  const base = slot === 'night' ? branch.night_price : branch.day_price;
+export function calcAmount(branch, slot, people, dateStr) {
+  const base = slotPrice(branch, slot, dateStr);
   const basePeople = branch.base_people || 0;
   const extraPeople = Math.max(0, (people || 0) - basePeople);
   const extra = extraPeople * (branch.extra_price || 0);
@@ -51,11 +90,17 @@ export async function getAvailability(env, branchId, dateStr) {
   ).bind(branchId, dateStr).all();
 
   const { results: closed } = await env.DB.prepare(
-    `SELECT slot FROM branch_closures WHERE branch_id=? AND use_date=?`
-  ).bind(branchId, dateStr).all().catch(() => ({ results: [] }));
+    `SELECT slot FROM closures
+      WHERE branch_id = ? AND (
+            (kind='date'   AND date = ?)
+         OR (kind='weekly' AND weekday = CAST(strftime('%w', ?) AS INTEGER))
+         OR (kind='period' AND ? BETWEEN start_date AND end_date))`
+  ).bind(branchId, dateStr, dateStr, dateStr).all().catch(() => ({ results: [] }));
 
-  const closedAll = closed.some((c) => !c.slot);
-  const blocked = new Set([...taken.map((t) => t.slot), ...closed.filter((c) => c.slot).map((c) => c.slot)]);
+  /* 호스트는 하루 전체 휴무를 slot='all' 로 저장합니다 (빈 값도 전체로 봅니다) */
+  const isAll = (s) => !s || s === 'all';
+  const closedAll = closed.some((c) => isAll(c.slot));
+  const blocked = new Set([...taken.map((t) => t.slot), ...closed.filter((c) => !isAll(c.slot)).map((c) => c.slot)]);
 
   /* 홀드 (결제 진행 중) */
   const holds = await env.KV.list({ prefix: `hold:${branchId}:${dateStr}:` });
@@ -76,7 +121,7 @@ export async function getAvailability(env, branchId, dateStr) {
       slot: s,
       label: SLOT_LABEL[s],
       time: t.label,
-      price: s === 'night' ? branch.night_price : branch.day_price,
+      price: slotPrice(branch, s, dateStr),
       available: !closedAll && !blocked.has(s),
     };
   });

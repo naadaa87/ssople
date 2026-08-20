@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>예약하기 — 쏘플파티룸</title>
 <meta name="robots" content="noindex" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e8352e'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23E83217'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <link rel="stylesheet" href="/assets/app.css" />
 <link rel="stylesheet" href="/assets/wire.css" />
@@ -70,6 +70,7 @@ const ctx = {
   hold: null, branch: null, me: null, step: 1,
   guestName: '', guestPhone: '', requestNote: '',
   method: 'CARD', policyRead: false,
+  wallet: null, couponIssueId: null, pointUse: 0,
 };
 let timerId = null;
 
@@ -87,6 +88,8 @@ async function init() {
     location.href = '/login.html?next=' + encodeURIComponent(location.pathname + location.search);
     return;
   }
+
+  try { ctx.wallet = await API.get('/api/me/wallet', { silent: true }); } catch { ctx.wallet = null; }
 
   try {
     ctx.branch = (await API.get('/api/branches/' + ctx.branchId, { silent: true })).branch;
@@ -143,8 +146,29 @@ function render() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* 할인 반영 결제 금액 — 서버(payBreakdown)와 같은 규칙으로 미리 보여줍니다 */
+function calc() {
+  const h = ctx.hold;
+  const rent = h.totalAmount;
+  const c = ctx.wallet?.coupons?.find((x) => x.issueId === ctx.couponIssueId) || null;
+  let cd = 0;
+  if (c && rent >= (c.minAmount || 0))
+    cd = Math.min(c.kind === 'percent' ? Math.floor((rent * c.value) / 100) : c.value, rent);
+  let pu = Math.max(0, Math.floor(ctx.pointUse || 0));
+  pu = Math.min(pu, ctx.wallet?.points || 0, rent - cd);
+  if (pu && pu < (ctx.wallet?.minUse || 1000)) pu = 0;
+  const net = rent - cd - pu;
+  const full = (h.payMode || 'DEPOSIT') === 'FULL';
+  return {
+    rent, cd, pu, net, full, coupon: c,
+    pay: full ? net + h.deposit : h.deposit,
+    bal: full ? 0 : Math.max(0, net - h.deposit),
+  };
+}
+
 function summaryBox() {
   const h = ctx.hold;
+  const q = calc();
   const slotLabel = ctx.slot === 'night' ? '밤타임' : '낮타임';
   const slotTime = (ctx.branch.slots.find((s) => s.slot === ctx.slot) || {}).time || '';
   return `
@@ -156,17 +180,58 @@ function summaryBox() {
       h.peopleExtra ? ` (기본 ${h.peopleBase} + 추가 ${h.peopleExtra})` : ''}</span></div>
     <div class="sum-row"><span class="k">타임 요금</span><span class="v">${won(h.baseAmount)}</span></div>
     ${h.extraAmount ? `<div class="sum-row"><span class="k">추가 인원 요금</span><span class="v">${won(h.extraAmount)}</span></div>` : ''}
-    <div class="sum-row"><span class="k">총 이용 금액</span><span class="v">${won(h.totalAmount)}</span></div>
-    <div class="sum-row sum-total"><span class="k">지금 결제할 예약금</span><span class="v">${won(h.deposit)}</span></div>
-    <div class="sum-row"><span class="k">현장에서 낼 잔금</span><span class="v">${won(h.balance)}</span></div>
+    ${q.cd ? `<div class="sum-row"><span class="k">쿠폰 할인</span><span class="v" style="color:var(--clay)">− ${won(q.cd)}</span></div>` : ''}
+    ${q.pu ? `<div class="sum-row"><span class="k">포인트 사용</span><span class="v" style="color:var(--clay)">− ${won(q.pu)}</span></div>` : ''}
+    ${q.full ? `
+      <div class="sum-row"><span class="k">대관료 합계</span><span class="v">${won(q.net)}</span></div>
+      <div class="sum-row"><span class="k">보증금 (이용 후 환급)</span><span class="v">${won(h.deposit)}</span></div>
+      <div class="sum-row sum-total"><span class="k">지금 결제할 금액</span><span class="v">${won(q.pay)}</span></div>
+    ` : `
+      <div class="sum-row"><span class="k">총 이용 금액</span><span class="v">${won(q.net)}</span></div>
+      <div class="sum-row sum-total"><span class="k">지금 결제할 예약금</span><span class="v">${won(q.pay)}</span></div>
+      <div class="sum-row"><span class="k">현장에서 낼 잔금</span><span class="v">${won(q.bal)}</span></div>
+    `}
+  </div>`;
+}
+
+/* 포인트 · 쿠폰 선택 — 1단계 견적 화면 */
+function walletBox() {
+  const w = ctx.wallet;
+  if (!w || (!w.points && !w.coupons?.length)) return '';
+  const rent = ctx.hold.totalAmount;
+  return `
+  <div class="sum" style="margin-top:14px">
+    ${w.coupons?.length ? `
+    <div class="sum-row" style="align-items:center"><span class="k">쿠폰</span>
+      <select class="input" id="cpSel" style="max-width:250px;padding:10px 12px">
+        <option value="">쿠폰 안 씀</option>
+        ${w.coupons.map((c) => {
+          const off = rent < (c.minAmount || 0);
+          const label = c.kind === 'percent' ? `${c.value}%` : won(c.value);
+          return `<option value="${c.issueId}" ${off ? 'disabled' : ''} ${c.issueId === ctx.couponIssueId ? 'selected' : ''}>
+            ${esc(c.title)} (${label}${off ? ` · ${won(c.minAmount)} 이상` : ''})</option>`;
+        }).join('')}
+      </select></div>` : ''}
+    ${w.points ? `
+    <div class="sum-row" style="align-items:center"><span class="k">포인트 <small style="color:var(--muted)">보유 ${num(w.points)}P</small></span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <input class="input" id="ptIn" type="number" inputmode="numeric" min="0" step="100"
+               value="${ctx.pointUse || ''}" placeholder="0" style="max-width:130px;padding:10px 12px;text-align:right">
+        <button type="button" class="btn btn-line btn-sm" id="ptAll">전액</button>
+      </span></div>
+    <div class="hint" style="margin:2px 0 4px;text-align:right">${num(w.minUse)}P부터 사용 · 대관료까지만</div>` : ''}
   </div>`;
 }
 
 function step1() {
+  const full = (ctx.hold.payMode || 'DEPOSIT') === 'FULL';
   return `
     <h2 class="sec">예약 내용을 확인해 주세요</h2>
     ${summaryBox()}
-    <div class="note">홈페이지에서는 <b>예약금만</b> 결제합니다. 나머지 잔금은 이용 당일 현장에서 내시면 됩니다.</div>
+    ${walletBox()}
+    <div class="note">${full
+      ? '대관료와 보증금을 한 번에 결제하는 <b>비대면 완결 예약</b>입니다. 보증금은 이용 후 이상이 없으면 <b>전액 환급</b>됩니다.'
+      : '홈페이지에서는 <b>예약금만</b> 결제합니다. 나머지 잔금은 이용 당일 현장에서 내시면 됩니다.'}</div>
     <div class="nav-btns">
       <a class="btn btn-line" href="/room-detail.html?id=${ctx.branchId}">타임 바꾸기</a>
       <button class="btn btn-clay" data-next>다음</button>
@@ -215,8 +280,8 @@ function step3() {
       <p>· 취소는 마이페이지에서 직접 하실 수 있고, 취소 전에 환불 금액이 먼저 표시됩니다.</p>
       <p>· 환불은 취소 즉시 결제 취소로 진행되며, 카드사 사정에 따라 실제 입금까지 3~5영업일이 걸릴 수 있습니다.</p>
       <p>· 천재지변 등 부득이한 사정은 고객센터를 통해 별도로 처리됩니다.</p>
-      <p style="margin-top:12px"><b style="color:var(--ink)">결제와 잔금</b></p>
-      <p>· 홈페이지에서 결제하시는 금액은 예약금입니다. 남은 잔금은 이용 당일 현장에서 결제하십니다.</p>
+      <p style="margin-top:12px"><b style="color:var(--ink)">결제와 보증금</b></p>
+      <p id="polPay">· 대관료와 보증금을 함께 결제합니다. 보증금은 이용 후 시설에 이상이 없으면 영업일 기준 3일 안에 전액 환급됩니다.</p>
       <p>· 현장에서 인원이 늘면 추가 인원 요금이 더해집니다. 최대 인원을 넘겨 입장하실 수 없습니다.</p>
       <p style="margin-top:12px"><b style="color:var(--ink)">이용 시 유의사항</b></p>
       <p>· 예약하신 타임의 시작 시각부터 종료 시각까지 이용하실 수 있습니다. 다음 이용자를 위한 정비 시간이 있어 종료 시각을 지켜주셔야 합니다.</p>
@@ -239,10 +304,11 @@ function step3() {
 }
 
 function step4() {
+  const q = calc();
   const methods = [['CARD', '신용·체크카드'], ['KAKAOPAY', '카카오페이'],
                    ['NAVERPAY', '네이버페이'], ['TRANSFER', '계좌이체']];
   return `
-    <h2 class="sec">예약금 결제</h2>
+    <h2 class="sec">${q.full ? '결제' : '예약금 결제'}</h2>
     ${summaryBox()}
     <h2 class="sec">결제 수단</h2>
     <div class="pay-methods">
@@ -254,7 +320,7 @@ function step4() {
     </div>
     <div class="nav-btns">
       <button class="btn btn-line" data-prev>이전</button>
-      <button class="btn btn-clay" id="payBtn">예약금 ${won(ctx.hold.deposit)} 결제하기</button>
+      <button class="btn btn-clay" id="payBtn">${won(calc().pay)} 결제하기</button>
     </div>`;
 }
 
@@ -262,6 +328,17 @@ function bind() {
   const st = document.getElementById('stage');
   st.querySelector('[data-prev]')?.addEventListener('click', () => { ctx.step--; render(); });
   st.querySelector('[data-next]')?.addEventListener('click', onNext);
+
+  if (ctx.step === 1) {
+    document.getElementById('cpSel')?.addEventListener('change', (e) => {
+      ctx.couponIssueId = e.target.value ? Number(e.target.value) : null; render();
+    });
+    const pt = document.getElementById('ptIn');
+    pt?.addEventListener('change', () => { ctx.pointUse = Number(pt.value || 0); render(); });
+    document.getElementById('ptAll')?.addEventListener('click', () => {
+      ctx.pointUse = ctx.wallet?.points || 0; render();
+    });
+  }
 
   if (ctx.step === 3) {
     const box = document.getElementById('pbox');
@@ -314,10 +391,12 @@ async function pay() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span>';
   try {
+    const q = calc();
     const r = await API.post('/api/reservations', {
       holdId: ctx.hold.holdId,
-      deposit: ctx.hold.deposit,
       people: ctx.people,
+      pointUse: q.pu, couponIssueId: ctx.couponIssueId,
+      expectedPay: q.pay,
       guestName: ctx.guestName, guestPhone: ctx.guestPhone,
       requestNote: ctx.requestNote, agreeAll: true,
     }, { silent: true });
@@ -332,13 +411,13 @@ async function pay() {
     if (!window.PortOne) {
       toast('결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', 'bad');
       btn.disabled = false;
-      btn.textContent = `예약금 ${won(ctx.hold.deposit)} 결제하기`;
+      btn.textContent = `${won(calc().pay)} 결제하기`;
       return;
     }
     const rs = await window.PortOne.requestPayment({
       storeId: r.payment.storeId, channelKey: r.payment.channelKey,
       paymentId: r.orderId, orderName: r.payment.orderName,
-      totalAmount: r.deposit, currency: 'KRW',
+      totalAmount: r.payAmount, currency: 'KRW',
       payMethod: ctx.method === 'CARD' ? 'CARD' : 'EASY_PAY',
       customer: r.payment.customer,
     });

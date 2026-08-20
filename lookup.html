@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>예약 조회 — 쏘플파티룸</title><meta name="robots" content="index,follow" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e8352e'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23E83217'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <link rel="stylesheet" href="/assets/app.css" />
 <link rel="stylesheet" href="/assets/wire.css" />
@@ -78,14 +78,28 @@ function show(r) {
       <div class="r"><span class="k">주소</span><span class="v">${esc(r.address||'')}</span></div>
       ${r.parking ? `<div class="r"><span class="k">주차</span><span class="v">${esc(r.parking)}</span></div>` : ''}
       <div class="r"><span class="k">총 이용 금액</span><span class="v">${won(r.totalAmount)}</span></div>
-      <div class="r"><span class="k">결제하신 예약금</span><span class="v">${won(r.deposit)}</span></div>
-      <div class="r"><span class="k">현장 잔금</span><span class="v" style="color:var(--clay-deep)">${won(r.balance)}</span></div>
+      ${r.couponDiscount ? `<div class="r"><span class="k">쿠폰 할인</span><span class="v" style="color:var(--clay)">− ${won(r.couponDiscount)}</span></div>` : ''}
+      ${r.pointUsed ? `<div class="r"><span class="k">포인트 사용</span><span class="v" style="color:var(--clay)">− ${won(r.pointUsed)}</span></div>` : ''}
+      ${r.payMode === 'FULL'
+        ? `<div class="r"><span class="k">보증금 (이용 후 환급)</span><span class="v">${won(r.deposit)}</span></div>`
+        : `<div class="r"><span class="k">결제하신 예약금</span><span class="v">${won(r.deposit)}</span></div>
+           <div class="r"><span class="k">현장 잔금</span><span class="v" style="color:var(--clay-deep)">${won(r.balance)}</span></div>`}
     </div>
+    ${r.guestToken && (r.status === 'confirmed') ? `
+    <div class="note" style="margin-top:16px;text-align:left">
+      <b>👥 참석자 안내 링크</b> — 함께 오는 분들께 보내면 주소·시간·주차를 알아서 확인합니다.
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="input" readonly value="${location.origin}/guest.html?t=${esc(r.guestToken)}"
+               style="flex:1;font-size:12px;padding:9px 11px" onclick="this.select()">
+        <button class="btn btn-clay btn-sm" type="button"
+          onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(()=>toast('링크를 복사했습니다'))">복사</button>
+      </div>
+    </div>` : ''}
     ${r.accessInfo ? `<div class="note note-ok" style="margin-top:16px">
       <b>오늘 이용하시는 예약입니다.</b><br>${esc(r.accessInfo)}</div>` : ''}
     ${r.refund ? `<div class="note" style="margin-top:16px">${esc(r.refund.label)}<br>
-      지금 취소하시면 ${won(r.refund.refundAmount)}을 돌려받습니다.
-      취소는 고객센터 또는 지점(${esc(r.branchPhone||'')})으로 연락해 주세요.</div>` : ''}
+      지금 취소하시면 ${won(r.refund.refundAmount)}${r.refund.depositBack ? ` (보증금 ${won(r.refund.depositBack)} 포함)` : ''}을 돌려받습니다.<br>
+      회원이라면 마이페이지에서 직접 취소하실 수 있고, 비회원 예약은 고객센터(1544-3523)로 연락해 주세요.</div>` : ''}
     <div style="display:flex;gap:10px;margin-top:22px">
       <button class="btn btn-line" style="flex:1" onclick="location.reload()">다시 조회</button>
       <a class="btn btn-clay" style="flex:1" href="/rooms.html">다른 공간 보기</a>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>예약이 확정되었습니다 — 쏘플파티룸</title><meta name="robots" content="noindex" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23e8352e'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23E83217'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
 <link rel="stylesheet" href="/assets/app.css" />
 <link rel="stylesheet" href="/assets/wire.css" />
@@ -56,16 +56,37 @@ async function render(){
         <div class="r"><span class="k">인원</span><span class="v">${r.people}명</span></div>
         <div class="r"><span class="k">주소</span><span class="v">${esc(r.address||'')}</span></div>
         <div class="r"><span class="k">총 이용 금액</span><span class="v">${won(r.totalAmount)}</span></div>
-        <div class="r"><span class="k">결제하신 예약금</span><span class="v">${won(r.deposit)}</span></div>
-        <div class="r"><span class="k">현장 잔금</span><span class="v" style="color:var(--clay-deep)">${won(r.balance)}</span></div>
+        ${r.couponDiscount ? `<div class="r"><span class="k">쿠폰 할인</span><span class="v" style="color:var(--clay)">− ${won(r.couponDiscount)}</span></div>` : ''}
+        ${r.pointUsed ? `<div class="r"><span class="k">포인트 사용</span><span class="v" style="color:var(--clay)">− ${won(r.pointUsed)}</span></div>` : ''}
+        ${r.payMode === 'FULL'
+          ? `<div class="r"><span class="k">보증금 (이용 후 환급)</span><span class="v">${won(r.deposit)}</span></div>`
+          : `<div class="r"><span class="k">결제하신 예약금</span><span class="v">${won(r.deposit)}</span></div>
+             <div class="r"><span class="k">현장 잔금</span><span class="v" style="color:var(--clay-deep)">${won(r.balance)}</span></div>`}
       </div>
+      ${r.guestToken ? `
+      <div class="note" style="text-align:left;margin-bottom:14px">
+        <b>👥 참석자 안내 링크</b><br>
+        <span style="color:var(--muted);font-size:13px">함께 오는 분들께 이 링크만 보내면 주소·시간·주차·준비물을 알아서 확인합니다. 로그인 없이 볼 수 있어요.</span>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input class="input" id="gLink" readonly value="${location.origin}/guest.html?t=${esc(r.guestToken)}"
+                 style="flex:1;font-size:12.5px;padding:11px 12px" onclick="this.select()">
+          <button class="btn btn-clay btn-sm" id="gCopy" style="white-space:nowrap">복사</button>
+        </div>
+      </div>` : ''}
       <div class="note" style="text-align:left;margin-bottom:20px">
-        이용일 7일 전까지는 마이페이지에서 직접 취소하시면 예약금 전액을 돌려드립니다.
+        ${r.payMode === 'FULL'
+          ? '보증금은 이용 후 이상이 없으면 전액 환급됩니다. 이용일 7일 전까지는 마이페이지에서 직접 취소하시면 대관료와 보증금을 모두 돌려드립니다.'
+          : '이용일 7일 전까지는 마이페이지에서 직접 취소하시면 예약금 전액을 돌려드립니다.'}
       </div>
       <div class="acts">
         <a class="btn btn-line" href="/rooms.html">다른 공간 보기</a>
         <a class="btn btn-clay" href="/mypage.html">예약 내역</a>
       </div>`;
+    document.getElementById('gCopy')?.addEventListener('click', async () => {
+      const el = document.getElementById('gLink');
+      try { await navigator.clipboard.writeText(el.value); } catch { el.select(); document.execCommand('copy'); }
+      toast('참석자 안내 링크를 복사했습니다');
+    });
   }catch(e){ box.innerHTML = fallback; }
 }
 </script>

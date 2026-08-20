@@ -9,16 +9,21 @@ export async function onRequestGet({ request, env }) {
   const date    = u.searchParams.get('date');
   const people  = Number(u.searchParams.get('people') || 0);
   const sort    = u.searchParams.get('sort') || 'recommend';
+  const area    = u.searchParams.get('area');
 
   const where = [`b.status='open'`], bind = [];
   if (region && region !== 'all') { where.push(`b.region=?`); bind.push(region); }
+  if (area) { where.push(`b.area=?`); bind.push(area); }
   if (people) { where.push(`b.max_people>=?`); bind.push(people); }
+  if (u.searchParams.get('pet') === '1')     where.push(`b.pet_ok=1`);
+  if (u.searchParams.get('bbq') === '1')     where.push(`b.bbq_ok=1`);
+  if (u.searchParams.get('karaoke') === '1') where.push(`b.karaoke_ok=1`);
 
   const { results } = await env.DB.prepare(
     `SELECT b.*,
             (SELECT url FROM branch_photos WHERE branch_id=b.id ORDER BY is_main DESC, sort_no LIMIT 1) AS photo,
-            (SELECT COUNT(*) FROM reviews WHERE branch_id=b.id AND visibility='visible') AS review_count,
-            (SELECT ROUND(AVG(rating),1) FROM reviews WHERE branch_id=b.id AND visibility='visible') AS rating
+            (SELECT COUNT(*) FROM reviews WHERE branch_id=b.id AND hidden=0) AS review_count,
+            (SELECT ROUND(AVG(rating),1) FROM reviews WHERE branch_id=b.id AND hidden=0) AS rating
        FROM branches b WHERE ${where.join(' AND ')}`
   ).bind(...bind).all();
 
@@ -52,8 +57,9 @@ export async function onRequestGet({ request, env }) {
   return ok({
     count: list.length,
     branches: list.map((b) => ({
-      id: b.id, code: b.code, name: b.name, region: b.region, address: b.address,
-      photo: b.photo, tags: tags(b), amenities: amenities(b),
+      id: b.id, code: b.code, name: b.name, region: b.region, area: b.area, address: b.address,
+      photo: b.photo, tags: tags(b), amenities: amenities(b), features: parse(b.features),
+      petOk: !!b.pet_ok, bbqOk: !!b.bbq_ok, karaokeOk: !!b.karaoke_ok, mgmtType: b.mgmt_type,
       dayPrice: b.day_price, nightPrice: b.night_price,
       basePeople: b.base_people, maxPeople: b.max_people, extraPrice: b.extra_price,
       minPrice: minPrice(b), rating: b.rating, reviewCount: b.review_count,

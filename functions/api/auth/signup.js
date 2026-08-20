@@ -1,5 +1,5 @@
 /* 회원가입 — 휴대폰이 아이디입니다 (호스트와 같은 규칙) */
-import { ok, err, readJson, randomSalt, hashPassword, createSession, setCookie, onlyDigits, fmtPhone } from '../../lib/core.js';
+import { ok, err, readJson, randomSalt, hashPassword, createSession, setCookie, onlyDigits, fmtPhone, getSetting } from '../../lib/core.js';
 
 export async function onRequestPost({ request, env }) {
   const b = await readJson(request);
@@ -27,6 +27,19 @@ export async function onRequestPost({ request, env }) {
   await env.DB.prepare(
     `INSERT INTO customer_grade_logs (customer_id,grade_from,grade_to,reason) VALUES (?,NULL,'WELCOME','가입')`
   ).bind(customerId).run();
+
+  /* 첫 예약 환영 쿠폰 — 마이그레이션 전이면 조용히 건너뜁니다 */
+  try {
+    const cid = Number(await getSetting(env, 'coupon.first.coupon_id', '0'));
+    if (cid) {
+      const c = await env.DB.prepare(
+        `SELECT valid_days FROM coupons WHERE id=? AND status='active'`).bind(cid).first();
+      if (c) await env.DB.prepare(
+        `INSERT INTO coupon_issues (coupon_id, customer_id, expires_at)
+         VALUES (?,?, datetime('now', ?))`
+      ).bind(cid, customerId, `+${c.valid_days || 60} days`).run();
+    }
+  } catch { /* coupons 테이블 미생성 */ }
 
   const { token, ttl } = await createSession(env, { customerId, name, grade: 'WELCOME' });
   return ok({ customerId, name, grade: 'WELCOME' }, { headers: { 'set-cookie': setCookie(token, ttl) } });

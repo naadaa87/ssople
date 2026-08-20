@@ -3,12 +3,27 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>쏘플파티룸 — 전국 130개 프라이빗 파티룸 예약 No.1</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23e8352e'/%3E%3Cstop offset='1' stop-color='%23ff6a4e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
-<meta name="description" content="생일파티, 브라이덜샤워, 루프탑 바베큐, 올나잇까지. 전국 130개 프라이빗 파티룸을 실시간으로 예약하세요. 무인 스마트 입장, 100% 프라이빗." />
+<title>쏘플파티룸 — 프라이빗 파티룸 예약 No.1 · 생일파티 브라이덜샤워 워크샵</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23E83217'/%3E%3Cstop offset='1' stop-color='%23ff6a4e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='url(%23g)'/%3E%3Cpolygon points='16,5 18.7,12.8 27,12.8 20.3,17.8 22.9,26 16,20.9 9.1,26 11.7,17.8 5,12.8 13.3,12.8' fill='white'/%3E%3C/svg%3E" />
+<meta name="description" content="생일파티, 브라이덜샤워, 워크샵, 루프탑 바베큐까지. 전국 프라이빗 파티룸을 실시간으로 예약하세요. 무인 스마트 입장, 100% 프라이빗." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+/* ---------- Today & Tomorrow ---------- */
+.tday-scroll{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+.tday-scroll::-webkit-scrollbar{display:none}
+.tday{flex:0 0 252px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;box-shadow:0 1px 2px rgba(23,24,28,.04),0 4px 14px rgba(23,24,28,.05);transition:.2s;display:block}
+.tday:hover{transform:translateY(-3px);box-shadow:0 10px 34px rgba(23,24,28,.09);border-color:#dfe1e8}
+.tday .td-when{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#E83217;background:#fdefee;border-radius:30px;padding:5px 11px;margin-bottom:10px}
+.tday .td-when.tm{color:#7a4d12;background:#fdf3e4}
+.tday .td-nm{font-weight:800;font-size:15.5px;letter-spacing:-.01em;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tday .td-loc{font-size:12.5px;color:#84868f;margin-bottom:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tday .td-foot{display:flex;align-items:baseline;justify-content:space-between;border-top:1px dashed #eceef2;padding-top:10px}
+.tday .td-slot{font-size:12.5px;color:#2a2c33;font-weight:700}
+.tday .td-slot small{display:block;font-weight:500;color:#84868f;font-size:11.5px;margin-top:2px}
+.tday .td-price{font-weight:800;color:#E83217;font-size:15px}
+</style>
 <style>
 /* ============================================================
    SSOPLE v3 — Design System
@@ -27,8 +42,8 @@
   --muted-2:#b8bac2;
   --line:#eceef2;
   --line-2:#dfe1e8;
-  --clay:#e8352e;            /* SSOPLE Red */
-  --clay-deep:#c4241e;
+  --clay:#E83217;            /* SSOPLE Red */
+  --clay-deep:#c62912;
   --clay-50:#fdefee;
   --gold:#f08c3c;
   --sans:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo',sans-serif;
@@ -93,7 +108,7 @@ ul{list-style:none}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:14.5px;letter-spacing:.005em;padding:15px 26px;border-radius:12px;transition:.2s;white-space:nowrap;line-height:1}
 .btn-ink{background:var(--ink);color:#fff}
 .btn-ink:hover{background:#000;transform:translateY(-1px)}
-.btn-clay{background:var(--clay);color:#fff;box-shadow:0 8px 22px rgba(232,53,46,.28)}
+.btn-clay{background:var(--clay);color:#fff;box-shadow:0 8px 22px rgba(232,50,23,.28)}
 .btn-clay:hover{background:var(--clay-deep);transform:translateY(-1px)}
 .btn-line{border:1.5px solid var(--line-2);color:var(--ink);background:var(--card)}
 .btn-line:hover{border-color:var(--ink)}
@@ -150,7 +165,7 @@ ul{list-style:none}
 .hdr.scrolled{box-shadow:0 6px 24px rgba(23,24,28,.06)}
 .nav{display:flex;align-items:center;height:76px;gap:30px}
 .brand{display:flex;align-items:center;gap:10px;flex:none}
-.brand .bm{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--clay),#ff6a4e);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 6px 16px rgba(232,53,46,.3)}
+.brand .bm{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--clay),#ff6a4e);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 6px 16px rgba(232,50,23,.3)}
 .brand .bt{display:flex;flex-direction:column;line-height:1}
 .brand .bn{font-weight:900;font-size:20px;letter-spacing:-.01em;color:var(--ink)}
 .brand .bs{font-weight:600;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--clay);margin-top:3px}
@@ -418,7 +433,7 @@ ul{list-style:none}
 <style>
 /* home-specific */
 /* hero2 — light & trendy */
-.hero2{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(760px 340px at 92% -12%,rgba(232,53,46,.09),transparent 60%),radial-gradient(620px 320px at -8% 112%,rgba(232,53,46,.05),transparent 60%),linear-gradient(180deg,#fff,#f7f8fa)}
+.hero2{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:radial-gradient(760px 340px at 92% -12%,rgba(232,50,23,.09),transparent 60%),radial-gradient(620px 320px at -8% 112%,rgba(232,50,23,.05),transparent 60%),linear-gradient(180deg,#fff,#f7f8fa)}
 .hero2 .wrap{padding-top:50px;padding-bottom:50px}
 .hero2-in{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center;margin-bottom:32px}
 .h2-badge{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);box-shadow:var(--sh-sm);border-radius:40px;padding:9px 16px;font-weight:700;font-size:13px;color:var(--ink-2)}
@@ -450,7 +465,7 @@ ul{list-style:none}
 .how-c .hi{font-size:26px}
 .how-c h4{font-weight:800;font-size:17px;margin:14px 0 7px;letter-spacing:-.02em}
 .how-c p{font-size:13.5px;color:var(--muted);line-height:1.65}
-.evbanner{position:relative;overflow:hidden;border-radius:var(--r-lg);background:linear-gradient(110deg,var(--clay),#ff6a4e);color:#fff;padding:34px 44px;display:flex;align-items:center;justify-content:space-between;gap:24px;box-shadow:0 16px 40px rgba(232,53,46,.28)}
+.evbanner{position:relative;overflow:hidden;border-radius:var(--r-lg);background:linear-gradient(110deg,var(--clay),#ff6a4e);color:#fff;padding:34px 44px;display:flex;align-items:center;justify-content:space-between;gap:24px;box-shadow:0 16px 40px rgba(232,50,23,.28)}
 .evbanner::after{content:"🎉";position:absolute;right:-8px;bottom:-18px;font-size:110px;opacity:.18;transform:rotate(-12deg)}
 .evbanner .eb-tag{display:inline-block;background:rgba(255,255,255,.2);border-radius:40px;padding:5px 14px;font-weight:800;font-size:12px;letter-spacing:.08em;margin-bottom:10px}
 .evbanner h3{font-weight:900;font-size:clamp(19px,2.4vw,26px);letter-spacing:-.02em}
@@ -508,7 +523,7 @@ ul{list-style:none}
     <div class="wrap">
       <div class="hero2-in">
         <div class="h2-copy">
-          <span class="h2-badge">🥇 무인공간 업계 1위 · 전국 130개 지점</span>
+          <span class="h2-badge">🥇 무인공간 업계 1위 · <span id="hqNet">전국 파티룸 네트워크</span></span>
           <h1>오늘의 파티,<br><em>완벽한 공간</em>에서</h1>
           <p class="h2-sub">생일파티, 브라이덜샤워, 루프탑 바베큐, 올나잇까지 — 검색부터 입장까지 3분이면 충분해요.</p>
         </div>
@@ -516,7 +531,7 @@ ul{list-style:none}
           <div class="h2-card h2-c1"><div class="ph" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div></div>
           <div class="h2-card h2-c2"><div class="ph" style="background:linear-gradient(150deg,#2a1f2c,#8a5a7a)"></div></div>
           <div class="h2-card h2-c3"><div class="ph" style="background:linear-gradient(150deg,#232840,#5a6aa0)"></div></div>
-          <div class="h2-stat">⭐ <b>4.8</b>누적 후기 12,400+</div>
+          <div class="h2-stat">⭐ <b id="hqRating">4.8</b><span id="hqReviews">누적 후기 12,400+</span></div>
           <div class="h2-stat h2-stat2">🔑 <b>24H</b>무인 스마트 입장</div>
         </div>
       </div>
@@ -525,7 +540,7 @@ ul{list-style:none}
           <select id="hRegion"><option value="">전국 어디든</option><option>서울</option><option>경기</option><option>인천</option><option>부산</option><option>대구</option><option>대전</option><option>광주</option></select></div>
         <div class="hs-f"><label>이용 날짜</label><input type="date" id="hDate" /></div>
         <div class="hs-f"><label>모임 목적</label>
-          <select id="hPurpose"><option value="">어떤 모임인가요</option><option value="생일">생일파티</option><option value="브라이덜">브라이덜샤워</option><option value="바베큐">루프탑 바베큐</option><option value="노래방">노래방</option><option value="대형">동아리·단체</option><option value="워크샵">워크샵</option><option value="숙박">올나잇·숙박</option></select></div>
+          <select id="hPurpose"><option value="">어떤 모임인가요</option><option value="생일">생일파티</option><option value="브라이덜">브라이덜샤워</option><option value="바베큐">루프탑 바베큐</option><option value="노래방">노래방</option><option value="대형">동아리·단체</option><option value="촬영">촬영·스냅</option><option value="워크샵">워크샵</option><option value="숙박">올나잇·숙박</option></select></div>
         <button class="hs-btn" onclick="heroSearch()">파티룸 찾기 →</button>
       </div>
       <div class="h2-quick"><span class="ql">인기 검색</span><a href="rooms.html?purpose=바베큐">#루프탑바베큐</a><a href="rooms.html?purpose=브라이덜">#브라이덜샤워</a><a href="rooms.html?purpose=숙박">#올나잇</a><a href="rooms.html?purpose=노래방">#노래방</a><a href="rooms.html?region=서울">#서울</a></div>
@@ -543,6 +558,18 @@ ul{list-style:none}
     </div>
   </section>
 
+  <!-- ============ TODAY & TOMORROW ============ -->
+  <section class="sec-s" id="todaySec" style="display:none;padding:56px 0 0">
+    <div class="wrap">
+      <div class="sh-row reveal">
+        <div><span class="eyebrow">Today &amp; Tomorrow</span><h2 class="kh h-md">오늘·내일, 바로 예약 가능한 타임</h2></div>
+        <a href="rooms.html" class="tlink">날짜로 찾기 →</a>
+      </div>
+      <div class="tday-scroll" id="todayScroll"></div>
+      <p class="muted" style="font-size:13px;margin-top:14px">지금 비어 있는 타임만 모았어요. 결제까지 3분이면 예약이 끝납니다.</p>
+    </div>
+  </section>
+
   <!-- ============ CATEGORIES ============ -->
   <section class="sec-s" style="padding-top:60px">
     <div class="wrap">
@@ -551,12 +578,12 @@ ul{list-style:none}
         <a href="rooms.html" class="tlink">전체 보기 →</a>
       </div>
       <div class="mood-grid" style="grid-template-columns:repeat(4,1fr)">
-        <a href="rooms.html?purpose=생일" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#3a2230,#a85068)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🎂</div><div class="m-nm">생일파티</div></div></a>
-        <a href="rooms.html?purpose=브라이덜" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#2a1f2c,#8a5a7a)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">💍</div><div class="m-nm">브라이덜샤워</div></div></a>
+        <a href="purpose-birthday.html" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#3a2230,#a85068)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🎂</div><div class="m-nm">생일파티</div></div></a>
+        <a href="purpose-bridal.html" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#2a1f2c,#8a5a7a)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">💍</div><div class="m-nm">브라이덜샤워</div></div></a>
         <a href="rooms.html?purpose=바베큐" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🍖</div><div class="m-nm">루프탑 바베큐</div></div></a>
         <a href="rooms.html?purpose=노래방" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#232840,#5a6aa0)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🎤</div><div class="m-nm">노래방 파티룸</div></div></a>
-        <a href="rooms.html?purpose=대형" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#2b2740,#7d6a9c)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🎉</div><div class="m-nm">동아리·단체</div></div></a>
-        <a href="rooms.html?purpose=워크샵" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#1f3336,#5a8a86)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">💼</div><div class="m-nm">워크샵·세미나</div></div></a>
+        <a href="purpose-filming.html" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#2b2740,#7d6a9c)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">📸</div><div class="m-nm">촬영·스냅</div></div></a>
+        <a href="purpose-workshop.html" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#1f3336,#5a8a86)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">💼</div><div class="m-nm">워크샵·세미나</div></div></a>
         <a href="rooms.html?purpose=숙박" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#4a3128,#d18b5e)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🛏️</div><div class="m-nm">올나잇·숙박</div></div></a>
         <a href="rooms.html?purpose=반려동물" class="mood reveal" style="aspect-ratio:1/0.78"><div class="ph" style="background:linear-gradient(150deg,#213028,#6f9a72)"></div><div class="m-grad"></div><div class="m-body"><div class="m-ic">🐶</div><div class="m-nm">반려동물 동반</div></div></a>
       </div>
@@ -570,7 +597,7 @@ ul{list-style:none}
         <div><span class="eyebrow">Now Popular</span><h2 class="kh h-md">지금 가장 사랑받는 공간</h2></div>
         <a href="rooms.html" class="tlink">전체 공간 →</a>
       </div>
-      <div class="space-grid c4">
+      <div class="space-grid c4" id="popGrid">
 
         <div class="space reveal">
           <a href="room-detail.html?id=hongdae-rooftop" class="space-img"><div class="ph" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div><div class="space-badges"><span class="badge badge-clay">BEST</span></div></a>
@@ -676,18 +703,17 @@ ul{list-style:none}
   <section class="sec-s bg-paper2">
     <div class="wrap">
       <div class="sh-row reveal">
-        <div><span class="eyebrow">Nationwide 130+</span><h2 class="kh h-md">우리 동네 파티룸 찾기</h2></div>
+        <div><span class="eyebrow">Nationwide</span><h2 class="kh h-md">우리 동네 파티룸 찾기</h2></div>
         <a href="locations.html" class="tlink">지점 안내 →</a>
       </div>
       <div class="region-grid">
-        <a href="rooms.html?region=서울" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">서울</div><div class="r-ct">42개 공간</div></div></a>
-        <a href="rooms.html?region=경기" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#1f3336,#5a8a86)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">경기·인천</div><div class="r-ct">29개 공간</div></div></a>
-        <a href="rooms.html?region=부산" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#26302f,#5f8f88)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">부산·경상</div><div class="r-ct">24개 공간</div></div></a>
-        <a href="rooms.html?region=대구" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#213028,#6f9a72)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">대구</div><div class="r-ct">11개 공간</div></div></a>
-        <a href="rooms.html?region=대전" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#3d2c1e,#c99a5b)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">대전·충청</div><div class="r-ct">9개 공간</div></div></a>
-        <a href="rooms.html?region=광주" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#2b2740,#7d6a9c)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">광주·전라</div><div class="r-ct">7개 공간</div></div></a>
-        <a href="locations.html" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#232840,#5a6aa0)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">강원·제주</div><div class="r-ct">8개 공간</div></div></a>
-        <a href="locations.html" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#43291f,#cf6a4a)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">전체 지점 안내</div><div class="r-ct">130+ 지점 →</div></div></a>
+        <a href="rooms.html?region=서울" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#3a2a2f,#c65f47)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">서울</div><div class="r-ct" data-region-count="서울">19개 지점</div></div></a>
+        <a href="rooms.html?region=경기" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#1f3336,#5a8a86)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">경기</div><div class="r-ct" data-region-count="경기">20개 지점</div></div></a>
+        <a href="rooms.html?region=인천" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#26302f,#5f8f88)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">인천</div><div class="r-ct" data-region-count="인천">2개 지점</div></div></a>
+        <a href="rooms.html?region=부산" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#232840,#5a6aa0)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">부산</div><div class="r-ct" data-region-count="부산">2개 지점</div></div></a>
+        <a href="rooms.html?region=대전" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#3d2c1e,#c99a5b)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">대전</div><div class="r-ct" data-region-count="대전">1개 지점</div></div></a>
+        <a href="rooms.html?region=전주" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#213028,#6f9a72)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">전주</div><div class="r-ct" data-region-count="전주">1개 지점</div></div></a>
+        <a href="locations.html" class="region-c reveal"><div class="ph" style="background:linear-gradient(150deg,#43291f,#cf6a4a)"></div><div class="r-grad"></div><div class="r-body"><div class="r-nm">전체 지점 안내</div><div class="r-ct" id="regionTotal">전국 45개 →</div></div></a>
       </div>
     </div>
   </section>
@@ -762,7 +788,7 @@ ul{list-style:none}
     <div class="wrap">
       <div class="promo2">
         <a href="corporate.html" class="promo reveal"><div class="ph" style="background:linear-gradient(150deg,#232840,#5a6aa0)"></div><div class="p-grad"></div><div class="p-body"><span class="eyebrow" style="color:#cdd8ff">For Business</span><h3>팀을 위한 완벽한 공간</h3><p>워크샵·회식·행사를 한 번에. 케이터링 연계와 세금계산서 당일 발행까지.</p><span class="btn btn-paper btn-sm">기업대관 →</span></a>
-        <a href="franchise.html" class="promo reveal"><div class="ph" style="background:linear-gradient(150deg,#43291f,#cf6a4a)"></div><div class="p-grad"></div><div class="p-body"><span class="eyebrow" style="color:#ffd9cc">Franchise</span><h3>비어 있는 공간을 수익으로</h3><p>SPMS 자동화 시스템으로 검증된 무인 운영 모델. 130개 지점의 노하우를 나눕니다.</p><span class="btn btn-paper btn-sm">창업 상담 →</span></a>
+        <a href="franchise.html" class="promo reveal"><div class="ph" style="background:linear-gradient(150deg,#43291f,#cf6a4a)"></div><div class="p-grad"></div><div class="p-body"><span class="eyebrow" style="color:#ffd9cc">Franchise</span><h3>비어 있는 공간을 수익으로</h3><p>SPMS 자동화 시스템으로 검증된 무인 운영 모델. 전 지점의 운영 노하우를 나눕니다.</p><span class="btn btn-paper btn-sm">창업 상담 →</span></a>
       </div>
     </div>
   </section>
@@ -791,24 +817,24 @@ ul{list-style:none}
     <div class="ftr-top">
       <div>
         <div class="brand"><span class="bm">✦</span><span class="bt"><span class="bn">SSOPLE</span><span class="bs">쏘플파티룸</span></span></div>
-        <p class="ftr-desc">즐거움이 가득한 프라이빗 공간의 끝판왕. 전국 130개 지점, 340여 개의 공간에서 오늘의 파티를 시작하세요.</p>
+        <p class="ftr-desc">즐거움이 가득한 프라이빗 공간의 끝판왕. 전국 곳곳의 프라이빗 파티룸에서, 오늘의 파티를 시작하세요.</p>
         <div class="ftr-ph">1544-3523</div>
-        <div class="ftr-hrs">평일 10:00–19:00 · 예약은 연중무휴 24시간</div>
+        <div class="ftr-hrs">월–목 10:00–19:00 · 금–일 10:00–22:00 · 예약은 연중무휴 24시간</div>
         <div class="ftr-sns"><a href="#" aria-label="instagram">📷</a><a href="#" aria-label="kakao">💬</a><a href="#" aria-label="blog">📝</a></div>
       </div>
-      <div class="ftr-col"><h5>공간</h5><a href="rooms.html">파티룸 찾기</a><a href="locations.html">지점 안내</a><a href="rooms.html?purpose=바베큐">루프탑 바베큐</a><a href="rooms.html?purpose=생일">생일파티</a><a href="corporate.html">기업대관</a></div>
+      <div class="ftr-col"><h5>공간</h5><a href="rooms.html">파티룸 찾기</a><a href="locations.html">지점 안내</a><a href="rooms.html?purpose=바베큐">루프탑 바베큐</a><a href="purpose-birthday.html">생일파티</a><a href="corporate.html">기업대관</a></div>
       <div class="ftr-col"><h5>서비스</h5><a href="gift.html">선물하기</a><a href="membership.html">멤버십</a><a href="event.html">이벤트 · 공지</a><a href="/lookup.html">예약 조회</a><a href="franchise.html">창업안내</a></div>
       <div class="ftr-col"><h5>고객지원</h5><a href="guide.html">이용안내</a><a href="guide.html#faq">자주 묻는 질문</a><a href="reviews.html">이용후기</a><a href="about.html">브랜드 소개</a><a href="tel:1544-3523">고객센터</a></div>
       <div class="ftr-col"><h5>점주 · 본사</h5><a href="https://host.ssople.co.kr" target="_blank" rel="noopener">호스트 센터</a><a href="https://admin.ssople.co.kr" target="_blank" rel="noopener">본사 대시보드</a><a href="franchise.html">창업 문의</a></div>
     </div>
     <div class="ftr-bot">
-      <div>(주)소셜패밀리 · 대표 최시준 · contact@socialfamily.co.kr<br>무인공간 업계 1위 · Since 2016 · 전국 130개 지점</div>
+      <div>(주)소셜패밀리 · 대표 최시준 · contact@socialfamily.co.kr<br>무인공간 업계 1위 · Since 2016 · 전국 파티룸 네트워크</div>
       <div class="ftr-legal"><a href="#">이용약관</a><a href="#">개인정보처리방침</a><span>© 2026 SSOPLE</span></div>
     </div>
   </div>
 </footer>
 <div class="floaters">
-  <a class="fab kakao" href="http://pf.kakao.com/_ssople/chat" target="_blank" rel="noopener" aria-label="카카오 상담"><span class="fab-tip">카카오 상담</span>💬</a>
+  <a class="fab kakao" href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" aria-label="카카오 상담"><span class="fab-tip">카카오 상담</span>💬</a>
   <button class="fab ai" id="aiFab" onclick="toggleChat()" aria-label="AI 공간추천"><span class="fab-tip">AI 공간추천</span>✦</button>
 </div>
 <div class="chatbox" id="chatbox">
@@ -878,10 +904,10 @@ const REVIEWS = [
 ];
 
 const REGIONS = [
-  {nm:"서울", count:42, g:0}, {nm:"경기·인천", count:29, g:3},
-  {nm:"부산·경상", count:24, g:11}, {nm:"대전·충청", count:9, g:6},
-  {nm:"광주·전라", count:7, g:5}, {nm:"강원", count:5, g:7},
-  {nm:"제주", count:4, g:2}, {nm:"전국 130+", count:130, g:1}
+  {nm:"서울", count:19, g:0}, {nm:"경기", count:20, g:3},
+  {nm:"인천", count:2, g:11}, {nm:"부산", count:2, g:6},
+  {nm:"대전", count:1, g:5}, {nm:"전주", count:1, g:7},
+  {nm:"전국 전체", count:45, g:1}
 ];
 
 const MOODS = [

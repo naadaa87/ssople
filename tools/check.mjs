@@ -36,9 +36,10 @@ console.log('\n[2] HTML 인라인 스크립트');
 let htmlBad = 0;
 for (const f of files.filter((x) => extname(x) === '.html')) {
   const s = readFileSync(f, 'utf8');
-  for (const m of s.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
-    if (!m[1].trim()) continue;
-    try { new vm.Script(m[1], { filename: f }); }
+  for (const m of s.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+    if (/type=["'](application\/(ld\+json|json))/.test(m[1])) continue;   /* 구조화 데이터는 JSON */
+    if (!m[2].trim()) continue;
+    try { new vm.Script(m[2], { filename: f }); }
     catch (e) { bad(`${f} → ${e.message.split('\n')[0]}`); htmlBad++; }
   }
 }

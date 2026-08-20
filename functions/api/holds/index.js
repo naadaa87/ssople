@@ -1,6 +1,6 @@
 /* 홀드 생성 — 결제 진행 중 그 타임을 잠급니다 */
-import { ok, err, readJson, requireCustomer, getSetting } from '../../lib/core.js';
-import { getAvailability, calcAmount, createHold, SLOTS } from '../../lib/booking.js';
+import { ok, err, readJson, requireCustomer } from '../../lib/core.js';
+import { getAvailability, calcAmount, createHold, branchDeposit, payMode, payBreakdown, SLOTS } from '../../lib/booking.js';
 
 export async function onRequestPost({ request, env }) {
   const { session, error } = await requireCustomer(env, request);
@@ -25,8 +25,10 @@ export async function onRequestPost({ request, env }) {
     return err('방금 다른 분이 예약을 마쳤습니다. 다른 날짜나 타임을 골라주세요.', 409, { code: 'SLOT_TAKEN' });
 
   /* 금액은 서버가 계산합니다 */
-  const amt = calcAmount(av.branch, slot, people || av.branch.base_people);
-  const deposit = Number(await getSetting(env, 'deposit.amount', '80000'));
+  const amt = calcAmount(av.branch, slot, people || av.branch.base_people, date);
+  const deposit = await branchDeposit(env, av.branch);
+  const mode = await payMode(env);
+  const pb = payBreakdown(mode, amt.totalAmount, deposit);
 
   const hold = await createHold(env, {
     branchId, dateStr: date, slot, customerId: session.customerId, amount: deposit,
@@ -35,6 +37,6 @@ export async function onRequestPost({ request, env }) {
 
   return ok({
     holdId: hold.holdId, expiresAt: hold.expiresAt, expiresIn: hold.expiresIn,
-    ...amt, deposit, balance: Math.max(0, amt.totalAmount - deposit),
+    ...amt, deposit, payMode: mode, payAmount: pb.payAmount, balance: pb.balance,
   });
 }

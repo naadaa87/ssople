@@ -1,6 +1,6 @@
 /* 지점 상세 */
 import { ok, err } from '../../lib/core.js';
-import { slotTime, SLOT_LABEL } from '../../lib/booking.js';
+import { slotTime, SLOT_LABEL, slotPrice, branchDeposit } from '../../lib/booking.js';
 
 export async function onRequestGet({ params, env }) {
   const id = Number(params.id);
@@ -14,12 +14,18 @@ export async function onRequestGet({ params, env }) {
 
   const rv = await env.DB.prepare(
     `SELECT COUNT(*) c, ROUND(AVG(rating),1) avg FROM reviews
-      WHERE branch_id=? AND visibility='visible'`).bind(id).first();
+      WHERE branch_id=? AND hidden=0`).bind(id).first();
+
+  const deposit = await branchDeposit(env, b);
+  let priceRules = null;
+  try { priceRules = b.price_rules ? JSON.parse(b.price_rules) : null; } catch { priceRules = null; }
 
   return ok({
     branch: {
-      id: b.id, code: b.code, name: b.name, region: b.region,
+      id: b.id, code: b.code, name: b.name, region: b.region, area: b.area,
       address: b.address, lat: b.lat, lng: b.lng,
+      mgmtType: b.mgmt_type, deposit, priceRules,
+      features: parse(b.features), petOk: !!b.pet_ok, bbqOk: !!b.bbq_ok, karaokeOk: !!b.karaoke_ok,
       intro: b.intro, guideText: b.guide_text, parkingText: b.parking_text,
       dayPrice: b.day_price, nightPrice: b.night_price,
       basePeople: b.base_people, extraPrice: b.extra_price, maxPeople: b.max_people,
@@ -27,7 +33,7 @@ export async function onRequestGet({ params, env }) {
       photos: photos.map((p) => p.url),
       slots: ['day', 'night'].map((s) => ({
         slot: s, label: SLOT_LABEL[s], time: slotTime(b, s).label,
-        price: s === 'night' ? b.night_price : b.day_price,
+        price: slotPrice(b, s),
       })),
       rating: rv?.avg || null, reviewCount: rv?.c || 0,
     },

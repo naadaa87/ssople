@@ -12,15 +12,18 @@
 const TEMPLATES = {
   'WEB-01': {
     title: '예약 확정',
-    body: ({ name, code, when, branch, address, deposit, balance }) =>
+    body: ({ name, code, when, branch, address, deposit, balance, payLine, guestUrl }) =>
 `${name}님, 예약이 확정되었습니다.
 
 예약번호 ${code}
 일시 ${when}
 지점 ${branch}
 주소 ${address}
-결제하신 예약금 ${deposit}원
-현장 잔금 ${balance}원
+${payLine || `결제하신 예약금 ${deposit}원
+현장 잔금 ${balance}원`}${guestUrl ? `
+
+참석자 안내 링크 (함께 오시는 분들께 전달하세요)
+${guestUrl}` : ''}
 
 방문 전 이용안내를 확인해 주세요.`,
   },
@@ -51,6 +54,17 @@ const TEMPLATES = {
 일시 ${when}
 환불 금액 ${refund}원
 ${note}`,
+  },
+  'WEB-06': {
+    title: '재예약 감사 쿠폰',
+    body: ({ name, branch, title, value, days }) =>
+`${name}님, 지난 ${branch} 이용 감사드립니다.
+
+[${title}] ${value} 쿠폰을 드렸어요.
+마이페이지 > 쿠폰에서 확인하실 수 있고,
+${days}일 안에 어느 지점에서나 쓰실 수 있습니다.
+
+다음 파티도 쏘플이 준비하고 있을게요.`,
   },
   'WEB-05': {
     title: '이용 감사 · 후기 요청',
@@ -96,9 +110,13 @@ export async function notify(env, code, to, vars, opts = {}) {
 async function log(env, { code, to, body, channel, status, error = null, reservationId = null, branchId = null }) {
   try {
     await env.DB.prepare(
-      `INSERT INTO message_logs (branch_id, reservation_id, template_code, recipient, channel, body, status, error, created_at)
-       VALUES (?,?,?,?,?,?,?,?,datetime('now'))`
-    ).bind(branchId, reservationId, code, to, channel, body, status, error).run();
+      /* 호스트 센터 「발송 내역」과 같은 테이블에 남깁니다.
+         branch_id 가 없는 발송(회원 가입 등)은 로그를 남기지 않습니다. */
+      `INSERT INTO message_logs (branch_id, reservation_id, sender, template, channel, content, status, created_at)
+       VALUES (?,?,?,?,?,?,?,datetime('now'))`
+    ).bind(branchId, reservationId, '홈페이지', `${code} ${TEMPLATES[code]?.title || ""}`.trim(),
+           channel, `${to} · ${body}`.slice(0, 2000),
+           error ? `fail: ${String(error).slice(0, 120)}` : status).run();
   } catch { /* 호스트 스키마 미적용 상태 */ }
 }
 

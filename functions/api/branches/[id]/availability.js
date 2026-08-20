@@ -1,6 +1,6 @@
 /* 날짜별 예약 가능 타임 */
-import { ok, err, getSetting } from '../../../lib/core.js';
-import { getAvailability, calcAmount } from '../../../lib/booking.js';
+import { ok, err } from '../../../lib/core.js';
+import { getAvailability, calcAmount, branchDeposit } from '../../../lib/booking.js';
 
 export async function onRequestGet({ params, request, env }) {
   const id = Number(params.id);
@@ -13,7 +13,7 @@ export async function onRequestGet({ params, request, env }) {
   if (av.error) return err('지점을 찾을 수 없습니다.', 404);
 
   const head = people || av.branch.base_people;
-  const deposit = Number(await getSetting(env, 'deposit.amount', '80000'));
+  const deposit = await branchDeposit(env, av.branch);
 
   return ok({
     date, branchId: id,
@@ -23,7 +23,7 @@ export async function onRequestGet({ params, request, env }) {
     deposit,
     closedAllDay: !!av.closedAllDay,
     slots: av.slots.map((s) => {
-      const amt = calcAmount(av.branch, s.slot, head);
+      const amt = calcAmount(av.branch, s.slot, head, date);
       return { ...s, ...amt, deposit, balance: Math.max(0, amt.totalAmount - deposit) };
     }),
   });

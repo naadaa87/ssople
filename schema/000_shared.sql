@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS reservations (
 );
 CREATE INDEX IF NOT EXISTS idx_res_branch_date ON reservations(branch_id, use_date);
 CREATE INDEX IF NOT EXISTS idx_res_phone ON reservations(phone);
-CREATE INDEX IF NOT EXISTS idx_res_customer ON reservations(customer_id);
+-- idx_res_customer 는 컬럼을 추가한 뒤에 만들어야 하므로 000_alter.sql 로 옮겼습니다.
 
 -- 지점 휴무
 CREATE TABLE IF NOT EXISTS branch_closures (

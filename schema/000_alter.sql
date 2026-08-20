@@ -14,3 +14,6 @@ ALTER TABLE branches ADD COLUMN day_end INTEGER DEFAULT 18;
 ALTER TABLE branches ADD COLUMN night_start INTEGER DEFAULT 19;
 ALTER TABLE branches ADD COLUMN night_end INTEGER DEFAULT 25;
 ALTER TABLE reservations ADD COLUMN customer_id INTEGER;
+
+-- 회원 예약 조회용 인덱스 (customer_id 컬럼을 추가한 뒤에 만듭니다)
+CREATE INDEX IF NOT EXISTS idx_res_customer ON reservations(customer_id);
