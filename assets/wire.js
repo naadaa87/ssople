@@ -260,6 +260,21 @@
     }
     document.title = `${b.name} — 쏘플파티룸`;
 
+    /* 오시는 길 · 네이버 예약 바로가기 */
+    const areaEl = document.getElementById('dArea');
+    if (areaEl && (b.naverPlace || b.address)) {
+      const links = document.createElement('div');
+      links.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px';
+      const mapUrl = b.naverPlace || `https://map.naver.com/v5/search/${encodeURIComponent(b.address || b.name)}`;
+      links.innerHTML = `
+        <a class="btn btn-line btn-xs" href="${esc(mapUrl)}" target="_blank" rel="noopener">📍 네이버 지도</a>
+        <button type="button" class="btn btn-line btn-xs" id="dCopyAddr">주소 복사</button>`;
+      areaEl.parentNode?.insertBefore(links, areaEl.nextSibling);
+      document.getElementById('dCopyAddr')?.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(b.address || ''); toast('주소를 복사했습니다'); } catch {}
+      });
+    }
+
     const amen = document.getElementById('dAmen');
     if (amen) amen.innerHTML = (b.amenities || []).map((t) => `<span class="amen-i">${esc(t)}</span>`).join('')
       || '<span class="muted">등록된 편의시설이 없습니다</span>';
@@ -336,6 +351,8 @@
       people: b.basePeople, data: null,
     };
 
+    const viaNaver = b.bookingMode === 'naver' && b.naverPkgs?.length;
+
     book.innerHTML = `
       <div class="bk-price" id="bkPrice">타임을 골라주세요</div>
       <div class="muted" style="font-size:13px;margin-bottom:14px">
@@ -343,16 +360,19 @@
       <div class="field"><label for="bkDate">이용 날짜</label>
         <input class="input" type="date" id="bkDate" value="${st.date}" min="${todayStr()}"></div>
       <div class="field"><label>타임</label><div class="slotpick" id="bkSlots"></div></div>
+      ${viaNaver ? '' : `
       <div class="field"><label for="bkPeople">인원</label>
         <select class="input" id="bkPeople">${
           Array.from({ length: b.maxPeople }, (_, i) => i + 1)
             .map((n) => `<option value="${n}"${n === b.basePeople ? ' selected' : ''}>${n}명${
               n > b.basePeople ? ` (추가 ${n - b.basePeople}명)` : ''}</option>`).join('')
-        }</select></div>
+        }</select></div>`}
       <div id="bkPay"></div>
       <button class="btn btn-clay btn-block" id="bkGo" disabled style="margin-top:16px">타임을 골라주세요</button>
       <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">
-        이용 7일 전까지 취소하면 예약금 전액을 돌려드립니다</div>`;
+        ${viaNaver
+          ? '취소·환불은 네이버 예약 규정을 따릅니다'
+          : '이용 7일 전까지 취소하면 예약금 전액을 돌려드립니다'}</div>`;
 
     const $date = document.getElementById('bkDate');
     const $slots = document.getElementById('bkSlots');
@@ -360,6 +380,59 @@
     const $pay = document.getElementById('bkPay');
     const $go = document.getElementById('bkGo');
     const $price = document.getElementById('bkPrice');
+
+    /* ---------- 네이버 예약으로 받는 지점 ----------
+       예약과 결제는 네이버에서 이뤄집니다. 홈페이지는 요금과 조건을
+       한눈에 보여주고, 고르신 타임의 네이버 예약 페이지로 연결합니다. */
+    if (b.bookingMode === 'naver' && b.naverPkgs?.length) {
+      const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+      const dowPrice = (arr, dateStr) => {
+        if (!Array.isArray(arr)) return null;
+        const d = new Date(`${dateStr}T00:00:00Z`).getUTCDay();
+        const i = d === 5 ? 1 : d === 6 ? 2 : d === 0 ? 3 : 0;
+        return arr[i] ?? arr[0] ?? null;
+      };
+      let pick = b.naverPkgs[0];
+
+      const draw = () => {
+        const dateStr = $date.value || todayStr();
+        $slots.innerHTML = b.naverPkgs.map((k, i) => {
+          const price = dowPrice(k.price, dateStr);
+          return `
+          <button type="button" class="slotcard${pick === b.naverPkgs[i] ? ' sel' : ''}" data-k="${i}"
+                  ${price ? '' : 'disabled'}>
+            <div class="sn">${esc(k.label)}</div>
+            <div class="st">${price ? `${DOW[new Date(`${dateStr}T00:00:00Z`).getUTCDay()]}요일 요금` : '이 요일 운영 안 함'}</div>
+            <div class="sp">${price ? won(price) : '—'}</div>
+          </button>`;
+        }).join('');
+        $slots.querySelectorAll('[data-k]').forEach((el) =>
+          el.addEventListener('click', () => { pick = b.naverPkgs[Number(el.dataset.k)]; draw(); }));
+
+        const price = dowPrice(pick?.price, dateStr);
+        $price.innerHTML = price
+          ? `${won(price)} <small>· ${esc(pick.label)}</small>`
+          : '이용 가능한 타임을 골라주세요';
+        $pay.innerHTML = `
+          <div class="paybox">
+            <div class="pr"><span class="k">기본 인원</span><span>${b.basePeople}명 (최대 ${b.maxPeople}명)</span></div>
+            <div class="pr"><span class="k">인원 추가</span><span>1인당 ${won(b.extraPrice || 10000)}</span></div>
+            <div class="pt"><span>보증금</span><span class="v">${won(b.deposit)} · 이용 후 환급</span></div>
+          </div>
+          <p class="muted" style="font-size:12.5px;margin-top:10px;line-height:1.6">
+            예약과 결제는 <b>네이버 예약</b>에서 진행됩니다. 실시간 잔여 타임과 정확한 요금은
+            네이버 예약 화면에서 확인하실 수 있어요.</p>`;
+        $go.disabled = !pick?.url;
+        $go.textContent = pick?.url ? `네이버로 ${esc(pick.label)} 예약하기 →` : '예약 링크 준비 중';
+      };
+
+      $date.addEventListener('change', draw);
+      $go.addEventListener('click', () => {
+        if (pick?.url) window.open(pick.url, '_blank', 'noopener');
+      });
+      draw();
+      return;
+    }
 
     async function loadSlots() {
       $slots.innerHTML = `<div class="skel" style="height:96px"></div><div class="skel" style="height:96px"></div>`;

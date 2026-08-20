@@ -60,6 +60,8 @@ export async function onRequestGet({ request, env }) {
       id: b.id, code: b.code, name: b.name, region: b.region, area: b.area, address: b.address,
       photo: b.photo, tags: tags(b), amenities: amenities(b), features: parse(b.features),
       petOk: !!b.pet_ok, bbqOk: !!b.bbq_ok, karaokeOk: !!b.karaoke_ok, mgmtType: b.mgmt_type,
+      bookingMode: b.booking_mode || 'naver',
+      naverPlace: b.naver_place || null,
       dayPrice: b.day_price, nightPrice: b.night_price,
       basePeople: b.base_people, maxPeople: b.max_people, extraPrice: b.extra_price,
       minPrice: minPrice(b), rating: b.rating, reviewCount: b.review_count,

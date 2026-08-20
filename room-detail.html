@@ -802,7 +802,9 @@ function initHeroSlider(slides){
   function goBook(e){e.preventDefault();
     const d=document.getElementById('bDate').value||'날짜미정';
     const ppl=document.getElementById('bPeople').value;
-    location.href=`booking.html?id=${room.id}&date=${d}&slot=${encodeURIComponent(slot)}&people=${ppl}`;
+    /* 예약은 오른쪽 위젯(네이버 예약 연결)에서 진행합니다 */
+    document.getElementById('bkGo')?.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
   }
   render();
 </script>
