@@ -16,7 +16,7 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "ssople-web"
-database_id = "여기에-ssople-web-Database-ID-붙여넣기"
+database_id = "da797810-a703-49b5-ac96-231d7b7c7b26"
 
 # ② 호스트 예약 DB — 지금은 쓰지 않아요 (호스트·대시보드·챗봇 보류).
 #    나중에 호스트 센터를 다시 쓰고, 그 DB가 이 Cloudflare 계정의 D1이라면
