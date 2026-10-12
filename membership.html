@@ -3,27 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>쏘플 클럽</title>
+<title>쏘플 클럽 — 다녀갈수록 올라가는 등급 혜택</title>
 <meta name="description" content="쏘플파티룸을 다녀갈수록 등급이 오르는 쏘플 클럽. 방문 인증, 등급별 혜택, 배지, 기념일 알림을 확인하세요.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="쏘플파티룸">
 <meta property="og:locale" content="ko_KR">
-<meta property="og:title" content="쏘플 클럽">
+<meta property="og:title" content="쏘플 클럽 — 다녀갈수록 올라가는 등급 혜택">
 <meta property="og:description" content="쏘플파티룸을 다녀갈수록 등급이 오르는 쏘플 클럽. 방문 인증, 등급별 혜택, 배지, 기념일 알림을 확인하세요.">
-<meta property="og:image" content="/assets/img/og.png">
+<meta property="og:image" content="/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="쏘플파티룸">
 <meta property="og:url" content="">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="쏘플 클럽 — 다녀갈수록 올라가는 등급 혜택">
+<meta name="twitter:description" content="쏘플파티룸을 다녀갈수록 등급이 오르는 쏘플 클럽. 방문 인증, 등급별 혜택, 배지, 기념일 알림을 확인하세요.">
+<meta name="twitter:image" content="/assets/img/og.jpg">
+<meta name="keywords" content="파티룸 멤버십, 쏘플 클럽, 파티룸 단골 혜택, 쏘플파티룸">
 <link rel="canonical" href="">
+<meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="theme-color" content="#ffffff">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/img/icon-192.png">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&amp;display=swap">
 <link rel="stylesheet" href="/assets/app.css?v=20261012">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "예약번호는 어디서 보나요?", "acceptedAnswer": {"@type": "Answer", "text": "네이버 예약 확정 알림이나 네이버 앱의 예약 내역에서 볼 수 있어요. 예약 확정 문자에 적힌 번호를 그대로 넣어도 돼요."}}, {"@type": "Question", "name": "인증이 바로 안 되면요?", "acceptedAnswer": {"@type": "Answer", "text": "예약 기록을 자동으로 찾지 못하면 운영진이 직접 확인해요. 보통 1~2일 안에 처리되고, 결과는 알림으로 알려 드려요."}}, {"@type": "Question", "name": "한 예약으로 여러 명이 인증할 수 있나요?", "acceptedAnswer": {"@type": "Answer", "text": "예약번호 하나는 한 계정에서만 인증돼요. 예약한 분 계정으로 인증해 주세요."}}, {"@type": "Question", "name": "혜택은 어떻게 쓰나요?", "acceptedAnswer": {"@type": "Answer", "text": "제휴 혜택은 제휴·협업 화면에서 등급별로 확인할 수 있어요. 행사 우선 신청은 등급에 맞는 행사가 열릴 때 따로 알려 드려요."}}]}</script>
 </head>
 <body data-page="membership" data-nav="membership">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -116,13 +125,16 @@
 <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
 <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="3.5" width="11" height="17" rx="1.5"/><path d="M15 9h3.5A1.5 1.5 0 0 1 20 10.5v10H4M8 7.5h3M8 11h3M8 14.5h3"/></symbol>
 <symbol id="i-handshake" viewBox="0 0 24 24"><path d="m3 11 4-4 4 1.5L14 6l7 5M3 11l5.5 5.5a1.6 1.6 0 0 0 2.3 0l.7-.7M21 11l-6.8 6.2a1.6 1.6 0 0 1-2.2 0M11 8.5 8.6 11a1.5 1.5 0 0 0 2.1 2.1l2.3-2"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 12 20 3m-3 3 2.5 2.5M14.5 8.5 17 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-tool" viewBox="0 0 24 24"><path d="m14.5 6.5 3 3L7 20H4v-3L14.5 6.5zM12 9l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m16 3 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 </svg>
 
 <a class="skip" href="#main">본문 바로가기</a>
 <div class="notice-bar" hidden></div>
 <header class="hd">
   <div class="wrap hd-in">
-    <a class="logo" href="/" aria-label="쏘플파티룸 처음으로"><svg class="logo-mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#E83217"/><path d="M11.5 20.5c2.6 3.2 10.4 3.2 13 0" stroke="#fff" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="13.2" cy="14" r="2.1" fill="#fff"/><circle cx="22.8" cy="14" r="2.1" fill="#fff"/></svg><span class="logo-word">쏘플파티룸</span></a>
+    <a class="logo" href="/" aria-label="쏘플파티룸 처음으로"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
     <nav class="gnb" aria-label="주요 메뉴">
       <a href="/rooms" data-nav="rooms room">지점 찾기</a>
       <a href="/event" data-nav="event">행사</a>
@@ -131,6 +143,7 @@
       <a href="/community" data-nav="community">커뮤니티</a>
       <a href="/play" data-nav="play">놀이터</a>
       <a href="/membership" data-nav="membership">쏘플 클럽</a>
+      <a href="/startup" data-nav="startup" class="gnb-biz">창업안내</a>
     </nav>
     <div class="hd-act">
       <a class="ibtn hide-m" href="/rooms" aria-label="지점 찾기"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></a>
@@ -143,7 +156,7 @@
 <div class="drawer">
   <div class="drawer-bg"></div>
   <div class="drawer-panel" role="dialog" aria-label="메뉴">
-    <div class="between" style="margin-bottom:6px"><a class="logo" href="/"><svg class="logo-mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#E83217"/><path d="M11.5 20.5c2.6 3.2 10.4 3.2 13 0" stroke="#fff" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="13.2" cy="14" r="2.1" fill="#fff"/><circle cx="22.8" cy="14" r="2.1" fill="#fff"/></svg><span class="logo-word">쏘플파티룸</span></a><button class="ibtn" type="button" data-x aria-label="메뉴 닫기"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="between" style="margin-bottom:6px"><a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a><button class="ibtn" type="button" data-x aria-label="메뉴 닫기"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <nav>
       <div id="drawerUser"><a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a></div>
       <a href="/rooms">지점 찾기</a>
@@ -158,15 +171,22 @@
       <a href="/membership">쏘플 클럽</a>
       <a href="/partners">제휴·협업</a>
       <a href="/corporate">기업·단체 행사</a>
+      <a href="/startup">창업안내 · 공간 파트너</a>
       <a href="/guide">이용 안내</a>
+      <a href="/about">브랜드 소개</a>
     </nav>
   </div>
 </div>
 
 <main id="main">
 <div class="wrap page-hd">
-  <h1 class="h1">쏘플 클럽</h1>
-  <p class="lead">다녀갈수록 등급이 올라요. 이용한 뒤 예약번호로 방문 인증만 하면 돼요.</p>
+  <div class="split">
+    <div>
+      <h1 class="h1">쏘플 클럽</h1>
+      <p class="lead">다녀갈수록 등급이 올라요. 이용한 뒤 예약번호로 방문 인증만 하면 돼요.</p>
+    </div>
+    <figure><img src="/assets/img/photo/brand-kit.webp" alt="쏘플 클럽 굿즈와 브랜드 키트" width="1400" height="1050" fetchpriority="high"></figure>
+  </div>
 </div>
 <div class="wrap">
   <div id="myClub"></div>
@@ -199,19 +219,19 @@
   <div class="wrap">
     <div class="ft-top">
       <div class="ft-brand">
-        <a class="logo" href="/"><svg class="logo-mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#E83217"/><path d="M11.5 20.5c2.6 3.2 10.4 3.2 13 0" stroke="#fff" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="13.2" cy="14" r="2.1" fill="#fff"/><circle cx="22.8" cy="14" r="2.1" fill="#fff"/></svg><span class="logo-word">쏘플파티룸</span></a>
+        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
         <div class="ft-cs"><span>고객센터</span><b data-set="cs.phone">1544-3523</b><span data-set="cs.hours">월~목 10:00~19:00 · 금~일 10:00~22:00</span></div>
         <a class="btn btn-kakao btn-sm" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" style="margin-top:14px"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카카오톡 상담</a>
       </div>
       <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비</h4><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
-      <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/partners">제휴·협업</a><a href="/partners#space">공간 입점 상담</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
+      <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/startup">창업안내</a><a href="/partners">제휴·협업</a><a href="/corporate">기업·단체 행사</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
     </div>
     <div class="ft-bot">
       <div>
         <div data-biz>(주)소셜패밀리 | 대표 최시준 | contact@socialfamily.co.kr</div>
-        <div>쏘플파티룸은 파티·모임을 위한 공간 대여 서비스예요. 숙박 목적으로는 이용할 수 없고, 예약과 결제는 네이버 예약에서 진행돼요.</div>
+        <div>쏘플파티룸은 생일파티·브라이덜 샤워·워크숍·모임을 위한 전국 파티룸 대여 서비스예요. 숙박 목적으로는 이용할 수 없고, 예약과 결제는 네이버 예약에서 진행돼요.</div>
         <div class="ft-legal" data-sns style="margin-top:6px"></div>
       </div>
       <div class="ft-legal"><a href="/terms">이용약관</a><a href="/privacy">개인정보처리방침</a><a href="/policy">커뮤니티 운영정책</a><span>© SSOPLE</span></div>

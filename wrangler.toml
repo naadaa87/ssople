@@ -12,7 +12,7 @@ pages_build_output_dir = "."
 
 # ① 고객 홈페이지 전용 DB (회원·커뮤니티·모임·행사·방막기)
 #    처음 접속할 때 표가 자동으로 만들어지고 지점 데이터(운영 36곳 공개)가 들어갑니다. SQL을 실행할 필요가 없어요.
-#    ↓ 아래 "여기에-..." 글자를 지우고 ssople-web의 Database ID를 붙여넣으세요. 그대로 두면 배포가 실패해요.
+#    ssople-web Database ID 입력 완료 (2026.10.12)
 [[d1_databases]]
 binding = "DB"
 database_name = "ssople-web"

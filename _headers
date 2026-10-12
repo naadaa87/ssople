@@ -9,3 +9,9 @@
 
 /assets/img/*
   Cache-Control: public, max-age=604800
+
+/assets/media/*
+  Cache-Control: public, max-age=604800
+
+/favicon.ico
+  Cache-Control: public, max-age=604800

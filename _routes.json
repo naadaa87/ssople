@@ -10,6 +10,8 @@
     "/i/*",
     "/sitemap.xml",
     "/robots.txt",
+    "/area/*",
+    "/rss.xml",
     "/",
     "/rooms",
     "/locations",
@@ -30,7 +32,10 @@
     "/purpose-yearend",
     "/purpose-workshop",
     "/purpose-filming",
-    "/purpose-reunion"
+    "/purpose-reunion",
+    "/startup",
+    "/area",
+    "/room-detail"
   ],
   "exclude": []
 }

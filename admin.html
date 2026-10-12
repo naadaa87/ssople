@@ -10,18 +10,24 @@
 <meta property="og:locale" content="ko_KR">
 <meta property="og:title" content="관리자 | 쏘플파티룸">
 <meta property="og:description" content="쏘플파티룸 홈페이지 관리">
-<meta property="og:image" content="/assets/img/og.png">
+<meta property="og:image" content="/assets/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="쏘플파티룸">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="관리자 | 쏘플파티룸">
+<meta name="twitter:description" content="쏘플파티룸 홈페이지 관리">
+<meta name="twitter:image" content="/assets/img/og.jpg">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#ffffff">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/img/icon-192.png">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&amp;display=swap">
 <link rel="stylesheet" href="/assets/app.css?v=20261012">
 <link rel="stylesheet" href="/assets/admin.css?v=20261012">
 </head>
@@ -116,12 +122,15 @@
 <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
 <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="3.5" width="11" height="17" rx="1.5"/><path d="M15 9h3.5A1.5 1.5 0 0 1 20 10.5v10H4M8 7.5h3M8 11h3M8 14.5h3"/></symbol>
 <symbol id="i-handshake" viewBox="0 0 24 24"><path d="m3 11 4-4 4 1.5L14 6l7 5M3 11l5.5 5.5a1.6 1.6 0 0 0 2.3 0l.7-.7M21 11l-6.8 6.2a1.6 1.6 0 0 1-2.2 0M11 8.5 8.6 11a1.5 1.5 0 0 0 2.1 2.1l2.3-2"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 12 20 3m-3 3 2.5 2.5M14.5 8.5 17 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-tool" viewBox="0 0 24 24"><path d="m14.5 6.5 3 3L7 20H4v-3L14.5 6.5zM12 9l3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m16 3 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 </svg>
 
 
 <div class="adm-login" id="admLogin" hidden>
   <form class="adm-login-card" id="admLoginForm" novalidate>
-    <a class="logo" href="/" aria-label="쏘플파티룸 홈페이지로"><svg class="logo-mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#E83217"/><path d="M11.5 20.5c2.6 3.2 10.4 3.2 13 0" stroke="#fff" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="13.2" cy="14" r="2.1" fill="#fff"/><circle cx="22.8" cy="14" r="2.1" fill="#fff"/></svg><span class="logo-word">쏘플파티룸</span></a>
+    <a class="logo" href="/" aria-label="쏘플파티룸 홈페이지로"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
     <h1>홈페이지 관리</h1>
     <p class="muted small">배포할 때 등록한 관리자 비밀번호(ADMIN_PASSWORD)를 넣어 주세요. 운영진 계정으로 로그인한 상태라면 바로 들어와요.</p>
     <div class="field" style="margin-top:18px"><label class="label" for="admPw">관리자 비밀번호</label><input class="input" id="admPw" type="password" autocomplete="current-password" required></div>
@@ -133,7 +142,7 @@
 
 <div class="adm" id="admApp" hidden>
   <aside class="adm-side" aria-label="관리 메뉴">
-    <div class="adm-brand"><a class="logo" href="/" aria-label="홈페이지로"><svg class="logo-mark" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="#E83217"/><path d="M11.5 20.5c2.6 3.2 10.4 3.2 13 0" stroke="#fff" stroke-width="2.8" stroke-linecap="round" fill="none"/><circle cx="13.2" cy="14" r="2.1" fill="#fff"/><circle cx="22.8" cy="14" r="2.1" fill="#fff"/></svg><span class="logo-word">쏘플파티룸</span></a><span class="adm-tag">관리</span></div>
+    <div class="adm-brand"><a class="logo" href="/" aria-label="홈페이지로"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a><span class="adm-tag">관리</span></div>
     <nav class="adm-nav" id="admNav"></nav>
     <div class="adm-side-ft">
       <div class="tiny faint" id="admWho"></div>
