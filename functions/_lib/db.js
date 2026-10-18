@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -12,7 +12,7 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_occ ON occ(code, d)`,
   `CREATE TABLE IF NOT EXISTS sync_log (id INTEGER PRIMARY KEY AUTOINCREMENT, src TEXT, at TEXT, ok INTEGER, n INTEGER, msg TEXT)`,
   `CREATE TABLE IF NOT EXISTS clicks (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT, kind TEXT, pkg TEXT, d TEXT, at TEXT, ih TEXT)`,
-  `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, pw TEXT NOT NULL, nick TEXT NOT NULL UNIQUE, birth TEXT, region TEXT, intro TEXT, avatar TEXT, role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'active', marketing INTEGER NOT NULL DEFAULT 0, memo TEXT, created_at TEXT, last_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, pw TEXT NOT NULL, nick TEXT NOT NULL UNIQUE, birth TEXT, region TEXT, intro TEXT, avatar TEXT, role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'active', marketing INTEGER NOT NULL DEFAULT 0, memo TEXT, host_codes TEXT, created_at TEXT, last_at TEXT)`,
   `CREATE TABLE IF NOT EXISTS sessions (th TEXT PRIMARY KEY, uid INTEGER, admin INTEGER NOT NULL DEFAULT 0, exp INTEGER NOT NULL, created_at TEXT)`,
   `CREATE TABLE IF NOT EXISTS rl (k TEXT PRIMARY KEY, n INTEGER NOT NULL, reset INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, board TEXT NOT NULL, scope INTEGER NOT NULL DEFAULT 0, uid INTEGER NOT NULL, title TEXT, body TEXT NOT NULL, imgs TEXT NOT NULL DEFAULT '[]', code TEXT, rating INTEGER, verified INTEGER NOT NULL DEFAULT 0, likes INTEGER NOT NULL DEFAULT 0, cmts INTEGER NOT NULL DEFAULT 0, views INTEGER NOT NULL DEFAULT 0, reports INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, pinned INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT)`,
@@ -42,7 +42,7 @@ const SCHEMA = [
 
 let ready = null;
 
-/** 첫 요청에서 표를 만들고 지점 기본 데이터(45곳, 운영 36곳 공개)를 넣는다. SQL을 직접 실행할 필요가 없다. */
+/** 첫 요청에서 표를 만들고 지점 기본 데이터(운영지점리스트 기준)를 넣는다. SQL을 직접 실행할 필요가 없다. */
 export function ensureSchema(env) {
   if (!env.DB) {
     return Promise.reject(new HttpError(503,
@@ -66,6 +66,10 @@ export function ensureSchema(env) {
           }
         }
         await env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s)));
+        if (v && v < 2) {
+          // v2: 회원에 호스트 지점 연결(host_codes) 칸 추가
+          try { await env.DB.prepare('ALTER TABLE users ADD COLUMN host_codes TEXT').run(); } catch { /* 이미 있으면 통과 */ }
+        }
         const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM spaces').first();
         if (!c || !c.n) {
           await seedSpaces(env.DB);
@@ -179,8 +183,8 @@ export const DEFAULTS = {
   'hero.sub': '',
   'cs.phone': '1544-3523',
   'cs.hours': '월~목 10:00~19:00 · 금~일 10:00~22:00',
-  'kakao.url': 'https://pf.kakao.com/_mufLd/chat',
-  'sns.instagram': '',
+  'kakao.url': 'http://pf.kakao.com/_mufLd/chat',
+  'sns.instagram': 'https://www.instagram.com/ssople_partyroom',
   'sns.blog': '',
   'sns.youtube': '',
   'link.play': '',
@@ -207,6 +211,12 @@ export const DEFAULTS = {
   'seo.naver_verify': '',
   'seo.google_verify': '',
   'seo.bing_verify': '',
+  'seo.canonical_host': '',      // 예: ssople.com — 적어 두면 pages.dev 주소로 들어온 손님을 이 주소로 보낸다
+  'host.premium_price': '50000',
+  'host.plus_price': '30000',
+  'host.discount6': '10',
+  'host.discount12': '20',
+  'host.managed_fee': '20',
 };
 const PRIVATE_KEYS = new Set(['community.banned']);
 

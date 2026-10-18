@@ -4,7 +4,7 @@ import { notiStmt, notiManyStmt, badgeStmt } from './db.js';
 import { loadSpaces } from './spaces.js';
 import { checkText, imgUrl } from './community.js';
 
-export const MEETUP_CATS = ['보드게임', '와인·술', '영화·드라마', '운동·러닝', '게임', '노래·음악', '맛집·요리', '스터디·자기계발', '동네친구', '파티·네트워킹', '기타'];
+export const MEETUP_CATS = ['보드게임', '와인·술', '영화·드라마', '운동·러닝', '게임', '노래·음악', '맛집·요리', '스터디·자기계발', '동네친구', '파티·네트워킹', '공간 아카데미', '기타'];
 export const REGIONS = ['서울', '경기', '인천', '대전', '전주', '부산', '기타'];
 
 function cover(k) { return k && /^u\/[\w/.-]{4,90}$/.test(k) ? k : null; }

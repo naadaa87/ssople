@@ -227,7 +227,7 @@ export function register(route) {
     if (q) { where.push('(email LIKE ? OR nick LIKE ?)'); binds.push(`%${q}%`, `%${q}%`); }
     if (c.q.get('role')) { where.push('role = ?'); binds.push(c.q.get('role')); }
     const rows = (await c.db.prepare(
-      `SELECT id, email, nick, birth, region, role, status, marketing, memo, created_at, last_at,
+      `SELECT id, email, nick, birth, region, role, status, marketing, memo, host_codes, created_at, last_at,
               (SELECT COUNT(*) FROM visits v WHERE v.uid = users.id AND v.status = 'ok') AS visits,
               (SELECT COUNT(*) FROM posts p WHERE p.uid = users.id) AS posts
        FROM users WHERE ${where.join(' AND ')} ORDER BY id DESC LIMIT 51 OFFSET ?`,
@@ -246,8 +246,13 @@ export function register(route) {
     let temp = null;
     if ('role' in b) {
       if (lv !== 'admin') throw new HttpError(403, '권한 변경은 대표 관리자만 할 수 있어요.');
-      const role = ['member', 'staff', 'admin'].includes(b.role) ? b.role : 'member';
+      const role = ['member', 'host', 'staff', 'admin'].includes(b.role) ? b.role : 'member';
       stmts.push(c.db.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id));
+    }
+    if ('hostCodes' in b) {
+      if (lv !== 'admin') throw new HttpError(403, '호스트 지점 연결은 대표 관리자만 할 수 있어요.');
+      const codes = (Array.isArray(b.hostCodes) ? b.hostCodes : String(b.hostCodes || '').split(',')).map((x) => String(x).trim().toUpperCase()).filter((x) => /^S-\d{4}$/.test(x)).slice(0, 30);
+      stmts.push(c.db.prepare('UPDATE users SET host_codes = ? WHERE id = ?').bind(codes.length ? JSON.stringify(codes) : null, id));
     }
     if ('status' in b) {
       const st = ['active', 'banned'].includes(b.status) ? b.status : 'active';

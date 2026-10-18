@@ -40,6 +40,7 @@ export function publicUser(u) {
   return {
     id: u.id, email: u.email, nick: u.nick, region: u.region || '', intro: u.intro || '', avatar: u.avatar || '',
     role: u.role, adult: age != null && age >= 19, birth: u.birth, marketing: !!u.marketing, created_at: u.created_at,
+    hostCodes: (() => { try { const a = u.host_codes ? JSON.parse(u.host_codes) : []; return Array.isArray(a) ? a : []; } catch { return []; } })(),
   };
 }
 

@@ -4,13 +4,16 @@ import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
 import { loadSpaces } from './spaces.js';
 import { imgUrl, checkText } from './community.js';
 
-export const APP_VERSION = '2026.10.13';
+export const APP_VERSION = '2026.10.18';
 
 export const INQUIRY_KINDS = {
   partner: '제휴 혜택 제공',
   corporate: '기업·단체 행사',
   space: '공간 입점·위탁운영 상담',
-  startup: '창업·입점 상담',
+  host_listing: '공간 등록 신청 (호스트)',
+  host_managed: '위탁운영 신청',
+  startup: '창업 상담',
+  academy: '공간 아카데미 참여',
   collab: '브랜드 협업·촬영',
   etc: '기타 문의',
 };

@@ -98,6 +98,39 @@ export function register(route) {
   });
 }
 
+/* ---------------- 호스트 센터: 내 지점 보기·고치기 ---------------- */
+export function registerHost(route) {
+  route('GET', '/api/host/spaces', async (c) => {
+    const u = await c.needUser();
+    const codes = hostCodes(u);
+    if (!codes.length && u.role !== 'admin' && u.role !== 'staff') throw new HttpError(403, '호스트 권한이 있는 회원만 쓸 수 있어요. 관리자에게 지점 연결을 요청해 주세요.');
+    const list = await loadSpaces(c.db, { all: true });
+    const mine = codes.length ? list.filter((s) => codes.includes(s.code)) : list;
+    return { spaces: mine.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl) })) };
+  });
+  route('PUT', '/api/host/spaces/:code', async (c) => {
+    const u = await c.needUser();
+    const codes = hostCodes(u);
+    const adm = u.role === 'admin' || u.role === 'staff';
+    if (!adm && !codes.includes(c.params.code)) throw new HttpError(403, '이 지점을 고칠 권한이 없어요.');
+    const b = await c.body();
+    const list = await loadSpaces(c.db, { all: true });
+    const prev = list.find((s) => s.code === c.params.code);
+    if (!prev) throw new HttpError(404, '지점을 찾을 수 없어요.');
+    const next = cleanHostInput(b, prev);
+    next.edited = true;
+    next.hostEditedAt = nowIso();
+    await saveSpace(c.db, prev.code, next, { visible: prev.visible, sort: prev.sort });
+    return { ok: true };
+  });
+}
+export function hostCodes(u) {
+  if (!u) return [];
+  const v = u.host_codes ?? u.hostCodes;
+  if (!v) return [];
+  try { const arr = typeof v === 'string' ? JSON.parse(v) : v; return Array.isArray(arr) ? arr.filter((x) => /^S-\d{4}$/.test(x)) : []; } catch { return []; }
+}
+
 /* ---------------- 관리자: 지점 수정 ---------------- */
 const PKG_KEYS = ['day', 'night', 'allday', 'tonight', 'morning', 'hour3', 'full'];
 
@@ -163,7 +196,36 @@ export function cleanSpaceInput(b, prev = {}) {
     }
     out.info = inf;
   }
+  if ('listing' in b && b.listing && typeof b.listing === 'object') {
+    const l = { ...(prev.listing || {}) };
+    if ('type' in b.listing) l.type = LISTING_TYPES[b.listing.type] ? b.listing.type : 'managed';
+    if ('zone' in b.listing) l.zone = ['premium', 'plus'].includes(b.listing.zone) ? b.listing.zone : '';
+    if ('until' in b.listing) l.until = /^\d{4}-\d{2}-\d{2}$/.test(String(b.listing.until || '')) ? b.listing.until : '';
+    if ('hostName' in b.listing) l.hostName = str(b.listing.hostName, { max: 30, name: '호스트 표시 이름' });
+    out.listing = l;
+  }
   return out;
+}
+
+/** 지점 운영 방식 — managed: 쏘플 위탁운영, host: 호스트가 직접 운영(등록 공간), direct: 쏘플 직영 */
+export const LISTING_TYPES = { managed: '쏘플 위탁운영', host: '호스트 운영', direct: '쏘플 직영' };
+export const LISTING_ZONES = { premium: '프리미엄존', plus: '플러스존' };
+/** 노출 존이 기간을 넘겼으면 빈 값으로 본다 */
+export function zoneOf(s, today) {
+  const l = s.listing || {};
+  if (!l.zone) return '';
+  if (l.until && today && l.until < today) return '';
+  return l.zone;
+}
+
+/* ---------- 호스트(매장 운영자)가 자기 지점을 고치는 범위 ---------- */
+const HOST_FIELDS = ['intro', 'notice', 'tags', 'photos', 'feat', 'info', 'addFeeLabel', 'depositLabel', 'place'];
+const HOST_FIELDS_OWN = ['pkgs', 'book', 'base', 'max', 'addFee'];   // 호스트 운영 공간이면 요금·예약 주소까지
+export function cleanHostInput(b, prev) {
+  const allow = new Set(HOST_FIELDS.concat(prev.listing && prev.listing.type === 'host' ? HOST_FIELDS_OWN : []));
+  const picked = {};
+  for (const k of Object.keys(b)) if (allow.has(k)) picked[k] = b[k];
+  return cleanSpaceInput(picked, prev);
 }
 
 export function hrsLabel(s, e) {

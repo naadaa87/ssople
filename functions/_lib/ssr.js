@@ -92,7 +92,7 @@ export async function roomMeta(env, params) {
   if (s.feat?.pet?.on) feats.push('애견 동반');
   if ((s.feat?.zones || []).length) feats.push(...s.feat.zones.slice(0, 2));
   const desc = [`${s.region} ${s.area}`, s.base && s.max ? `기준 ${s.base}명 · 최대 ${s.max}명` : '', from ? `${won(from)}부터` : '', feats.join('·')]
-    .filter(Boolean).join(' | ') + ' — 빈 방 확인하고 네이버 예약으로 바로 잡으세요.';
+    .filter(Boolean).join(' | ') + ' — 요금 확인하고 네이버 예약으로 바로 잡으세요.';
   let st = {};
   try { st = await getSettings(env.DB); } catch { st = {}; }
   const origin = env.__origin || '';
@@ -120,7 +120,7 @@ export async function areaMeta(env, params) {
   const feats = [...new Set(a.list.flatMap((s) => featList(s)))].slice(0, 5);
   return {
     title: `${a.name} 파티룸 ${a.list.length}곳 — 쏘플파티룸`, fullTitle: true,
-    desc: `${a.name} 파티룸을 찾는다면 쏘플. ${names}${a.list.length > 6 ? ' 등' : ''} ${a.list.length}곳의 요금, 인원, 시설을 비교하고 날짜별 빈 방을 확인한 뒤 네이버 예약으로 바로 잡으세요.${feats.length ? ` ${feats.join('·')} 있는 방.` : ''}`,
+    desc: `${a.name} 파티룸을 찾는다면 쏘플. ${names}${a.list.length > 6 ? ' 등' : ''} ${a.list.length}곳의 요금, 인원, 시설을 비교하고 네이버 예약으로 바로 잡으세요.${feats.length ? ` ${feats.join('·')} 있는 방.` : ''}`,
     keywords: [`${a.name} 파티룸`, `${a.name} 파티룸 대여`, `${a.name} 파티룸 추천`, `${a.name} 생일파티 장소`, `${a.name} 모임 장소`, a.kind === 'area' ? `${a.region} 파티룸` : '', '쏘플파티룸'].filter(Boolean).join(', '),
     image: a.list.flatMap((s) => s.photos || []).map(photoUrl).find(Boolean) || '/assets/img/og.jpg',
     data: { area: { kind: a.kind, name: a.name, region: a.region, codes: a.list.map((s) => s.code) } },
@@ -179,7 +179,7 @@ export async function inviteMeta(env, params) {
 export async function sitemap(context) {
   const { env, request } = context;
   const origin = new URL(request.url).origin;
-  const pages = ['/', '/rooms', '/locations', '/startup', '/event', '/meetups', '/crew', '/community', '/play', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about',
+  const pages = ['/', '/rooms', '/locations', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about',
     '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy'];
   const urls = pages.map((p) => ({ loc: origin + p }));
   try {
@@ -190,7 +190,7 @@ export async function sitemap(context) {
       for (const s of spaces) urls.push({ loc: `${origin}/room/${s.code}`, lastmod: (s.updated_at || '').slice(0, 10) });
       const ev = (await env.DB.prepare(`SELECT id, updated_at FROM events WHERE status IN ('open','closed') AND COALESCE(d2, d) >= ?`).bind(todayKST()).all()).results || [];
       for (const e of ev) urls.push({ loc: `${origin}/e/${e.id}`, lastmod: (e.updated_at || '').slice(0, 10) });
-      const ps = (await env.DB.prepare(`SELECT id, updated_at FROM posts WHERE hidden = 0 AND board IN ('review','tip','qna','free','notice') ORDER BY id DESC LIMIT 300`).all()).results || [];
+      const ps = (await env.DB.prepare(`SELECT id, updated_at FROM posts WHERE hidden = 0 AND board IN ('review','tip','qna','free','notice','host') ORDER BY id DESC LIMIT 300`).all()).results || [];
       for (const p of ps) urls.push({ loc: `${origin}/c/${p.id}`, lastmod: (p.updated_at || '').slice(0, 10) });
       const ms = (await env.DB.prepare(`SELECT id FROM meetups WHERE status = 'active' ORDER BY id DESC LIMIT 200`).all()).results || [];
       for (const m of ms) urls.push({ loc: `${origin}/m/${m.id}` });
@@ -214,16 +214,18 @@ export async function rss(context) {
       await ensureSchema(env);
       const ev = (await env.DB.prepare(`SELECT id, title, summary, d, created_at, updated_at FROM events WHERE status IN ('open','closed','done') ORDER BY id DESC LIMIT 30`).all()).results || [];
       for (const e of ev) items.push({ title: e.title, link: `${origin}/e/${e.id}`, desc: e.summary || `${e.d || ''} 쏘플파티룸 행사`, at: e.updated_at || e.created_at, cat: '행사' });
-      const ps = (await env.DB.prepare(`SELECT id, board, title, body, created_at, updated_at FROM posts WHERE hidden = 0 AND board IN ('notice','tip','review','qna','free') ORDER BY id DESC LIMIT 60`).all()).results || [];
-      const BOARD = { notice: '공지', tip: '팁', review: '후기', qna: '질문', free: '자유' };
+      const ps = (await env.DB.prepare(`SELECT id, board, title, body, created_at, updated_at FROM posts WHERE hidden = 0 AND board IN ('notice','tip','review','qna','free','host') ORDER BY id DESC LIMIT 60`).all()).results || [];
+      const BOARD = { notice: '공지', tip: '팁', review: '후기', qna: '질문', free: '자유', host: '지점 소식' };
       for (const p of ps) items.push({ title: p.title || cut(p.body, 40), link: `${origin}/c/${p.id}`, desc: cut(p.body, 200), at: p.updated_at || p.created_at, cat: BOARD[p.board] || '커뮤니티' });
       const sp = await loadSpaces(env.DB);
-      for (const s of sp.slice(0, 40)) items.push({ title: `${s.name} 파티룸 — ${s.region} ${s.area}`, link: `${origin}/room/${s.code}`, desc: `${s.addr || ''} 기준 ${s.base || '-'}명 · 최대 ${s.max || '-'}명. 날짜별 빈 방 확인 후 네이버 예약.`, at: s.updated_at, cat: '지점' });
+      for (const s of sp.slice(0, 40)) items.push({ title: `${s.name} 파티룸 — ${s.region} ${s.area}`, link: `${origin}/room/${s.code}`, desc: `${s.addr || ''} 기준 ${s.base || '-'}명 · 최대 ${s.max || '-'}명. 요금 확인 후 네이버 예약.`, at: s.updated_at, cat: '지점' });
     }
   } catch { /* DB 연결 전이면 고정 글만 */ }
   const fixed = [
-    { title: '파티룸은 쏘플, 우리 쏘플에서 만나요', link: origin + '/', desc: '전국 쏘플파티룸 지점의 낮·밤 빈 방을 날짜별로 확인하고 네이버 예약으로 바로 잡으세요.', cat: '안내' },
-    { title: '파티룸 창업·위탁운영 안내 — 공간 파트너', link: origin + '/startup', desc: '비어 있는 공간을 파티룸으로. 오픈 비용, 정산 방식, 절차를 한 번에.', cat: '창업' },
+    { title: '파티룸은 쏘플, 우리 쏘플에서 만나요', link: origin + '/', desc: '전국 쏘플파티룸 지점의 낮·밤 요금과 시설을 확인하고 네이버 예약으로 바로 잡으세요.', cat: '안내' },
+    { title: '파티룸 창업안내 — 상권 분석부터 오픈 홍보까지', link: origin + '/startup', desc: '비어 있는 공간을 파티룸으로. 340곳 넘게 열어 본 데이터로 상권 분석, 매물, 기획, 인테리어, 촬영, 오픈 홍보까지 한 번에.', cat: '창업' },
+    { title: '호스트 센터 — 공간 등록 · 위탁운영', link: origin + '/host', desc: '운영 중인 파티룸을 쏘플에 등록하면 쏘플 손님에게 노출되고 예약은 네이버 예약으로 이어져요. 프리미엄존 월 5만원, 플러스존 월 3만원. 위탁운영은 매출의 20%.', cat: '호스트' },
+    { title: '쏘플 공간 아카데미 — 공간 운영·창업 커뮤니티', link: origin + '/academy', desc: '파티룸과 공간대여 사업에 관심 있는 분들이 모이는 정기 모임, 현장 투어, 온라인 스터디.', cat: '아카데미' },
     { title: '이용 안내 — 예약부터 입장까지', link: origin + '/guide', desc: '예약, 입장, 보증금, 미성년자 이용까지 자주 묻는 내용을 모았어요.', cat: '안내' },
   ];
   items.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));

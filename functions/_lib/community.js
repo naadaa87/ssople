@@ -1,12 +1,12 @@
 // 커뮤니티 — 게시글·댓글·좋아요·저장·신고
 import { HttpError, str, int, nowIso, maskPhones, parseJSON, likeSafe, dispNick } from './util.js';
 import { getSettings, notiStmt, badgeStmt } from './db.js';
-import { loadSpaces } from './spaces.js';
+import { loadSpaces, hostCodes } from './spaces.js';
 
 export const BOARDS = {
-  review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', mb: '모임 게시판',
+  review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', host: '지점 소식', mb: '모임 게시판',
 };
-const PUBLIC_BOARDS = ['review', 'tip', 'qna', 'free', 'notice'];
+const PUBLIC_BOARDS = ['review', 'tip', 'qna', 'free', 'notice', 'host'];
 
 export function imgUrl(k) { return k ? (/^https?:\/\//.test(k) ? k : '/api/img/' + k) : ''; }
 export function cleanImgs(v, max = 6) {
@@ -134,6 +134,13 @@ export function register(route) {
     const board = String(b.board || '');
     if (!BOARDS[board]) throw new HttpError(400, '게시판을 골라 주세요.');
     if (board === 'notice' && !(await c.adminLevel())) throw new HttpError(403, '공지는 운영진만 쓸 수 있어요.');
+    if (board === 'host') {
+      // 지점 소식은 그 지점의 호스트(또는 운영진)만 쓴다
+      const code = String(b.code || '');
+      if (!(await loadSpaces(c.db, { all: true })).find((sp) => sp.code === code)) throw new HttpError(400, '소식을 남길 지점을 골라 주세요.');
+      const mine = hostCodes(await c.rawUser());
+      if (!(await c.adminLevel()) && !mine.includes(code)) throw new HttpError(403, '지점 소식은 그 지점의 호스트만 쓸 수 있어요.');
+    }
     let scope = 0;
     if (board === 'mb') {
       scope = int(b.scope, { min: 1, name: '모임' });

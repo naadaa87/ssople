@@ -35,7 +35,17 @@
     "/purpose-reunion",
     "/startup",
     "/area",
-    "/room-detail"
+    "/room-detail",
+    "/host",
+    "/academy",
+    "/terms",
+    "/privacy",
+    "/policy",
+    "/login",
+    "/signup",
+    "/mypage",
+    "/write",
+    "/purpose-*"
   ],
   "exclude": []
 }

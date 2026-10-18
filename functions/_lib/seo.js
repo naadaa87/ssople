@@ -72,7 +72,7 @@ export const featList = (s) => {
 };
 
 export function orgJsonLd(origin, st = {}) {
-  const same = ['sns.instagram', 'sns.blog', 'sns.youtube'].map((k) => st[k]).filter(Boolean);
+  const same = ['sns.instagram', 'sns.blog', 'sns.youtube', 'kakao.url'].map((k) => st[k]).filter(Boolean);
   return {
     '@context': 'https://schema.org', '@type': 'Organization', '@id': origin + '/#org',
     name: '쏘플파티룸', alternateName: ['SSOPLE', 'SSOPLE Party Room', '쏘플'], url: origin + '/',
@@ -149,4 +149,18 @@ export function areaHtml(origin, a) {
 <p class="lead">${esc(a.name)}에서 바로 갈 수 있는 쏘플파티룸이에요. 낮·밤 타임으로 빌리고, 결제는 네이버 예약에서 해요. ${regionLine ? '' : ''}</p>
 <div class="area-cards">${cards}</div>
 ${regionLine ? `<p class="muted small" style="margin-top:18px">${regionLine}도 같이 볼 수 있어요.</p>` : ''}`;
+}
+
+/* ---------- 대표 주소(정식 도메인)로 보내기 ---------- */
+/** 설정 seo.canonical_host(예: ssople.com)가 있고, 지금 접속한 주소가 *.pages.dev 이면 정식 도메인으로 301 */
+export async function canonicalRedirect(env, request) {
+  if (!env.DB) return null;
+  let host = '';
+  try { host = String((await getSettings(env.DB))['seo.canonical_host'] || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''); } catch { return null; }
+  if (!host) return null;
+  const url = new URL(request.url);
+  // 정식 배포 주소(ssople.pages.dev)만 보내고, 미리보기 배포(브랜치.ssople.pages.dev)는 그대로 둔다
+  if (url.hostname === host || !/^[^.]+\.pages\.dev$/.test(url.hostname)) return null;
+  url.hostname = host; url.protocol = 'https:'; url.port = '';
+  return Response.redirect(url.toString(), 301);
 }
