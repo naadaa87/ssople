@@ -69,6 +69,7 @@
           </div>
         </aside>
       </div>
+      ${guideCards(s)}
       <section class="sec" style="padding-top:44px"><div class="between" style="margin-bottom:18px"><h2 class="h2">근처 다른 지점</h2><a class="sec-more" href="/rooms?region=${encodeURIComponent(s.region)}">${esc(s.region)} 지점 전체</a></div><div class="rooms" id="nearList"></div></section>`;
     $('#mobileBook').hidden = false;
     $('#mbPrice').textContent = minP ? SP.won(minP) + '부터' : '';
@@ -77,6 +78,25 @@
   }
 
   function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+  /* 지점 시설에 맞는 파티 가이드 글 3개 */
+  function guideSlugs(s) {
+    const f = s.feat || {}, out = [];
+    if ((s.max || 0) >= 20) out.push('year-end-party-guide', 'large-group-partyrooms');
+    if (f.bbq && f.bbq.on) out.push('rooftop-terrace-partyrooms', 'party-food-guide');
+    if (f.pet && f.pet.on) out.push('pet-friendly-partyroom');
+    if (f.console) out.push('tv-party-games');
+    if (f.karaoke && f.karaoke.on) out.push('karaoke-party-tips');
+    if (f.projector) out.push('movie-night-partyroom');
+    if ((s.max || 0) <= 10) out.push('couple-anniversary-partyroom');
+    out.push('birthday-party-guide', 'party-checklist', 'party-games-50', 'what-is-partyroom');
+    return [...new Set(out)].slice(0, 3);
+  }
+  function guideCards(s) {
+    const list = window.SP_MAG || [];
+    const arts = guideSlugs(s).map((x) => list.find((m) => m.slug === x)).filter(Boolean);
+    if (!arts.length) return '';
+    return `<section class="sec" style="padding-top:44px;padding-bottom:0"><div class="between" style="margin-bottom:18px"><h2 class="h2">이 지점에서 파티 준비하기</h2><a class="sec-more" href="/magazine">파티 가이드 전체</a></div><div class="mag-grid">${arts.map((a) => `<a class="mag-card sm" href="/magazine/${esc(a.slug)}"><div class="mag-thumb"><img src="/assets/img/photo/${esc(a.cover)}-s.webp" alt="" loading="lazy" width="700" height="525"></div><div class="mag-card-body"><span class="mag-cat">${esc(a.catLabel)}</span><h3>${esc(a.title)}</h3><p>${esc(a.desc)}</p></div></a>`).join('')}</div></section>`;
+  }
   function listingBadges(s) {
     const l = s.listing || {};
     const zone = SP.zoneOf(s);
