@@ -4,16 +4,25 @@
   const q = SP.qs();
   const editId = Number(q.edit) || 0;
   const BOARDS = [['review', '이용후기'], ['tip', '파티 꿀팁'], ['qna', '질문'], ['free', '자유']];
-  const st = { board: BOARDS.some((b) => b[0] === q.b) ? q.b : (q.b === 'mb' ? 'mb' : 'review'), scope: Number(q.scope) || 0, rating: 0, imgs: [], code: /^S-\d{4}$/.test(q.code || '') ? q.code : '' };
+  const st = { board: BOARDS.some((b) => b[0] === q.b) ? q.b : (q.b === 'mb' ? 'mb' : q.b === 'host' ? 'host' : 'review'), scope: Number(q.scope) || 0, rating: 0, imgs: [], code: /^S-\d{4}$/.test(q.code || '') ? q.code : '' };
+  let hostCodes = [];
 
   function drawBoards(admin) {
     if (st.board === 'mb') { $('#boardField').hidden = true; return; }
-    const list = admin ? [...BOARDS, ['notice', '공지']] : BOARDS;
+    let list = admin ? [...BOARDS, ['notice', '공지']] : BOARDS;
+    if (hostCodes.length || admin) list = [...list, ['host', '지점 소식']];
     $('#boardPick').innerHTML = list.map(([k, n]) => `<button type="button" class="chip${st.board === k ? ' on' : ''}" role="radio" aria-checked="${st.board === k}" data-b="${k}">${n}</button>`).join('');
-    $('#reviewBox').hidden = st.board !== 'review';
+    $('#reviewBox').hidden = st.board !== 'review' && st.board !== 'host';
+    $('#wStars').parentElement.hidden = st.board !== 'review';
+    $('#wCode').previousElementSibling.textContent = st.board === 'host' ? '소식을 올릴 지점' : '다녀온 지점';
+    if (st.board === 'host' && hostCodes.length && !admin) {
+      $$('#wCode option').forEach((o) => { o.hidden = o.value && !hostCodes.includes(o.value); });
+      if (!st.code && hostCodes.length === 1) { st.code = hostCodes[0]; $('#wCode').value = st.code; }
+    } else $$('#wCode option').forEach((o) => { o.hidden = false; });
     $('#wBody').placeholder = st.board === 'review' ? '이용한 패키지, 좋았던 점, 아쉬웠던 점을 적어 주면 다른 분들께 큰 도움이 돼요.'
       : st.board === 'tip' ? '파티 준비하면서 알게 된 요령을 나눠 주세요.'
-        : st.board === 'qna' ? '궁금한 점을 자세히 적을수록 답이 빨리 달려요.' : '자유롭게 이야기해 주세요.';
+        : st.board === 'host' ? '지점의 새 소식, 이달의 꾸밈, 준비한 이벤트, 손님께 드리는 안내를 적어 주세요. 사진을 같이 올리면 더 좋아요.'
+          : st.board === 'qna' ? '궁금한 점을 자세히 적을수록 답이 빨리 달려요.' : '자유롭게 이야기해 주세요.';
   }
   function drawStars() {
     $('#wStars').innerHTML = [1, 2, 3, 4, 5].map((n) => `<button type="button" role="radio" aria-checked="${st.rating === n}" aria-label="${n}점" class="${n <= st.rating ? 'on' : ''}" data-r="${n}">${icon('star-f')}</button>`).join('') + `<span class="muted small" style="align-self:center;margin-left:8px">${st.rating ? st.rating + '점' : '눌러서 고르기'}</span>`;
@@ -26,6 +35,7 @@
   async function init() {
     const me = await SP.needLogin('글을 쓰려면 로그인이 필요해요.');
     if (!me) return;
+    hostCodes = me.hostCodes || [];
     if (st.board === 'mb') $('#wCancel').href = `/m/${st.scope}`;
     const spaces = await SP.spaces();
     const byR = {};
@@ -96,6 +106,7 @@
     const title = $('#wSubject').value.trim(), body = $('#wBody').value.trim();
     const fail = (m) => { err.textContent = m; err.hidden = false; };
     if (st.board === 'review' && !editId && !st.code) return fail('후기를 남길 지점을 골라 주세요.');
+    if (st.board === 'host' && !editId && !st.code) return fail('소식을 올릴 지점을 골라 주세요.');
     if (st.board === 'review' && !st.rating) return fail('별점을 골라 주세요.');
     if (!title) return fail('제목을 적어 주세요.');
     if (body.length < 5) return fail('내용을 조금 더 적어 주세요.');

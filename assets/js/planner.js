@@ -92,7 +92,7 @@
       <tr><td>1인당</td><td class="r num">약 ${SP.fmt(Math.ceil(total / people / 100) * 100)}원</td></tr>
       </tbody></table></div>
       <p class="small muted" style="margin-top:10px">청소 보증금 ${esc(s.depositLabel || '')}은 따로 받고, 퇴실 후 확인해서 돌려 드려요. 바베큐 같은 옵션은 포함하지 않았어요.</p>
-      <div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn btn-naver" href="/room/${s.code}?date=${d}">${icon('calendar')}${esc(s.short || s.name)} 빈 방 보기</a><button class="btn btn-soft" type="button" id="toN">이 금액으로 N빵</button></div>`;
+      <div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn btn-naver" href="/room/${s.code}?date=${d}">${icon('calendar')}${esc(s.short || s.name)} 요금·예약 보기</a><button class="btn btn-soft" type="button" id="toN">이 금액으로 N빵</button></div>`;
     $('#toN').onclick = () => { $('#nTotal').value = total; $('#nPeople').value = people; drawN(); $('#nbbang').scrollIntoView({ behavior: 'smooth' }); };
   }
 

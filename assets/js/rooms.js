@@ -64,8 +64,8 @@
     else if (st.sort === 'review') list.sort((a, b) => (b.reviews?.n || 0) - (a.reviews?.n || 0));
     else if (st.date && live && av.spaces) {
       const score = (s) => { const c = av.spaces[s.code] || '--'; return (c[0] === 'o' ? 1 : 0) + (c[1] === 'o' ? 1 : 0); };
-      list.sort((a, b) => score(b) - score(a) || a.sort - b.sort);
-    }
+      list.sort((a, b) => score(b) - score(a) || SP.zoneRank(a) - SP.zoneRank(b) || a.sort - b.sort);
+    } else list.sort((a, b) => SP.zoneRank(a) - SP.zoneRank(b) || a.sort - b.sort);
     return { list, from, live };
   }
 
@@ -101,10 +101,11 @@
     drawFilters();
     SP.setQs({ region: st.region, area: st.area, date: st.date, slot: st.slot, open: st.open && st.date ? '1' : '', people: st.people, q: st.q, sort: st.sort, f: st.f.join(',') });
     const label = st.date ? `${SP.mdw(st.date)}${st.slot === 'day' ? ' 낮' : st.slot === 'night' ? ' 밤' : ''}` : '';
-    $('#rCount').textContent = `${list.length}곳`;
+    const any = st.region || st.area || st.date || st.people || st.q || st.f.length;
+    $('#rCount').textContent = any ? `조건에 맞는 지점 ${list.length}곳` : '전체 지점';
     $('#rNote').textContent = st.date
-      ? (live ? (st.open ? `${label}에 비어 있는 지점` : `${label} 기준`) : `${label} · 예약 현황 연결 전이라 빈 방 여부는 네이버에서 확인해 주세요`)
-      : '날짜를 고르면 빈 방을 함께 보여 드려요';
+      ? (live ? (st.open ? `${label}에 비어 있는 지점` : `${label} 기준`) : `${label} 요금 기준 · 예약 가능 여부는 네이버 예약에서 확인해요`)
+      : '예약과 결제는 네이버 예약에서 이어져요';
     $('#rLegend').innerHTML = av && av.show !== false ? SP.legend(live) : '';
     if (!list.length) {
       $('#rList').innerHTML = `<div class="empty" style="grid-column:1/-1">${icon('search')}<h3>조건에 맞는 지점이 없어요</h3><p>${st.open ? '빈 방만 보기를 끄거나 다른 날짜를 골라 보세요.' : '조건을 하나씩 빼 보면 더 많이 보여요.'}</p><button class="btn btn-ink" type="button" data-reset>조건 지우기</button></div>`;

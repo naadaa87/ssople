@@ -29,7 +29,7 @@
     const m = D.meetup;
     $('#mtRoot').innerHTML = `
       <nav class="crumb"><a href="/meetups">모임</a>${icon('chev-r', 'sm')}<span>${esc(m.cat)}</span></nav>
-      <div class="meet-cover" style="border-radius:22px;aspect-ratio:16/6">${m.cover ? `<img src="${esc(m.cover)}" alt="">` : `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${({ 보드게임: 'game-lounge-2', 와인: 'party-table', 영화: 'theater', 파티: 'birthday-2', 운동: 'rooftop', 음악: 'neon-night', 사진: 'photowall', 스터디: 'workshop' })[m.cat] || 'welcome'}.webp')"><span class="ca-area" style="font-size:54px">${esc(m.cat)}</span></div>`}</div>
+      <div class="meet-cover" style="border-radius:22px;aspect-ratio:16/6">${m.cover ? `<img src="${esc(m.cover)}" alt="">` : `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${({ 보드게임: 'game-lounge-2', '와인·술': 'party-table', '영화·드라마': 'theater', '파티·네트워킹': 'birthday-2', '운동·러닝': 'rooftop', '노래·음악': 'neon-night', 게임: 'game-lounge', '스터디·자기계발': 'workshop', '맛집·요리': 'cups', 동네친구: 'welcome', '공간 아카데미': 'design-meeting' })[m.cat] || 'welcome'}.webp')"><span class="ca-area" style="font-size:54px">${esc(m.cat)}</span></div>`}</div>
       <div class="between" style="margin-top:20px;align-items:flex-end;flex-wrap:wrap">
         <div><div class="row wrap-ok"><span class="badge ink">${esc(m.cat)}</span><span class="badge mute">${esc(m.region)}</span><span class="badge mute">${m.join_mode === 'open' ? '바로 가입' : '승인 후 가입'}</span>${m.status === 'closed' ? '<span class="badge warn">모집 닫힘</span>' : ''}</div>
           <h1 class="h1" style="margin-top:10px">${esc(m.title)}</h1>
@@ -112,7 +112,7 @@
         <div class="field full"><label class="label" for="p5">다른 장소 <span class="opt">지점이 아니라면</span></label><input class="input" id="p5" name="place" maxlength="60"></div>
         <div class="field"><label class="label" for="p6">정원 <span class="opt">선택</span></label><input class="input" id="p6" name="cap" type="number" min="1" max="300"></div>
         <div class="field full"><label class="label" for="p7">메모 <span class="opt">멤버에게만 보여요</span></label><textarea class="textarea" id="p7" name="memo" maxlength="500" style="min-height:80px" placeholder="회비, 준비물, 만나는 곳 등"></textarea></div>
-      </form><p class="tiny faint" style="margin-top:8px">지점은 일정을 만든 뒤 네이버 예약으로 직접 잡아 주세요. 지점 이름을 누르면 그날 빈 방을 볼 수 있어요.</p>`,
+      </form><p class="tiny faint" style="margin-top:8px">지점은 일정을 만든 뒤 네이버 예약으로 직접 잡아 주세요. 지점 이름을 누르면 그날 요금과 예약 버튼이 보여요.</p>`,
       foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" id="pGo">일정 올리기</button>',
     });
     md.$('#pGo').onclick = async () => {

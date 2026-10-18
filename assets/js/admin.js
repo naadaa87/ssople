@@ -637,6 +637,10 @@ async function run(env) {
         ${tx('e_notice', '지점 공지 (빨간 띠로 보여요)', s.notice, 400, '예) 10월 한 달 동안 엘리베이터 점검이 있어요.')}
         <div class="field"><label class="switch"><input type="checkbox" id="e_visible"${s.visible ? ' checked' : ''}><span>고객 화면에 공개</span></label></div>
         ${ip('e_sort', '보여 주는 순서 (작을수록 앞)', s.sort, 0, '', 'number')}
+        <div class="field full" style="margin-top:6px"><div class="a-note">운영 방식과 노출 존 — 호스트 센터에서 신청한 공간은 여기서 운영 방식을 정하고, 유료 노출 존은 결제 기간에 맞춰 끝 날짜를 넣어요. 끝 날짜가 지나면 존 표시가 자동으로 빠져요.</div></div>
+        <div class="field"><label class="label" for="e_ltype">운영 방식</label><select class="select" id="e_ltype">${[['managed', '쏘플 위탁운영'], ['host', '호스트 운영 (공간 등록)'], ['direct', '쏘플 직영']].map(([k, l]) => `<option value="${k}"${(s.listing && s.listing.type) === k || (!s.listing && k === 'managed') ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field"><label class="label" for="e_lzone">노출 존</label><select class="select" id="e_lzone">${[['', '없음'], ['plus', '플러스존'], ['premium', '프리미엄존']].map(([k, l]) => `<option value="${k}"${(s.listing && s.listing.zone || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        ${ip('e_luntil', '노출 끝 날짜 (결제 기간 끝)', s.listing && s.listing.until, 0, '', 'date')}${ip('e_lhost', '호스트 표시 이름 (선택)', s.listing && s.listing.hostName, 30, '예) 건대 호스트 김OO')}
       </div></div>
       <div data-p="pkg" hidden><p class="a-note" style="margin-bottom:10px">요금은 네이버 예약 화면과 같게 맞춰 주세요. 끝 시각이 시작보다 이르면 다음 날로 계산해요. 칸을 비우면 그 요일엔 팔지 않는 걸로 보여요.</p><div class="pkg-ed" id="pkgEd"></div>
         <button class="btn btn-soft btn-sm" type="button" id="pkgAdd" style="margin-top:10px">${icon('plus', 'sm')}패키지 추가</button></div>
@@ -715,6 +719,7 @@ async function run(env) {
         base: P('e_base').value, max: P('e_max').value, addFeeLabel: P('e_addFeeLabel').value.trim(), addFee: P('e_addFee').value, depositLabel: P('e_depositLabel').value.trim(),
         place: P('e_place').value.trim(), book: P('e_book').value.trim(), tags: list(P('e_tags').value), aliases: list(P('e_aliases').value), intro: P('e_intro').value.trim(), notice: P('e_notice').value.trim(),
         visible: P('e_visible').checked, sort: P('e_sort').value,
+        listing: { type: P('e_ltype').value, zone: P('e_lzone').value, until: P('e_luntil').value, hostName: P('e_lhost').value.trim() },
         pkgs: pkgs.map((p) => ({ k: p.k, label: p.label, s: p.s, e: p.e, p: p.p, url: p.url })),
         feat: {
           karaoke: { on: P('ft_karaoke').checked, note: P('fn_karaoke').value.trim() }, bbq: { on: P('ft_bbq').checked, note: P('fn_bbq').value.trim() }, pet: { on: P('ft_pet').checked, note: P('fn_pet').value.trim() },
@@ -893,7 +898,7 @@ async function run(env) {
     if (US.q) p.set('q', US.q);
     if (US.role) p.set('role', US.role);
     const d = await SP.get('/api/admin/users?' + p);
-    const ROLE = { member: '회원', staff: '운영진', admin: '대표 관리자' };
+    const ROLE = { member: '회원', host: '호스트', staff: '운영진', admin: '대표 관리자' };
     main.innerHTML = hd('회원', `전체 ${SP.fmt(d.total)}명 (탈퇴 제외). 비밀번호는 운영진도 볼 수 없어요. 잊은 회원에게는 임시 비밀번호를 만들어 알려 주세요.`,
       isAdmin() ? `<button class="btn btn-line btn-sm" type="button" data-bc>${icon('bell', 'sm')}전체 알림 보내기</button><a class="btn btn-ghost btn-sm" href="/api/admin/users/export">${icon('download', 'sm')}소식 받기 동의 회원 (CSV)</a>` : '')
       + `<div class="a-tools"><input class="input" id="usQ" placeholder="이메일·닉네임으로 찾기" value="${esc(US.q)}"><select class="select" id="usRole"><option value="">모든 권한</option>${Object.entries(ROLE).map(([k, l]) => `<option value="${k}"${US.role === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
@@ -910,11 +915,13 @@ async function run(env) {
       const u = e.target.closest('[data-u]'); if (u) userModal(d.items.find((x) => String(x.id) === u.dataset.u));
     };
   }
+  function hostCodesOf(u) { try { const a = typeof u.host_codes === 'string' ? JSON.parse(u.host_codes) : u.host_codes; return Array.isArray(a) ? a : []; } catch { return []; } }
   function userModal(u) {
     const m = SP.modal({
       title: `${u.nick} 회원`,
       body: `<dl class="kv2"><dt>이메일</dt><dd>${esc(u.email)}</dd><dt>생년월일</dt><dd>${esc(u.birth || '-')} (만 ${ageOf(u.birth) ?? '-'}세)</dd><dt>가입</dt><dd>${when(u.created_at)}</dd><dt>마지막 접속</dt><dd>${when(u.last_at)}</dd><dt>방문 인증 · 글</dt><dd>${u.visits}번 · ${u.posts}개</dd></dl>
-        ${isAdmin() ? `<div class="field" style="margin-top:16px"><label class="label" for="uRole">권한</label><select class="select" id="uRole">${[['member', '회원'], ['staff', '운영진 (관리 화면 사용)'], ['admin', '대표 관리자']].map(([k, l]) => `<option value="${k}"${u.role === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
+        ${isAdmin() ? `<div class="field" style="margin-top:16px"><label class="label" for="uRole">권한</label><select class="select" id="uRole">${[['member', '회원'], ['host', '호스트 (내 지점 관리)'], ['staff', '운영진 (관리 화면 사용)'], ['admin', '대표 관리자']].map(([k, l]) => `<option value="${k}"${u.role === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field" style="margin-top:12px"><label class="label" for="uCodes">연결한 지점 코드 <span class="opt">호스트에게만 · 쉼표로 나눠요</span></label><input class="input" id="uCodes" maxlength="300" value="${esc(hostCodesOf(u).join(', '))}" placeholder="S-0012, S-0031"><div class="a-note" style="margin-top:6px">여기 적은 지점은 이 회원이 마이 → 내 공간 관리에서 소개·사진·시설·이용 안내를 직접 고치고, 지점 소식을 올릴 수 있어요.</div></div>` : ''}
         <div class="field" style="margin-top:14px"><label class="label" for="uMemo">운영 메모 <span class="opt">운영진만 봐요</span></label><input class="input" id="uMemo" maxlength="300" value="${esc(u.memo || '')}"></div>
         <div id="uTemp"></div>`,
       foot: `<button class="btn btn-ghost btn-sm" type="button" id="uPw" style="margin-right:auto">임시 비밀번호 만들기</button><button class="btn ${u.status === 'banned' ? 'btn-line' : 'btn-soft'}" type="button" id="uBan">${u.status === 'banned' ? '정지 풀기' : '이용 정지'}</button><button class="btn btn-ink" type="button" id="uSave">저장</button>`,
@@ -922,6 +929,12 @@ async function run(env) {
     m.$('#uSave').onclick = async () => {
       const body = { memo: m.$('#uMemo').value.trim() };
       if (isAdmin() && m.$('#uRole').value !== u.role) body.role = m.$('#uRole').value;
+      if (isAdmin()) {
+        const codes = m.$('#uCodes').value.split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);
+        const bad = codes.find((x) => !/^S-\d{4}$/.test(x));
+        if (bad) { SP.toast(`지점 코드 형식이 달라요: ${bad} (예: S-0012)`, true); return; }
+        if (codes.join(',') !== hostCodesOf(u).join(',')) body.hostCodes = codes;
+      }
       try { await SP.post('/api/admin/users/' + u.id, body); m.close(); SP.toast('저장했어요.'); users(); } catch (e) { SP.fail(e); }
     };
     m.$('#uBan').onclick = async () => {
@@ -1075,7 +1088,8 @@ async function run(env) {
       + sec('고객센터 · 연결', I('cs.phone', '대표 번호', '1544-3523') + I('cs.hours', '상담 시간', '월~목 10:00~19:00 · 금~일 10:00~22:00') + I('kakao.url', '카카오톡 상담 주소', 'https://pf.kakao.com/...') + I('link.chatbot', '챗봇 주소', '', '비워 두면 안 보여요.')
         + I('link.host', '호스트 센터 주소', 'https://host.jssystems.kr', '비워 두면 바닥글에서 숨겨요. 지금은 호스트 센터를 쓰지 않으니 비워 두세요.') + I('link.play', '쏘플 플레이 주소', '', '놀이터에 연결 카드로 보여요.') + I('link.live', '온라인 파티룸 주소', '', '놀이터에 연결 카드로 보여요.'))
       + sec('SNS', I('sns.instagram', '인스타그램', 'https://instagram.com/...') + I('sns.blog', '블로그', 'https://blog.naver.com/...') + I('sns.youtube', '유튜브', 'https://youtube.com/...'), '적어 두면 검색엔진에 공식 채널로 같이 알려져요.')
-      + sec('검색 등록 (소유 확인)', I('seo.naver_verify', '네이버 서치어드바이저 확인 코드', '예) 1a2b3c4d5e...', 'searchadvisor.naver.com → 사이트 등록 → "HTML 태그" 방식의 content 값만 붙여 넣으세요.') + I('seo.google_verify', '구글 서치 콘솔 확인 코드', '예) AbCdEf...', 'search.google.com/search-console → 속성 추가(URL 접두어) → "HTML 태그" 방식의 content 값만.') + I('seo.bing_verify', '빙 웹마스터 확인 코드 (선택)', '', '안 쓰면 비워 두세요.'), '저장하면 홈페이지 머리 부분에 확인용 태그가 들어가요. 그다음 각 서비스에서 "소유 확인"을 누르면 돼요. 사이트맵 주소는 /sitemap.xml, RSS 주소는 /rss.xml 이에요.')
+      + sec('호스트 프로그램', I('host.plus_price', '플러스존 월 요금 (원)', '30000', '', 'number') + I('host.premium_price', '프리미엄존 월 요금 (원)', '50000', '', 'number') + I('host.discount6', '6개월 결제 할인 (%)', '10', '', 'number') + I('host.discount12', '12개월 결제 할인 (%)', '20', '', 'number') + I('host.managed_fee', '위탁운영 수수료 (매출의 %)', '20', '결제 수수료를 포함한 비율이에요.', 'number'), '호스트 센터 화면의 요금 표에 그대로 보여요. 숫자만 바꾸면 돼요.')
+      + sec('검색 등록 (소유 확인)', I('seo.canonical_host', '대표 주소 (도메인)', 'ssople.com', '적어 두면 ssople.pages.dev 같은 임시 주소로 들어온 손님과 검색엔진을 이 주소로 보내요. 도메인을 연결한 뒤에만 적어 주세요.', 'text', true) + I('seo.naver_verify', '네이버 서치어드바이저 확인 코드', '예) 1a2b3c4d5e...', 'searchadvisor.naver.com → 사이트 등록 → "HTML 태그" 방식의 content 값만 붙여 넣으세요.') + I('seo.google_verify', '구글 서치 콘솔 확인 코드', '예) AbCdEf...', 'search.google.com/search-console → 속성 추가(URL 접두어) → "HTML 태그" 방식의 content 값만.') + I('seo.bing_verify', '빙 웹마스터 확인 코드 (선택)', '', '안 쓰면 비워 두세요.'), '저장하면 홈페이지 머리 부분에 확인용 태그가 들어가요. 그다음 각 서비스에서 "소유 확인"을 누르면 돼요. 사이트맵 주소는 /sitemap.xml, RSS 주소는 /rss.xml 이에요.')
       + sec('사업자 정보', I('biz.name', '상호', '(주)소셜패밀리') + I('biz.ceo', '대표자', '') + I('biz.no', '사업자등록번호', '000-00-00000') + I('biz.mailorder', '통신판매업 신고번호', '', '신고했다면 적어 주세요.') + I('biz.addr', '사업장 주소', '', '', 'text', true) + I('biz.email', '대표 이메일') + I('biz.privacy_officer', '개인정보 보호책임자', '', '개인정보처리방침에 이름이 들어가요.'), '바닥글, 이용약관, 개인정보처리방침에 그대로 들어가요.')
       + sec('쏘플 클럽', I('club.silver', '실버가 되는 방문 횟수 (1년)', '2', '', 'number') + I('club.gold', '골드가 되는 방문 횟수 (1년)', '4', '', 'number')
         + ['welcome', 'silver', 'gold'].map((k) => `<div class="field"><label class="label" for="cb_${k}">${{ welcome: '웰컴', silver: '실버', gold: '골드' }[k]} 혜택 <span class="opt">한 줄에 하나</span></label><textarea class="textarea" id="cb_${k}" data-ben="${k}" style="min-height:96px">${esc((ben[k] || []).join('\n'))}</textarea></div>`).join('')

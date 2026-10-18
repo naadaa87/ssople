@@ -2,13 +2,14 @@
 (function () {
   const { $, $$, esc, icon } = SP;
   const q0 = SP.qs();
-  const st = { b: ['all', 'review', 'tip', 'qna', 'free', 'notice'].includes(q0.b) ? q0.b : 'all', s: q0.s === 'hot' ? 'hot' : 'new', q: q0.q || '', code: /^S-\d{4}$/.test(q0.code || '') ? q0.code : '', page: 1 };
+  const st = { b: ['all', 'review', 'tip', 'qna', 'free', 'host', 'notice'].includes(q0.b) ? q0.b : 'all', s: q0.s === 'hot' ? 'hot' : 'new', q: q0.q || '', code: /^S-\d{4}$/.test(q0.code || '') ? q0.code : '', page: 1 };
   const EMPTY = {
     all: ['아직 글이 없어요', '첫 글의 주인공이 되어 보세요.'],
     review: ['아직 후기가 없어요', '다녀온 지점의 후기를 남기면 다른 분들이 방을 고를 때 큰 도움이 돼요.'],
     tip: ['아직 꿀팁이 없어요', '풍선 붙이는 요령, 케이크 보관법처럼 작은 팁도 좋아요.'],
     qna: ['아직 질문이 없어요', '파티 준비하다 궁금한 걸 물어보세요.'],
     free: ['아직 글이 없어요', '파티 이야기, 사는 이야기 다 좋아요.'],
+    host: ['아직 지점 소식이 없어요', '호스트가 올리는 이벤트, 휴무, 새 시설 소식이 여기에 모여요.'],
     notice: ['공지가 없어요', ''],
   };
 
@@ -18,7 +19,7 @@
     $$('#boardTabs button').forEach((b) => { const on = b.dataset.b === st.b; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     $$('#sortSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === st.s));
     $('#q').value = st.q;
-    $('#writeBtn').href = '/write' + (st.b !== 'all' && st.b !== 'notice' ? '?b=' + st.b + (st.code ? '&code=' + st.code : '') : '');
+    $('#writeBtn').href = '/write' + (st.b !== 'all' && st.b !== 'notice' && st.b !== 'host' ? '?b=' + st.b + (st.code ? '&code=' + st.code : '') : '');
     if (st.code) {
       const sp = (await SP.spaces()).find((x) => x.code === st.code);
       $('#codeChip').innerHTML = `<button type="button" class="chip on" id="codeOff">${esc(sp ? sp.name : st.code)} 글만 보는 중 ${icon('x', 'sm')}</button>`;

@@ -37,6 +37,9 @@
   /* ---------------- 날짜 (한국 시간) ---------------- */
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   SP.today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  /** 노출 존(프리미엄/플러스) — 노출 끝 날짜가 지났으면 빈 값 */
+  SP.zoneOf = (s) => { const l = (s && s.listing) || {}; if (!l.zone) return ''; if (l.until && l.until < SP.today()) return ''; return l.zone === 'premium' || l.zone === 'plus' ? l.zone : ''; };
+  SP.zoneRank = (s) => { const z = SP.zoneOf(s); return z === 'premium' ? 0 : z === 'plus' ? 1 : 2; };
   SP.addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   SP.dayDiff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
   SP.wdi = (ymd) => new Date(ymd + 'T00:00:00Z').getUTCDay();
@@ -257,7 +260,7 @@
     else if (f.projector && (s.max || 0) >= 16) pool = ['theater', 'workshop', 'meeting', 'yearend'];
     return pool[h % pool.length];
   };
-  const MEET_MOOD = { 보드게임: 'game-lounge-2', 와인: 'party-table', 영화: 'theater', 파티: 'birthday-2', 운동: 'rooftop', 음악: 'neon-night', 사진: 'photowall', 스터디: 'workshop' };
+  const MEET_MOOD = { 보드게임: 'game-lounge-2', '와인·술': 'party-table', '영화·드라마': 'theater', '파티·네트워킹': 'birthday-2', '운동·러닝': 'rooftop', '노래·음악': 'neon-night', 게임: 'game-lounge', '스터디·자기계발': 'workshop', '맛집·요리': 'cups', 동네친구: 'welcome', '공간 아카데미': 'design-meeting' };
   SP.cover = (s, alt) => {
     if (s.photos && s.photos[0]) return `<img src="${SP.esc(s.photos[0])}" alt="${SP.esc(alt || s.name)}" loading="lazy">`;
     return `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${SP.moodPhoto(s)}-s.webp')"><span class="ca-note">실제 사진 준비 중</span><span class="ca-seal"></span><span class="ca-area">${SP.esc(s.area)}</span></div>`;
@@ -295,6 +298,11 @@
       if (d === 'o' || n === 'o') badge = `<div class="room-badge">${d === 'o' && opt.live ? '<span class="badge sun">낮 비어 있음</span>' : ''}${n === 'o' && opt.live ? '<span class="badge moon">밤 비어 있음</span>' : ''}</div>`;
       else if (d === 'b' || n === 'b') badge = '<div class="room-badge"><span class="badge mute">이날 마감</span></div>';
     }
+    const l = s.listing || {};
+    const z = SP.zoneOf(s);
+    const zone = z === 'premium' ? '<span class="badge red">프리미엄</span>' : z === 'plus' ? '<span class="badge ink">플러스</span>' : '';
+    const host = l.type === 'host' ? '<span class="badge mute">호스트 운영</span>' : '';
+    if (!badge && (zone || host)) badge = `<div class="room-badge">${zone}${host}</div>`;
     return `<a class="room" href="${href}">
       <div class="room-cover">${SP.cover(s)}${badge}${opt.rank ? `<span class="rank">${opt.rank}</span>` : ''}</div>
       <div class="room-body">
@@ -303,7 +311,7 @@
         <div class="room-facts"><span>${SP.icon('users', 'sm')}기준 ${s.base || '-'}명 · 최대 ${s.max || '-'}명</span>${s.info && s.info.size ? `<span>${SP.icon('size', 'sm')}${SP.esc(s.info.size)}</span>` : ''}${rv}</div>
         ${price ? `<div class="room-price"><b>${SP.won(price)}</b>${opt.date ? ` <span class="muted small">${SP.mdw(opt.date)} 최저</span>` : ' <span class="muted small">부터</span>'}</div>` : ''}
         <div class="room-feat">${SP.featTags(s)}</div>
-        ${opt.avail ? `<div class="room-avail">${SP.strip(opt.avail, opt.from, opt.live, 7)}</div>` : ''}
+        ${opt.avail && opt.live ? `<div class="room-avail">${SP.strip(opt.avail, opt.from, opt.live, 7)}</div>` : ''}
       </div></a>`;
   };
   SP.stars = (n, max = 5) => {
@@ -342,7 +350,7 @@
       <div class="meet-cover">${m.cover ? `<img src="${SP.esc(m.cover)}" alt="" loading="lazy">` : `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${MEET_MOOD[m.cat] || 'welcome'}-s.webp')"><span class="ca-area">${SP.esc(m.cat || '모임')}</span></div>`}<span class="cat badge ink">${SP.esc(m.cat || '모임')}</span></div>
       <div class="meet-body"><h3 class="clamp2">${SP.esc(m.title)}</h3>${m.intro ? `<p class="clamp2">${SP.esc(m.intro)}</p>` : ''}
         <div class="meet-foot"><span>${SP.icon('pin', 'sm')} ${SP.esc(m.region || '')}</span><span>${SP.icon('users', 'sm')} ${m.members}/${m.cap}명${m.next ? ` · 다음 모임 ${SP.mdw(m.next)}` : ''}</span></div></div></a>`;
-  const BOARD = { review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', mb: '모임' };
+  const BOARD = { review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', host: '지점 소식', mb: '모임' };
   SP.BOARD = BOARD;
   SP.postRow = (p) => `<a class="post-row" href="/c/${p.id}">
       <div style="min-width:0"><h3>${p.pinned ? '<span class="badge red">고정</span>' : ''}<span class="badge mute">${BOARD[p.board] || ''}</span>${SP.esc(p.title)}${p.imgCount > 1 ? ` <span class="faint small">${SP.icon('image', 'sm')}</span>` : ''}</h3>
@@ -423,7 +431,8 @@
       }
       const sns = SP.$('[data-sns]');
       if (sns) {
-        const l = [['sns.instagram', '인스타그램'], ['sns.blog', '블로그'], ['sns.youtube', '유튜브']].filter(([k]) => s[k]);
+        // 인스타그램은 바닥글 위쪽 버튼으로 보이니 여기엔 블로그·유튜브만
+        const l = [['sns.blog', '블로그'], ['sns.youtube', '유튜브']].filter(([k]) => s[k]);
         sns.innerHTML = l.map(([k, n]) => `<a href="${SP.esc(s[k])}" target="_blank" rel="noopener">${n}</a>`).join('');
       }
     });
@@ -440,7 +449,7 @@
           : '<a class="btn btn-ink btn-sm" href="/login">로그인</a>';
       }
       const dslot = SP.$('#drawerUser');
-      if (dslot) dslot.innerHTML = u ? `<a href="/mypage">${SP.avatar(u.avatar, 'sm')} ${SP.esc(u.nick)}님</a>${u.admin ? '<a href="/admin" class="sub">관리자 화면</a>' : ''}<a href="#" class="sub" data-logout>로그아웃</a>` : '<a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a>';
+      if (dslot) dslot.innerHTML = u ? `<a href="/mypage">${SP.avatar(u.avatar, 'sm')} ${SP.esc(u.nick)}님</a>${(u.hostCodes || []).length ? '<a href="/myspace" class="sub">내 공간 관리 (호스트)</a>' : ''}${u.admin ? '<a href="/admin" class="sub">관리자 화면</a>' : ''}<a href="#" class="sub" data-logout>로그아웃</a>` : '<a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a>';
       if (bell) {
         bell.hidden = !u;
         if (u && m.unread) bell.insertAdjacentHTML('beforeend', `<span class="dot">${m.unread > 9 ? '9+' : m.unread}</span>`);

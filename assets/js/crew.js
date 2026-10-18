@@ -55,7 +55,7 @@
           <div style="margin-top:14px">${applyBox()}</div>
           ${c.chat_url ? `<a class="btn btn-kakao btn-block" style="margin-top:12px" href="${esc(c.chat_url)}" target="_blank" rel="noopener">${icon('kakao', 'fill')}오픈채팅 들어가기</a>` : c.hasChat && !me.owner ? '<p class="tiny faint" style="margin-top:10px">오픈채팅 주소는 수락된 사람에게만 보여요.</p>' : ''}
           <div class="row" style="margin-top:14px;flex-wrap:wrap">
-            ${c.code ? `<a class="btn btn-soft btn-sm" href="/room/${c.code}?date=${c.d}">${icon('calendar', 'sm')}그날 빈 방 보기</a>` : ''}
+            ${c.code ? `<a class="btn btn-soft btn-sm" href="/room/${c.code}?date=${c.d}">${icon('calendar', 'sm')}그날 요금 보기</a>` : ''}
             <a class="btn btn-soft btn-sm" href="/planner#nbbang">${icon('won', 'sm')}N빵 계산기</a>
             <button class="btn btn-ghost btn-sm" type="button" data-act="share">${icon('share', 'sm')}공유</button>
             ${!me.owner ? `<button class="btn btn-ghost btn-sm" type="button" data-act="report">${icon('flag', 'sm')}신고</button>` : ''}

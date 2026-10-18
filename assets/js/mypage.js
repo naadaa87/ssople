@@ -15,13 +15,13 @@
       <div class="grow"><h1>${esc(me.nick)}</h1>
         <div class="row wrap-ok small muted" style="gap:8px;margin-top:4px"><span class="badge ${t.tier === 'gold' ? 'sun' : t.tier === 'silver' ? 'moon' : 'mute'}">쏘플 클럽 ${TIER[t.tier]}</span>${me.region ? `<span>${esc(me.region)}</span>` : ''}${since ? `<span>${esc(since)} 가입</span>` : ''}</div>
         ${me.intro ? `<p class="small" style="margin-top:6px">${esc(me.intro)}</p>` : ''}</div>
-      <div class="row wrap-ok">${me.admin ? `<a class="btn btn-soft btn-sm" href="/admin">${icon('sliders', 'sm')}관리자 화면</a>` : ''}<button class="btn btn-line btn-sm" type="button" data-go-tab="account">${icon('edit', 'sm')}프로필 고치기</button></div>`;
+      <div class="row wrap-ok">${me.admin ? `<a class="btn btn-soft btn-sm" href="/admin">${icon('sliders', 'sm')}관리자 화면</a>` : ''}${(me.hostCodes || []).length ? `<a class="btn btn-red btn-sm" href="/myspace">${icon('key', 'sm')}내 공간 관리</a>` : ''}<button class="btn btn-line btn-sm" type="button" data-go-tab="account">${icon('edit', 'sm')}프로필 고치기</button></div>`;
     const next = t.tier === 'gold' ? '가장 높은 등급이에요' : `${t.tier === 'welcome' ? '실버' : '골드'}까지 ${t.toNext}번`;
     $('#meQuick').innerHTML = `
       <a class="mq" href="/membership"><span class="mq-k">방문 인증</span><b>${t.n}번</b><small>${esc(next)}</small></a>
       <button class="mq" type="button" data-go-tab="noti"><span class="mq-k">안 읽은 알림</span><b>${info.unread || 0}개</b><small>모임·파티팀·행사 소식</small></button>
       <a class="mq" href="/invite"><span class="mq-k">초대장</span><b>${icon('send')}</b><small>링크 하나로 참석 받기</small></a>
-      <a class="mq" href="/rooms"><span class="mq-k">빈 방 찾기</span><b>${icon('search')}</b><small>날짜만 고르면 돼요</small></a>`;
+      <a class="mq" href="/rooms"><span class="mq-k">지점 찾기</span><b>${icon('search')}</b><small>날짜만 고르면 돼요</small></a>`;
     $('#meQuick').hidden = false;
   }
 

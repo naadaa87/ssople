@@ -1,4 +1,4 @@
-/* 지점 상세 — 요금·편의시설·오시는 길 + 날짜별 낮/밤 빈 방 + 네이버 예약 버튼 */
+/* 지점 상세 — 요금·편의시설·오시는 길 + 날짜별 요금 + 네이버 예약 버튼 */
 (function () {
   const { $, $$, esc, icon } = SP;
   const today = SP.today();
@@ -30,6 +30,7 @@
         <div class="room-head">
           <div>
             <h1 class="h1">${esc(s.name)}</h1>
+            ${listingBadges(s)}
             <div class="room-addr">${icon('pin', 'sm')}<span>${esc(s.addr || '주소는 예약 후 안내돼요')}</span>${s.addr ? `<button class="btn btn-ghost btn-sm" type="button" data-copy="${esc(s.addr)}">${icon('copy', 'sm')}주소 복사</button>` : ''}</div>
           </div>
           <div class="row">
@@ -53,6 +54,7 @@
           <section class="room-sec"><h2>편의시설</h2>${amenities(s)}</section>
           <section class="room-sec"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
           <section class="room-sec"><h2>찾아오는 길</h2>${route(s)}</section>
+          <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
           <section class="room-sec" id="reviews"><div class="between" style="margin-bottom:12px"><h2 style="margin:0" id="rvHead">이용후기</h2><a class="btn btn-line btn-sm" href="/write?b=review&code=${s.code}">${icon('edit', 'sm')}후기 쓰기</a></div><div id="rvList"><div class="skel" style="height:80px"></div></div></section>
         </div>
         <aside class="book" id="book" aria-label="날짜 고르고 예약하기">
@@ -60,9 +62,9 @@
           <div class="cal" id="cal"><div class="skel" style="height:260px"></div></div>
           <div id="calLegend" style="margin-top:10px"></div>
           <div id="pkgArea"></div>
-          <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>예약·결제·취소는 네이버 예약에서 진행돼요. 빈 방 표시는 실제 예약 상황과 조금 차이가 날 수 있어요.</span></div>
+          <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${isHost(s) ? '이 지점은 호스트가 직접 운영해요. 예약·결제·취소는 네이버 예약에서, 자세한 문의는 호스트에게 이어져요.' : '예약·결제·취소는 네이버 예약에서 진행돼요. 달력의 빈 방 표시는 실제 예약 상황과 조금 다를 수 있어요.'}</span></div>
           <div class="row" style="margin-top:12px;flex-wrap:wrap">
-            <a class="btn btn-kakao btn-sm" data-kakao href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>
+            <a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>
             <a class="btn btn-soft btn-sm" href="/planner?code=${s.code}#cost">${icon('won', 'sm')}예상 비용 계산</a>
           </div>
         </aside>
@@ -72,6 +74,18 @@
     $('#mbPrice').textContent = minP ? SP.won(minP) + '부터' : '';
     SP.site().then(({ settings }) => { const k = settings && settings['kakao.url']; if (k) $$('[data-kakao]').forEach((a) => { a.href = k; }); });
     bind();
+  }
+
+  function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+  function listingBadges(s) {
+    const l = s.listing || {};
+    const zone = SP.zoneOf(s);
+    const out = [];
+    if (zone === 'premium') out.push('<span class="badge red">프리미엄존</span>');
+    else if (zone === 'plus') out.push('<span class="badge ink">플러스존</span>');
+    if (l.type === 'host') out.push(`<span class="badge mute">호스트 운영${l.hostName ? ' · ' + esc(l.hostName) : ''}</span>`);
+    else if (l.type === 'direct') out.push('<span class="badge mute">쏘플 직영</span>');
+    return out.length ? `<div class="row" style="gap:6px;margin:6px 0 2px;flex-wrap:wrap">${out.join('')}</div>` : '';
   }
 
   function priceTable(s) {
@@ -177,7 +191,7 @@
     if (!sel) {
       const linked = (s.pkgs || []).filter((p) => p.url);
       const fb = fallback(s);
-      area.innerHTML = `<p class="small muted" style="margin-top:14px">날짜를 누르면 그날 빈 방과 요금을 보고 바로 예약할 수 있어요.${linked.length ? ' 네이버에서 날짜를 고르려면 아래 패키지를 누르세요.' : ''}</p>
+      area.innerHTML = `<p class="small muted" style="margin-top:14px">날짜를 누르면 그 요일 요금을 보고 네이버 예약으로 바로 이어져요. 예약 가능 여부는 네이버 예약 화면이 기준이에요.${linked.length ? ' 네이버에서 날짜를 고르려면 아래 패키지를 누르세요.' : ''}</p>
         ${linked.length ? `<div class="qbook">${linked.map((p) => `<a href="${esc(SP.naverHref(p.url))}" target="_blank" rel="noopener" data-track="${s.code}|book|${p.k}|"><span><b>${esc(p.label)}</b><small>${esc(p.hrs || '')}</small></span><span class="go">네이버 예약${icon('ext', 'sm')}</span></a>`).join('')}</div>` : ''}
         ${s.book ? `<a class="btn ${linked.length ? 'btn-line' : 'btn-naver'} btn-block" style="margin-top:12px" href="${esc(s.book)}" target="_blank" rel="noopener" data-track="${s.code}|book">${icon('ext')}네이버 예약 페이지 열기</a>`
           : !linked.length && fb ? `<a class="btn btn-naver btn-block" style="margin-top:12px" href="${esc(fb.href)}" target="_blank" rel="noopener" data-track="${s.code}|${fb.kind}">${icon('ext')}${esc(fb.label)}</a>` : ''}`;
@@ -233,7 +247,7 @@
     const el = $('#altList');
     if (!el) return;
     el.innerHTML = open.length ? open.map((x) => { const c = a.spaces[x.code]; return `<a href="/room/${x.code}?date=${sel}"><span><b>${esc(x.name)}</b><br><span class="tiny muted">${esc(x.area)} · 최대 ${x.max}명</span></span>${SP.dn(c[0], c[1], { live: true })}</a>`; }).join('')
-      : `<p class="small muted" style="padding:8px 0">근처도 대부분 마감이에요. <a class="link" href="/rooms?date=${sel}&open=1">이날 빈 방 전체 보기</a></p>`;
+      : `<p class="small muted" style="padding:8px 0">근처도 대부분 마감이에요. <a class="link" href="/rooms?date=${sel}&open=1">이날 다른 지점 보기</a></p>`;
   }
 
   /* ---------------- 후기 · 근처 ---------------- */
@@ -244,6 +258,14 @@
       $('#rvList').innerHTML = d.items.length ? d.items.map(SP.postRow).join('') + (reviewStat.n > 5 ? `<a class="btn btn-soft btn-sm" style="margin-top:14px" href="/community?b=review&code=${code}">후기 전체 보기</a>` : '')
         : '<div class="empty" style="padding:30px 20px"><h3>아직 후기가 없어요</h3><p>이 지점을 다녀왔다면 첫 후기를 남겨 주세요.</p></div>';
     } catch { $('#rvList').innerHTML = '<p class="muted small">후기를 불러오지 못했어요.</p>'; }
+  }
+  async function loadHostNews() {
+    try {
+      const d = await SP.get(`/api/posts?board=host&code=${code}&size=3`);
+      if (!d.items || !d.items.length) return;
+      $('#hnList').innerHTML = d.items.map(SP.postRow).join('');
+      $('#hostNews').hidden = false;
+    } catch { /* 소식은 없어도 돼요 */ }
   }
   async function drawNear() {
     const el = $('#nearList');
@@ -290,7 +312,7 @@
     try {
       if (pre) {
         space = pre;
-        SP.get('/api/spaces/' + code).then((d) => { near = d.near || []; reviewStat = d.reviews || reviewStat; drawNear(); loadReviews(); }).catch(() => {});
+        SP.get('/api/spaces/' + code).then((d) => { near = d.near || []; reviewStat = d.reviews || reviewStat; drawNear(); loadReviews(); loadHostNews(); }).catch(() => {});
       } else {
         const d = await SP.get('/api/spaces/' + code);
         space = d.space; near = d.near || []; reviewStat = d.reviews || reviewStat;
@@ -301,6 +323,6 @@
     av = await SP.avail(today, DAYS, [code], true);
     drawCal();
     drawPkgs();
-    if (!pre) { loadReviews(); drawNear(); }
+    if (!pre) { loadReviews(); loadHostNews(); drawNear(); }
   })();
 })();
