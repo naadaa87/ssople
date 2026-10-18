@@ -1,6 +1,8 @@
 // 검색 노출용 — 지역 페이지 주소, 구조화 데이터(JSON-LD), 검색엔진 소유 확인 태그
 import { getSettings } from './db.js';
 import { photoUrl } from './spaces.js';
+import { AREA_GUIDES } from './area-guides.js';
+import { MAGAZINE } from './magazine-index.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
@@ -120,6 +122,30 @@ export function areaJsonLd(origin, a) {
     itemListElement: a.list.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: `쏘플파티룸 ${s.name}`, url: `${origin}/room/${s.code}` })),
   };
 }
+/** 질문·답 묶음 → FAQPage 구조화 데이터 */
+export function faqJsonLd(pairs) {
+  if (!pairs || pairs.length < 2) return null;
+  return { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: pairs.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) };
+}
+/** 파티 가이드 글 카드 (slug 목록 → HTML) — 지역 화면·지점 화면에서 쓴다 */
+export function magCards(slugs, { small = true } = {}) {
+  const arts = (slugs || []).map((x) => MAGAZINE.find((m) => m.slug === x)).filter(Boolean);
+  if (!arts.length) return '';
+  return `<div class="mag-grid">${arts.map((a) => `<a class="mag-card${small ? ' sm' : ''}" href="/magazine/${esc(a.slug)}"><div class="mag-thumb"><img src="/assets/img/photo/${esc(a.cover)}-s.webp" alt="" loading="lazy" width="700" height="525"></div><div class="mag-card-body"><span class="mag-cat">${esc(a.catLabel)}</span><h3>${esc(a.title)}</h3><p>${esc(a.desc)}</p></div></a>`).join('')}</div>`;
+}
+/** 지역·동네 안내 글 (AREA_GUIDES) → 화면 조각 */
+export function areaGuideHtml(a) {
+  const g = AREA_GUIDES[a.name];
+  if (!g) return '';
+  const intro = (g.intro || []).map((p) => `<p>${esc(p)}</p>`).join('');
+  const fits = (g.fits || []).length ? `<h3 class="h3" style="margin-top:22px">이런 모임에 어울려요</h3><ul class="checks" style="margin-top:10px">${g.fits.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : '';
+  const faq = (g.faq || []).length ? `<h3 class="h3" style="margin-top:26px">${esc(a.name)} 파티룸 자주 묻는 질문</h3><div class="faq card-faq" style="margin-top:10px">${g.faq.map(([q, an]) => `<details><summary>${esc(q)}<svg class="ic" aria-hidden="true"><use href="#i-chev-d"/></svg></summary><div class="ans">${esc(an)}</div></details>`).join('')}</div>` : '';
+  const arts = magCards(g.articles);
+  return `<section class="area-guide" style="margin-top:40px"><h2 class="h2">${esc(a.name)} 파티룸, 이렇게 골라요</h2><div class="prose" style="margin-top:12px;max-width:760px">${intro}</div>${fits}${faq}${arts ? `<h3 class="h3" style="margin-top:28px">읽어 보면 좋은 글</h3><div style="margin-top:12px">${arts}</div>` : ''}</section>`;
+}
+export const areaGuideFaq = (a) => faqJsonLd((AREA_GUIDES[a.name] || {}).faq);
+export const areaGuideDesc = (a) => { const g = AREA_GUIDES[a.name]; return g && g.intro && g.intro[0] ? g.intro[0] : ''; };
+
 /** FAQ(details/summary)에서 FAQPage 구조화 데이터 만들기 — 정적 화면은 build 때 넣는다 */
 export const jsonLdTag = (obj) => `<script type="application/ld+json">${jsonText(obj)}</script>`;
 
@@ -148,7 +174,8 @@ export function areaHtml(origin, a) {
 <h1 class="h1">${esc(a.name)} 파티룸 <span class="area-count">${a.list.length}곳</span></h1>
 <p class="lead">${esc(a.name)}에서 바로 갈 수 있는 쏘플파티룸이에요. 낮·밤 타임으로 빌리고, 결제는 네이버 예약에서 해요. ${regionLine ? '' : ''}</p>
 <div class="area-cards">${cards}</div>
-${regionLine ? `<p class="muted small" style="margin-top:18px">${regionLine}도 같이 볼 수 있어요.</p>` : ''}`;
+${regionLine ? `<p class="muted small" style="margin-top:18px">${regionLine}도 같이 볼 수 있어요.</p>` : ''}
+${areaGuideHtml(a)}`;
 }
 
 /* ---------- 대표 주소(정식 도메인)로 보내기 ---------- */

@@ -146,6 +146,7 @@ export async function applySeedUpdate(db) {
       const [prevPlace, prevSig] = (SEED_PREV && SEED_PREV[seed.code]) || ['', ''];
       next = { ...cur, code: seed.code, name: r.name, region: r.region, area: r.area, visible: sv === false ? false : !!r.visible, edited: true };
       if (!cur.book && fresh.book) next.book = fresh.book;
+      if (!cur.intro && fresh.intro) next.intro = fresh.intro;   // 소개가 비어 있던 지점만 새 소개 글로 채운다
       if (fresh.place && (!cur.place || cur.place === prevPlace)) next.place = fresh.place;
       if (pkgSig(cur.pkgs) === prevSig) {
         // 패키지 구성·링크를 손대지 않았으면 새 목록 기준으로 맞추고, 요금·시간은 관리자가 고친 값을 쓴다

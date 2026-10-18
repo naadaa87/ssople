@@ -45,7 +45,9 @@
     "/signup",
     "/mypage",
     "/write",
-    "/purpose-*"
+    "/purpose-*",
+    "/magazine",
+    "/magazine/*"
   ],
   "exclude": []
 }

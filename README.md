@@ -1,7 +1,7 @@
 # 쏘플파티룸 고객 홈페이지
 
 전국 쏘플파티룸 지점 정보와 요금을 보여 주고, 예약은 **네이버 예약**으로 연결하는 고객용 홈페이지예요.
-커뮤니티, 모임, 파티팀 모집, 행사, 놀이터(파티 도구), 초대장, 쏘플 클럽(멤버십), 제휴·협업, 호스트 센터(공간 등록·위탁운영), 창업안내, 공간 아카데미까지 한 사이트에 담았어요.
+커뮤니티, 모임, 파티팀 모집, 행사, 놀이터(파티 도구), 초대장, 쏘플 클럽(멤버십), 제휴·협업, 호스트 센터(공간 등록·위탁운영), 창업안내, 공간 아카데미, 파티 가이드(글 48편)까지 한 사이트에 담았어요.
 
 - 예약·결제·취소: 네이버 예약에서 해요. 이 홈페이지는 결제를 받지 않아요.
 - 예약 버튼: 패키지별 네이버 예약 상품 → 지점 네이버 예약 페이지 → 네이버 지도 순서로 연결해요. (운영지점리스트 2026.10.11 기준)
@@ -14,8 +14,8 @@
 배포 안내서와 운영 안내서는 전달한 ZIP의 `docs` 폴더에 따로 들어 있어요. 내부 운영 내용이라 저장소(=공개 홈페이지)에는 올리지 않아요. 요약하면:
 
 1. Cloudflare D1 `ssople-web`과 Pages Secret `ADMIN_PASSWORD`는 이미 준비돼 있고, `wrangler.toml`에 Database ID도 들어 있어요
-2. GitHub 웹 업로드는 한 번에 100개까지라 세 번에 나눠 올려요: ① `assets`를 뺀 전부(화면·설정 파일·`functions`) ② `assets` 폴더 안에서 `img`·`media` ③ `assets` 폴더 안에서 `js`·`app.css`·`admin.css`·`app.js`
-3. `/api/health`, `/host`, `/academy`, `/startup`, `/area/sinchon`, `/sitemap.xml`, `/admin`에서 확인
+2. GitHub 웹 업로드는 한 번에 100개까지라 네 번에 나눠 올려요: ① `assets`·`magazine`을 뺀 전부(화면·설정 파일·`functions`) ② `magazine` 폴더 ③ `assets` 폴더 안에서 `img`·`media` ④ `assets` 폴더 안에서 `js`·`app.css`·`admin.css`·`app.js`
+3. `/api/health`, `/magazine`, `/host`, `/academy`, `/startup`, `/area/sinchon`, `/sitemap.xml`, `/admin`에서 확인
 4. 네이버 서치어드바이저·구글 서치 콘솔·다음 검색등록 (`docs/SEO-GUIDE.md`)
 
 ## 폴더 구성
@@ -23,9 +23,12 @@
 | 경로 | 내용 |
 |---|---|
 | `*.html` | 화면 (홈, 지점 찾기, 지점 상세, 지역별, 호스트 센터, 창업안내, 공간 아카데미, 행사, 모임, 파티팀, 커뮤니티, 놀이터, 초대장, 쏘플 클럽, 마이, 내 공간 관리, 관리자, 약관 등) |
+| `magazine/` | 파티 가이드 글 48편 (정적 HTML, 글마다 Article·Breadcrumb·FAQ 구조화 데이터) · 목록은 `magazine.html` |
 | `assets/` | 공통 스타일·스크립트, 화면별 스크립트(`js/`), 로고·아이콘·사진(`img/`), 영상(`media/`) |
 | `functions/` | 서버 기능 (Cloudflare Pages Functions) — API, 지점·지역 화면 서버 렌더링, 공유 미리보기, 사이트맵, RSS, 검색 노출 설정(`_lib/seo.js`), 대표 주소 이동(`_middleware.js`) |
-| `functions/_lib/seed-spaces.js` | 지점 공개 정보와 네이버 예약 링크 (내부 정보 제외) |
+| `functions/_lib/seed-spaces.js` | 지점 공개 정보·소개 글과 네이버 예약 링크 (내부 정보 제외) |
+| `functions/_lib/area-guides.js` | 지역·동네 화면 안내 글·FAQ (서버 렌더링) |
+| `functions/_lib/magazine-index.js` | 파티 가이드 글 목록 (사이트맵·RSS·지역·지점 화면 연결용, 빌드 때 자동 생성) |
 | `wrangler.toml` | DB·사진 저장소 연결 설정 |
 | `_routes.json` | 서버 기능을 거치는 주소 목록 |
 | `_redirects` | 설정 파일(README, wrangler.toml 등)이 홈페이지 주소로 열리지 않게 막기, 예전 주소 옮기기 |
@@ -40,4 +43,4 @@
 | `HOSTDB` | D1 (지금은 끔) | 나중에 예전 호스트 센터 DB를 다시 쓸 때 예약 읽기 전용 |
 | `SYNC_TOKEN` | Secret (나중에) | 호스트 예약 자동 업데이트·외부 예약 수신 |
 
-버전 2026.10.18 (v4 — 호스트 프로그램 · 공간 아카데미 · 패밀리 사이트 · 검색 노출 강화)
+버전 2026.10.18b (v5 — 파티 가이드 48편 · 지역 안내 글 · 지점 소개 글 · 호스트 프로그램 · 공간 아카데미 · 패밀리 사이트)

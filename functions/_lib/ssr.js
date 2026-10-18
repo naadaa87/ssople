@@ -4,7 +4,8 @@ import { loadSpaces, publicSpace, photoUrl } from './spaces.js';
 import { parseJSON, todayKST } from './util.js';
 import { imgUrl } from './community.js';
 import { getSettings } from './db.js';
-import { verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList } from './seo.js';
+import { verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
+import { MAGAZINE } from './magazine-index.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
@@ -73,13 +74,27 @@ export async function renderStatic(context) {
   } catch { /* DB 연결 전이면 기본 화면만 */ }
   return new HTMLRewriter()
     .on('meta[property="og:image"]', { element(el) { el.setAttribute('content', abs(el.getAttribute('content'))); } })
-    .on('meta[property="og:url"]', { element(el) { el.setAttribute('content', here); } })
-    .on('link[rel="canonical"]', { element(el) { el.setAttribute('href', here); } })
+    .on('meta[property="og:url"]', { element(el) { if (!el.getAttribute('content')) el.setAttribute('content', here); } })
+    .on('link[rel="canonical"]', { element(el) { if (!el.getAttribute('href')) el.setAttribute('href', here); } })
     .on('head', { element(el) { if (extra) el.append(extra, { html: true }); } })
     .transform(res);
 }
 
 /* ---------------- 화면별 정보 ---------------- */
+/** 지점 시설에 맞는 파티 가이드 글 링크 (검색 로봇용 — 고객 화면은 room.js가 카드로 다시 그린다) */
+function roomGuideLinks(s) {
+  const f = s.feat || {}, out = [];
+  if ((s.max || 0) >= 20) out.push('year-end-party-guide', 'large-group-partyrooms');
+  if (f.bbq && f.bbq.on) out.push('rooftop-terrace-partyrooms');
+  if (f.pet && f.pet.on) out.push('pet-friendly-partyroom');
+  if (f.console) out.push('tv-party-games');
+  if (f.karaoke && f.karaoke.on) out.push('karaoke-party-tips');
+  out.push('birthday-party-guide', 'party-checklist', 'party-games-50');
+  const arts = [...new Set(out)].slice(0, 3).map((x) => MAGAZINE.find((m) => m.slug === x)).filter(Boolean);
+  if (!arts.length) return '';
+  return `<p class="muted small" style="margin-top:14px">파티 준비 가이드: ${arts.map((a) => `<a class="link" href="/magazine/${esc(a.slug)}">${esc(a.title)}</a>`).join(' · ')} · <a class="link" href="/magazine">전체 보기</a></p>`;
+}
+
 export async function roomMeta(env, params) {
   const code = String(params.code || '').toUpperCase();
   const s = (await loadSpaces(env.DB)).find((x) => x.code === code);
@@ -101,7 +116,8 @@ export async function roomMeta(env, params) {
 <h1 class="h1" style="margin-top:10px">${esc(s.name)} <span class="muted" style="font-size:.55em;font-weight:600">${esc(s.region)} ${esc(s.area)} 파티룸</span></h1>
 <p class="lead">${esc(s.addr || '')}${s.base && s.max ? ` · 기준 ${esc(s.base)}명, 최대 ${esc(s.max)}명` : ''}${s.info?.size ? ` · ${esc(s.info.size)}` : ''}${from ? ` · ${esc(won(from))}부터` : ''}</p>
 ${all.length ? `<p class="muted">${all.map((f) => esc(f)).join(' · ')}</p>` : ''}
-${s.intro ? `<p style="margin-top:12px">${esc(s.intro)}</p>` : ''}
+${s.intro ? String(s.intro).split(/\n\s*\n/).map((pg) => `<p style="margin-top:12px">${esc(pg.trim())}</p>`).join('') : ''}
+${roomGuideLinks(s)}
 <div class="skel" style="height:360px;margin-top:22px;border-radius:22px"></div>`;
   return {
     title: `${s.name} 파티룸 — ${s.region} ${s.area}`, desc, image: (s.photos || [])[0] ? photoUrl(s.photos[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
@@ -120,11 +136,11 @@ export async function areaMeta(env, params) {
   const feats = [...new Set(a.list.flatMap((s) => featList(s)))].slice(0, 5);
   return {
     title: `${a.name} 파티룸 ${a.list.length}곳 — 쏘플파티룸`, fullTitle: true,
-    desc: `${a.name} 파티룸을 찾는다면 쏘플. ${names}${a.list.length > 6 ? ' 등' : ''} ${a.list.length}곳의 요금, 인원, 시설을 비교하고 네이버 예약으로 바로 잡으세요.${feats.length ? ` ${feats.join('·')} 있는 방.` : ''}`,
+    desc: (areaGuideDesc(a) ? areaGuideDesc(a).slice(0, 150) + ' ' : '') + `${names}${a.list.length > 6 ? ' 등' : ''} ${a.list.length}곳의 요금·인원·시설을 비교하고 네이버 예약으로 바로 잡으세요.`,
     keywords: [`${a.name} 파티룸`, `${a.name} 파티룸 대여`, `${a.name} 파티룸 추천`, `${a.name} 생일파티 장소`, `${a.name} 모임 장소`, a.kind === 'area' ? `${a.region} 파티룸` : '', '쏘플파티룸'].filter(Boolean).join(', '),
     image: a.list.flatMap((s) => s.photos || []).map(photoUrl).find(Boolean) || '/assets/img/og.jpg',
     data: { area: { kind: a.kind, name: a.name, region: a.region, codes: a.list.map((s) => s.code) } },
-    jsonld: [areaJsonLd(origin, a), breadcrumbJsonLd(origin, a.kind === 'area' ? [['홈', '/'], ['지역별 지점', '/locations'], [a.region, `/area/${encodeURIComponent(a.region)}`], [a.name, `/area/${encodeURIComponent(a.name)}`]] : [['홈', '/'], ['지역별 지점', '/locations'], [a.name, `/area/${encodeURIComponent(a.name)}`]])],
+    jsonld: [areaJsonLd(origin, a), breadcrumbJsonLd(origin, a.kind === 'area' ? [['홈', '/'], ['지역별 지점', '/locations'], [a.region, `/area/${encodeURIComponent(a.region)}`], [a.name, `/area/${encodeURIComponent(a.name)}`]] : [['홈', '/'], ['지역별 지점', '/locations'], [a.name, `/area/${encodeURIComponent(a.name)}`]]), areaGuideFaq(a)].filter(Boolean),
     html: { '#areaRoot': areaHtml(origin, a) },
   };
 }
@@ -182,6 +198,8 @@ export async function sitemap(context) {
   const pages = ['/', '/rooms', '/locations', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about',
     '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy'];
   const urls = pages.map((p) => ({ loc: origin + p }));
+  urls.push({ loc: origin + '/magazine' });
+  for (const m of MAGAZINE) urls.push({ loc: `${origin}/magazine/${m.slug}`, lastmod: m.date });
   try {
     if (env.DB) {
       await ensureSchema(env);
@@ -228,8 +246,9 @@ export async function rss(context) {
     { title: '쏘플 공간 아카데미 — 공간 운영·창업 커뮤니티', link: origin + '/academy', desc: '파티룸과 공간대여 사업에 관심 있는 분들이 모이는 정기 모임, 현장 투어, 온라인 스터디.', cat: '아카데미' },
     { title: '이용 안내 — 예약부터 입장까지', link: origin + '/guide', desc: '예약, 입장, 보증금, 미성년자 이용까지 자주 묻는 내용을 모았어요.', cat: '안내' },
   ];
+  for (const m of MAGAZINE) items.push({ title: m.title, link: `${origin}/magazine/${m.slug}`, desc: m.desc, at: m.date + 'T09:00:00+09:00', cat: '파티 가이드 · ' + m.catLabel });
   items.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
-  const all = [...items.slice(0, 100), ...fixed];
+  const all = [...items.slice(0, 150), ...fixed];
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
