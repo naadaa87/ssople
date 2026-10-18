@@ -245,9 +245,22 @@
   SP.legend = (live) => `<div class="legend"><span><i class="lg-d"></i>낮 ${live ? '빈 방' : ''}</span><span><i class="lg-n"></i>밤 ${live ? '빈 방' : ''}</span><span><i class="lg-b"></i>마감</span><span><i class="lg-c"></i>지난 시간</span></div>`;
 
   /* ---------------- 지점 표지 · 카드 ---------------- */
+  /* 사진이 없는 지점의 표지 — 시설에 맞는 분위기 사진 위에 동네 이름 (실제 사진이 아니라는 표시를 같이 둔다) */
+  const MOOD = ['orange-room', 'moroccan', 'welcome', 'party-table', 'birthday-2', 'yearend', 'bridal-2', 'entrance'];
+  SP.moodPhoto = (s) => {
+    const f = s.feat || {};
+    let h = 0; for (const ch of String(s.code || '')) h = (h * 31 + ch.charCodeAt(0)) % 9973;
+    let pool = MOOD;
+    if (f.bbq && f.bbq.on || (f.zones || []).some((z) => /루프탑|테라스/.test(z))) pool = ['terrace-night', 'rooftop', 'yearend', 'party-table', 'orange-room'];
+    else if (f.karaoke && f.karaoke.on && (f.console || (f.games || []).length > 6)) pool = ['game-lounge', 'neon-night', 'game-lounge-2', 'birthday-2'];
+    else if (f.karaoke && f.karaoke.on) pool = ['neon-night', 'birthday-2', 'orange-room', 'moroccan'];
+    else if (f.projector && (s.max || 0) >= 16) pool = ['theater', 'workshop', 'meeting', 'yearend'];
+    return pool[h % pool.length];
+  };
+  const MEET_MOOD = { 보드게임: 'game-lounge-2', 와인: 'party-table', 영화: 'theater', 파티: 'birthday-2', 운동: 'rooftop', 음악: 'neon-night', 사진: 'photowall', 스터디: 'workshop' };
   SP.cover = (s, alt) => {
     if (s.photos && s.photos[0]) return `<img src="${SP.esc(s.photos[0])}" alt="${SP.esc(alt || s.name)}" loading="lazy">`;
-    return `<div class="cover-art" aria-hidden="true"><span class="ca-seal"></span><span class="ca-area">${SP.esc(s.area)}</span></div>`;
+    return `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${SP.moodPhoto(s)}-s.webp')"><span class="ca-note">실제 사진 준비 중</span><span class="ca-seal"></span><span class="ca-area">${SP.esc(s.area)}</span></div>`;
   };
   SP.minPrice = (s) => {
     let m = null;
@@ -283,7 +296,7 @@
       else if (d === 'b' || n === 'b') badge = '<div class="room-badge"><span class="badge mute">이날 마감</span></div>';
     }
     return `<a class="room" href="${href}">
-      <div class="room-cover">${SP.cover(s)}${badge}</div>
+      <div class="room-cover">${SP.cover(s)}${badge}${opt.rank ? `<span class="rank">${opt.rank}</span>` : ''}</div>
       <div class="room-body">
         <div class="room-area">${SP.icon('pin', 'sm')}${SP.esc(s.region)} ${SP.esc(s.area)}</div>
         <h3 class="room-name">${SP.esc(s.name)}</h3>
@@ -326,7 +339,7 @@
       <div class="band-need"><b>${c.accepted}/${c.need}</b><small>명 모였어요</small><div class="slots">${slots}</div></div></a>`;
   };
   SP.meet = (m) => `<a class="meet" href="/m/${m.id}">
-      <div class="meet-cover">${m.cover ? `<img src="${SP.esc(m.cover)}" alt="" loading="lazy">` : `<span class="ca-word">${SP.esc(m.cat || '모임')}</span>`}<span class="cat badge ink">${SP.esc(m.cat || '모임')}</span></div>
+      <div class="meet-cover">${m.cover ? `<img src="${SP.esc(m.cover)}" alt="" loading="lazy">` : `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${MEET_MOOD[m.cat] || 'welcome'}-s.webp')"><span class="ca-area">${SP.esc(m.cat || '모임')}</span></div>`}<span class="cat badge ink">${SP.esc(m.cat || '모임')}</span></div>
       <div class="meet-body"><h3 class="clamp2">${SP.esc(m.title)}</h3>${m.intro ? `<p class="clamp2">${SP.esc(m.intro)}</p>` : ''}
         <div class="meet-foot"><span>${SP.icon('pin', 'sm')} ${SP.esc(m.region || '')}</span><span>${SP.icon('users', 'sm')} ${m.members}/${m.cap}명${m.next ? ` · 다음 모임 ${SP.mdw(m.next)}` : ''}</span></div></div></a>`;
   const BOARD = { review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', mb: '모임' };

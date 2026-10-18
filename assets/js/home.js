@@ -14,17 +14,25 @@
     const [spaces, av] = await Promise.all([SP.spaces().catch(() => []), SP.avail(today, 7)]);
     const site = await SP.site();
     const s = site.settings || {};
-    if (s['hero.title']) $('#heroTitle').innerHTML = esc(s['hero.title']).replace(/,\s*/, ',<br>');
+    if (s['hero.title']) $('#heroTitle').innerHTML = esc(s['hero.title']).replace(/,\s*/, ',<br>').replace('쏘플', '<em>쏘플</em>');
     if (s['hero.sub']) $('#heroSub').textContent = s['hero.sub'];
+    if (spaces.length) {
+      $('#stSpaces').textContent = spaces.length; $('#pillSpaces').textContent = spaces.length;
+      $('#stRegions').textContent = new Set(spaces.map((x) => x.region)).size;
+    }
     board(spaces, av);
-    weekend(spaces, av);
+    const shown = weekend(spaces, av);
+    popular(spaces, av, shown);
     regions(spaces);
     passes(s);
     feed();
+    const dateIn = $('#hDate');
+    dateIn.min = today;
     $('#heroForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const q = new URLSearchParams();
       if ($('#hRegion').value) q.set('region', $('#hRegion').value);
+      if (dateIn.value) q.set('date', dateIn.value);
       if ($('#hPeople').value) q.set('people', $('#hPeople').value);
       location.href = '/rooms' + (q.toString() ? '?' + q : '');
     });
@@ -106,7 +114,7 @@
       if (fa !== fb) return (fa < 0 ? 99 : fa) - (fb < 0 ? 99 : fb);
       return (b.reviews?.n || 0) - (a.reviews?.n || 0) || a.sort - b.sort;
     });
-    list = list.slice(0, 6);
+    list = list.slice(0, 4);
     $('#wkMore').href = live ? `/rooms?date=${wd}` : '/rooms';
     $('#wkRooms').innerHTML = list.length
       ? list.map((s) => {
@@ -114,23 +122,40 @@
         return SP.roomCard(s, { avail: c, from: today, live, date: live ? wd : '', dayState: live && c ? [c[idx * 2], c[idx * 2 + 1]] : null });
       }).join('')
       : `<div class="empty" style="grid-column:1/-1">${icon('calendar')}<h3>${label}은 빈 방이 거의 없어요</h3><p>다른 날짜를 골라 보면 더 많이 보여요.</p><a class="btn btn-ink" href="/rooms">날짜 바꿔서 찾기</a></div>`;
+    return new Set(list.map((s) => s.code));
+  }
+
+  /* ---------- 인기 지점 ---------- */
+  function popular(spaces, av, shown) {
+    const featured = (SP.settings && SP.settings['home.featured'] || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const list = spaces.slice().sort((a, b) => {
+      const fa = featured.indexOf(a.code), fb = featured.indexOf(b.code);
+      if (fa !== fb) return (fa < 0 ? 99 : fa) - (fb < 0 ? 99 : fb);
+      return (b.reviews?.n || 0) - (a.reviews?.n || 0) || (b.max || 0) - (a.max || 0) || a.sort - b.sort;
+    }).filter((s) => !shown.has(s.code)).slice(0, 8);
+    const live = !!(av && av.live);
+    $('#popRooms').innerHTML = list.map((s, i) => {
+      const c = av && av.spaces && av.spaces[s.code];
+      return SP.roomCard(s, { avail: c, from: today, live, rank: i + 1 });
+    }).join('');
   }
 
   /* ---------- 지역 ---------- */
+  const REGION_PHOTO = { 서울: 'neon-night', 경기: 'orange-room', 인천: 'terrace-night', 대전: 'moroccan', 부산: 'rooftop', 전주: 'welcome' };
   function regions(spaces) {
     const by = {};
     spaces.forEach((s) => { (by[s.region] = by[s.region] || {}); by[s.region][s.area] = (by[s.region][s.area] || 0) + 1; });
     const order = ['서울', '경기', '인천', '대전', '부산', '전주'];
     const regs = Object.keys(by).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
-    $('#regionSub').textContent = `${regs.length}개 권역 ${spaces.length}곳. 가까운 동네부터 찾아보세요.`;
-    let cur = regs[0];
-    const draw = () => {
-      $('#regionTabs').innerHTML = regs.map((r) => `<button class="chip${r === cur ? ' on' : ''}" type="button" data-r="${esc(r)}">${esc(r)} <span class="n">${Object.values(by[r]).reduce((a, b) => a + b, 0)}</span></button>`).join('');
-      $('#areaList').innerHTML = Object.entries(by[cur]).sort((a, b) => b[1] - a[1])
-        .map(([a, n]) => `<a class="area-item" href="/rooms?region=${encodeURIComponent(cur)}&area=${encodeURIComponent(a)}"><b>${esc(a)}</b><small>${n}곳</small></a>`).join('');
-    };
-    draw();
-    $('#regionTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (b) { cur = b.dataset.r; draw(); } });
+    $('#regionSub').textContent = `${regs.length}개 권역 ${spaces.length}곳. 권역을 누르면 그 지역 지점을 모아 보여 드려요.`;
+    $('#regionTiles').innerHTML = regs.map((r) => {
+      const n = Object.values(by[r]).reduce((a, b) => a + b, 0);
+      const ph = REGION_PHOTO[r] || 'entrance';
+      return `<a class="region" href="/area/${encodeURIComponent(r)}" style="--pp:url('/assets/img/photo/${ph}-s.webp')"><b>${esc(r)}</b><span>${n}개 지점</span></a>`;
+    }).join('') + `<a class="region all" href="/locations"><b>전체 지점 안내</b><span>전국 ${spaces.length}곳 주소·지도</span></a>`;
+    const areas = [];
+    for (const r of regs) for (const [a, n] of Object.entries(by[r]).sort((x, y) => y[1] - x[1])) if (a !== r || regs.length === 1) areas.push([a, n]);
+    $('#areaList').innerHTML = `<span class="area-chips-lb">동네별</span>` + areas.map(([a, n]) => `<a class="chip" href="/area/${encodeURIComponent(a)}">${esc(a)} <span class="n">${n}</span></a>`).join('');
   }
 
   /* ---------- 클럽 패스 ---------- */
@@ -151,11 +176,24 @@
       : `<div class="empty">${icon('users')}<h3>지금 모집 중인 파티팀이 없어요</h3><p>같이 파티룸 빌릴 사람을 먼저 모아 보세요.</p><a class="btn btn-line btn-sm" href="/crew#new">모집글 쓰기</a></div>`;
     $('#homeMeetups').innerHTML = d.meetups.length ? d.meetups.slice(0, 3).map(SP.meet).join('')
       : `<div class="empty" style="grid-column:1/-1">${icon('smile')}<h3>아직 열린 모임이 없어요</h3><p>보드게임, 와인, 영화처럼 좋아하는 걸 같이 할 사람을 모아 보세요.</p><a class="btn btn-line btn-sm" href="/meetups#new">모임 만들기</a></div>`;
-    $('#homeReviews').innerHTML = d.reviews.length ? d.reviews.slice(0, 3).map((r) => `<a class="review-card" href="/c/${r.id}">
-        ${r.img ? `<div class="rc-img"><img src="${esc(r.img)}" alt="" loading="lazy"></div>` : `<div class="rc-img rc-text"><p>${esc(r.excerpt)}</p></div>`}
-        <div class="rc-body"><div class="between">${SP.stars(r.rating || 0)}${r.verified ? '<span class="badge ok">방문 인증</span>' : ''}</div>
-        <h3 class="clamp2">${esc(r.title)}</h3>${r.img ? `<p class="clamp2">${esc(r.excerpt)}</p>` : ''}
-        <div class="post-meta"><span>${esc(r.spaceName || '')}</span><span>${esc(r.author.nick)}</span><span>${SP.ago(r.created_at)}</span></div></div></a>`).join('')
+    if (d.events.length) {
+      const e = d.events[0];
+      $('#homeBanner').href = '/e/' + e.id;
+      $('#homeBanner').querySelector('.badge').textContent = '다가오는 행사';
+      $('#bannerTitle').textContent = e.title;
+      $('#bannerSub').textContent = `${SP.mdw(e.d || '')}${e.t1 ? ' ' + SP.hm(e.t1) : ''}${e.spaceName ? ' · ' + e.spaceName : ''}${e.summary ? ' — ' + e.summary : ''}`;
+      $('#bannerBtn').innerHTML = `행사 보기${icon('arrow-r', 'sm')}`;
+    }
+    const rv = d.reviews || [];
+    if (rv.length) {
+      const avg = rv.reduce((a, r) => a + (r.rating || 0), 0) / rv.length;
+      $('#reviewSum').innerHTML = `<span class="stars" style="vertical-align:-2px">${icon('star-f')}</span> <b>${avg.toFixed(1)}</b> · 최근 후기 ${rv.length}개 · 방문 인증을 받은 후기는 따로 표시돼요.`;
+    }
+    $('#homeReviews').innerHTML = rv.length ? rv.slice(0, 3).map((r) => `<a class="quote" href="/c/${r.id}">
+        <span class="quote-mark" aria-hidden="true">“</span>
+        <p class="quote-text">${esc(r.excerpt || r.title)}</p>
+        ${r.img ? `<div class="quote-img"><img src="${esc(r.img)}" alt="" loading="lazy"></div>` : ''}
+        <div class="quote-foot">${SP.avatar(r.author.avatar, 'sm')}<div><b>${esc(r.author.nick)}</b><small>${esc(r.spaceName || '')}${r.spaceName ? ' · ' : ''}${SP.ago(r.created_at)}</small></div><div class="quote-rate">${SP.stars(r.rating || 0)}${r.verified ? '<span class="badge ok">방문 인증</span>' : ''}</div></div></a>`).join('')
       : `<div class="empty" style="grid-column:1/-1">${icon('star')}<h3>첫 후기를 기다려요</h3><p>다녀온 지점의 후기를 남겨 주세요. 방문 인증을 하면 후기에 표시돼요.</p><a class="btn btn-line btn-sm" href="/write?b=review">후기 쓰기</a></div>`;
     const ps = d.partners || [];
     $('#homePartners').innerHTML = ps.length

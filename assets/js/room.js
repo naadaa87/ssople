@@ -22,7 +22,7 @@
     const photos = s.photos || [];
     const gallery = photos.length
       ? `<div class="gallery${photos.length === 1 ? ' one' : ''}">${photos.slice(0, 5).map((p, i) => `<div><img src="${esc(p)}" alt="${esc(s.name)} 사진 ${i + 1}" data-i="${i}" ${i ? 'loading="lazy"' : ''}></div>`).join('')}${photos.length > 5 ? `<button class="btn btn-line btn-sm more" type="button" data-i="0">사진 ${photos.length}장 모두 보기</button>` : ''}</div>`
-      : `<div class="gallery one nophoto"><div class="room-cover" style="border:0;border-radius:0">${SP.cover(s)}<div class="ph-wait"><b>사진을 준비하고 있어요</b>${s.place ? `<a class="btn btn-line btn-sm" href="${esc(s.place)}" target="_blank" rel="noopener" data-track="${s.code}|place">${icon('image', 'sm')}네이버 플레이스에서 사진 보기</a>` : ''}</div></div></div>`;
+      : `<div class="gallery one nophoto"><div class="room-cover" style="border:0;border-radius:0">${SP.cover(s)}<div class="ph-wait"><b>실제 사진을 준비하고 있어요 · 지금 보이는 건 쏘플 분위기 컷이에요</b>${s.place ? `<a class="btn btn-line btn-sm" href="${esc(s.place)}" target="_blank" rel="noopener" data-track="${s.code}|place">${icon('image', 'sm')}네이버 플레이스에서 사진 보기</a>` : ''}</div></div></div>`;
     const minP = SP.minPrice(s);
     $('#roomRoot').innerHTML = `
       <div style="padding-top:22px">

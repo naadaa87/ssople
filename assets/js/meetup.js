@@ -29,7 +29,7 @@
     const m = D.meetup;
     $('#mtRoot').innerHTML = `
       <nav class="crumb"><a href="/meetups">모임</a>${icon('chev-r', 'sm')}<span>${esc(m.cat)}</span></nav>
-      <div class="meet-cover" style="border-radius:22px;aspect-ratio:16/6">${m.cover ? `<img src="${esc(m.cover)}" alt="">` : `<span class="ca-word" style="font-size:54px">${esc(m.cat)}</span>`}</div>
+      <div class="meet-cover" style="border-radius:22px;aspect-ratio:16/6">${m.cover ? `<img src="${esc(m.cover)}" alt="">` : `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${({ 보드게임: 'game-lounge-2', 와인: 'party-table', 영화: 'theater', 파티: 'birthday-2', 운동: 'rooftop', 음악: 'neon-night', 사진: 'photowall', 스터디: 'workshop' })[m.cat] || 'welcome'}.webp')"><span class="ca-area" style="font-size:54px">${esc(m.cat)}</span></div>`}</div>
       <div class="between" style="margin-top:20px;align-items:flex-end;flex-wrap:wrap">
         <div><div class="row wrap-ok"><span class="badge ink">${esc(m.cat)}</span><span class="badge mute">${esc(m.region)}</span><span class="badge mute">${m.join_mode === 'open' ? '바로 가입' : '승인 후 가입'}</span>${m.status === 'closed' ? '<span class="badge warn">모집 닫힘</span>' : ''}</div>
           <h1 class="h1" style="margin-top:10px">${esc(m.title)}</h1>
