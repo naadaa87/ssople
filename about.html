@@ -31,7 +31,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261012">
+<link rel="stylesheet" href="/assets/app.css?v=20261013">
 </head>
 <body data-page="about" data-nav="about">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -145,9 +145,9 @@
       <a href="/startup" data-nav="startup" class="gnb-biz">창업안내</a>
     </nav>
     <div class="hd-act">
-      <a class="ibtn hide-m" href="/rooms" aria-label="지점 찾기"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></a>
       <button class="ibtn" id="bellBtn" type="button" hidden aria-label="알림"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
-      <span id="hdUser" class="hide-m"><a class="btn btn-ink btn-sm" href="/login">로그인</a></span>
+      <span id="hdUser" class="hide-m"><a class="btn btn-ghost btn-sm" href="/login">로그인</a></span>
+      <a class="btn btn-red btn-sm hd-cta hide-m" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>빈 방 찾기</a>
       <button class="ibtn menu-btn" type="button" data-menu aria-label="메뉴 열기"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
     </div>
   </div>
@@ -178,29 +178,41 @@
 </div>
 
 <main id="main">
-<div class="wrap page-hd">
-  <h1 class="h-hero" style="font-size:clamp(36px,5.6vw,60px)">모여서 노는 일에<br>진심인 공간</h1>
-  <p class="lead" style="max-width:620px">쏘플파티룸은 생일, 기념일, 회식, 동호회 모임처럼 사람들이 모이는 날을 위한 공간을 운영해요. 방을 빌려주는 데서 끝내지 않고, 같이 놀 사람과 놀 거리까지 만들고 있어요.</p>
-</div>
+<section class="hero-dark" style="--bg:url('/assets/img/photo/entrance.webp')">
+  <div class="wrap">
+    <span class="eyebrow">2016년부터</span>
+    <h1 class="h-hero">모여서 노는 일에<br>진심인 공간</h1>
+    <p class="lead">쏘플파티룸은 생일, 기념일, 회식, 동호회 모임처럼 사람들이 모이는 날을 위한 공간을 운영해요. 방을 빌려주는 데서 끝내지 않고, 같이 놀 사람과 놀 거리까지 만들고 있어요.</p>
+    <div class="hd-stats"><span><b id="aCount">36</b>운영 중인 지점</span><span><b id="aRegions">6</b>권역</span><span><b>340+</b>기획·운영한 공간</span><span><b>2016</b>첫 지점</span></div>
+  </div>
+</section>
 <div class="wrap">
   <div class="photo-grid" style="margin-top:4px">
     <figure><img src="/assets/img/photo/storefront.webp" alt="쏘플파티룸 지점 외관" width="1400" height="1050" fetchpriority="high"><figcaption>골목 어귀에서 만나는 쏘플 간판</figcaption></figure>
     <figure><img src="/assets/img/photo/moroccan.webp" alt="쏘플파티룸 내부 — 모로칸 컨셉 룸" width="1400" height="1050" loading="lazy"><figcaption>지점마다 다른 컨셉의 방</figcaption></figure>
     <figure><img src="/assets/img/photo/rooftop.webp" alt="쏘플파티룸 루프탑" width="1400" height="1050" loading="lazy"><figcaption>루프탑과 테라스가 있는 지점</figcaption></figure>
   </div>
-  <div class="facts" style="margin-top:28px">
-    <div><small>운영 중인 지점</small><b class="display" style="font-size:34px" id="aCount">36곳</b></div>
-    <div><small>권역</small><b class="display" style="font-size:34px" id="aRegions">6개</b></div>
-    <div><small>예약</small><b style="font-size:20px;margin-top:8px">네이버 예약</b></div>
-    <div><small>상담</small><b style="font-size:20px;margin-top:8px">카카오톡 · 전화</b></div>
+  <div class="sec-hd center" style="margin-top:56px"><div><span class="eyebrow">우리가 지키는 것</span><h2 class="h2">공간보다 먼저 생각하는 세 가지</h2></div></div>
+  <div class="grid g3">
+    <div class="box" style="text-align:center;padding:30px 22px"><span class="t-ic" style="margin:0 auto 14px"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg></span><h3 class="h3">목적이 있는 공간</h3><p class="muted small" style="margin-top:6px">개수를 늘리는 경쟁이 아니라, 모임의 목적에 딱 맞는 공간의 '쓸모'를 먼저 봐요.</p></div>
+    <div class="box" style="text-align:center;padding:30px 22px"><span class="t-ic" style="margin:0 auto 14px"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg></span><h3 class="h3">검증된 시스템</h3><p class="muted small" style="margin-top:6px">예약·입장·청소·정산을 자동화한 무인 운영 노하우로, 누구나 지속 가능하게 운영해요.</p></div>
+    <div class="box" style="text-align:center;padding:30px 22px"><span class="t-ic" style="margin:0 auto 14px"><svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg></span><h3 class="h3">머무는 경험</h3><p class="muted small" style="margin-top:6px">들어선 순간부터 나설 때까지, 좋은 사람들과의 하루가 특별해지도록 설계해요.</p></div>
   </div>
-  <div class="grid g2" style="margin-top:44px;gap:30px">
+  <div class="grid g2" style="margin-top:56px;gap:30px">
     <div><h2 class="h2">공간</h2><p class="muted" style="margin-top:8px;line-height:1.8">노래방, 바베큐, 테라스, 게임기처럼 지점마다 놀 거리가 달라요. 홈페이지에서 날짜별로 비어 있는 방을 보고, 네이버 예약으로 바로 잡을 수 있어요.</p><a class="btn btn-line btn-sm" style="margin-top:14px" href="/rooms">지점 찾기</a></div>
     <div><h2 class="h2">같이 놀기</h2><p class="muted" style="margin-top:8px;line-height:1.8">쏘플이 직접 여는 행사, 파티룸을 같이 빌릴 사람을 모으는 파티팀, 꾸준히 만나는 모임까지. 혼자여도 같이 놀 수 있게 만들고 있어요.</p><a class="btn btn-line btn-sm" style="margin-top:14px" href="/event">행사 보기</a></div>
     <div><h2 class="h2">파티 준비</h2><p class="muted" style="margin-top:8px;line-height:1.8">초대장, 준비물 체크리스트, N빵 계산기, TV에 띄우는 파티 게임까지. 준비하는 사람이 덜 고생하게 도구를 만들어요.</p><a class="btn btn-line btn-sm" style="margin-top:14px" href="/play">놀이터 가기</a></div>
     <div><h2 class="h2">쏘플 클럽</h2><p class="muted" style="margin-top:8px;line-height:1.8">다녀갈수록 등급이 오르고, 제휴처 혜택과 행사 우선 신청이 열려요. 기념일을 등록하면 한 달 전에 먼저 알려 드려요.</p><a class="btn btn-line btn-sm" style="margin-top:14px" href="/membership">클럽 안내</a></div>
   </div>
-  <div class="split" style="margin-top:56px">
+  <div class="sec-hd center" style="margin-top:64px"><div><span class="eyebrow">걸어온 길</span><h2 class="h2">작은 방 하나에서 전국으로</h2></div></div>
+  <ol class="timeline">
+    <li><b>2016</b><div><h3>첫 파티룸 오픈</h3><p>홍대의 작은 공간 하나에서 쏘플의 이야기가 시작됐어요.</p></div></li>
+    <li><b>2018</b><div><h3>무인 운영 방식 정립</h3><p>예약·결제·출입·청소를 자동화한 운영 틀을 만들었어요.</p></div></li>
+    <li><b>2020</b><div><h3>전국 확장 · 브랜드화</h3><p>다양한 목적의 공간 라인업을 갖추고 지역을 넓혔어요.</p></div></li>
+    <li><b>2023</b><div><h3>운영 시스템 고도화</h3><p>지점 운영을 한 번에 관리하는 자체 시스템을 다듬었어요.</p></div></li>
+    <li><b>지금</b><div><h3>전국으로 뻗은 파티룸 네트워크</h3><p>공간 파트너와 함께 사람들이 모이는 공간을 계속 만들고 있어요.</p></div></li>
+  </ol>
+  <div class="split" style="margin-top:64px">
     <div>
       <span class="eyebrow">2016년부터</span>
       <h2 class="h2" style="margin-top:8px">340곳 넘는 파티룸을 직접 기획하고 열었어요</h2>
@@ -215,11 +227,12 @@
   <div class="wrap">
     <div class="ft-top">
       <div class="ft-brand">
-        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
+        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo-white.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async" loading="lazy"></a>
+        <p class="ft-desc">사람들의 시간과 즐거움을 기억하는 공간. 2016년부터 전국에 파티룸을 만들고 운영해 온 쏘플이에요.</p>
         <div class="ft-cs"><span>고객센터</span><b data-set="cs.phone">1544-3523</b><span data-set="cs.hours">월~목 10:00~19:00 · 금~일 10:00~22:00</span></div>
         <a class="btn btn-kakao btn-sm" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" style="margin-top:14px"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카카오톡 상담</a>
       </div>
-      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비</h4><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/startup">창업안내</a><a href="/partners">제휴·협업</a><a href="/corporate">기업·단체 행사</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
@@ -243,7 +256,7 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261012" defer></script>
-<script src="/assets/js/about.js?v=20261012" defer></script>
+<script src="/assets/app.js?v=20261013" defer></script>
+<script src="/assets/js/about.js?v=20261013" defer></script>
 </body>
 </html>

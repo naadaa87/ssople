@@ -31,7 +31,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261012">
+<link rel="stylesheet" href="/assets/app.css?v=20261013">
 </head>
 <body data-page="play" data-nav="play">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -145,9 +145,9 @@
       <a href="/startup" data-nav="startup" class="gnb-biz">창업안내</a>
     </nav>
     <div class="hd-act">
-      <a class="ibtn hide-m" href="/rooms" aria-label="지점 찾기"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></a>
       <button class="ibtn" id="bellBtn" type="button" hidden aria-label="알림"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
-      <span id="hdUser" class="hide-m"><a class="btn btn-ink btn-sm" href="/login">로그인</a></span>
+      <span id="hdUser" class="hide-m"><a class="btn btn-ghost btn-sm" href="/login">로그인</a></span>
+      <a class="btn btn-red btn-sm hd-cta hide-m" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>빈 방 찾기</a>
       <button class="ibtn menu-btn" type="button" data-menu aria-label="메뉴 열기"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
     </div>
   </div>
@@ -216,11 +216,12 @@
   <div class="wrap">
     <div class="ft-top">
       <div class="ft-brand">
-        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
+        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo-white.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async" loading="lazy"></a>
+        <p class="ft-desc">사람들의 시간과 즐거움을 기억하는 공간. 2016년부터 전국에 파티룸을 만들고 운영해 온 쏘플이에요.</p>
         <div class="ft-cs"><span>고객센터</span><b data-set="cs.phone">1544-3523</b><span data-set="cs.hours">월~목 10:00~19:00 · 금~일 10:00~22:00</span></div>
         <a class="btn btn-kakao btn-sm" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" style="margin-top:14px"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카카오톡 상담</a>
       </div>
-      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비</h4><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/startup">창업안내</a><a href="/partners">제휴·협업</a><a href="/corporate">기업·단체 행사</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
@@ -244,7 +245,7 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261012" defer></script>
-<script src="/assets/js/play.js?v=20261012" defer></script>
+<script src="/assets/app.js?v=20261013" defer></script>
+<script src="/assets/js/play.js?v=20261013" defer></script>
 </body>
 </html>

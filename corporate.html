@@ -31,7 +31,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261012">
+<link rel="stylesheet" href="/assets/app.css?v=20261013">
 </head>
 <body data-page="corporate" data-nav="rooms">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -145,9 +145,9 @@
       <a href="/startup" data-nav="startup" class="gnb-biz">창업안내</a>
     </nav>
     <div class="hd-act">
-      <a class="ibtn hide-m" href="/rooms" aria-label="지점 찾기"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></a>
       <button class="ibtn" id="bellBtn" type="button" hidden aria-label="알림"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
-      <span id="hdUser" class="hide-m"><a class="btn btn-ink btn-sm" href="/login">로그인</a></span>
+      <span id="hdUser" class="hide-m"><a class="btn btn-ghost btn-sm" href="/login">로그인</a></span>
+      <a class="btn btn-red btn-sm hd-cta hide-m" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>빈 방 찾기</a>
       <button class="ibtn menu-btn" type="button" data-menu aria-label="메뉴 열기"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
     </div>
   </div>
@@ -178,22 +178,42 @@
 </div>
 
 <main id="main">
-<div class="wrap page-hd">
-  <h1 class="h1">기업·단체 행사</h1>
-  <p class="lead">워크숍, 팀빌딩, 송년회처럼 여러 명이 함께하는 자리라면 원하는 날짜와 인원을 알려 주세요. 맞는 지점을 골라 드려요.</p>
-  <div class="photo-grid" style="margin-top:22px">
-    <figure><img src="/assets/img/photo/meeting.webp" alt="쏘플파티룸에서 진행하는 회의" width="1400" height="1050" fetchpriority="high"></figure>
-    <figure><img src="/assets/img/photo/theater.webp" alt="빔프로젝터로 발표를 보는 단체" width="1400" height="1050" loading="lazy"></figure>
-    <figure><img src="/assets/img/photo/party-table.webp" alt="긴 테이블에 둘러앉은 단체 모임" width="1400" height="1050" loading="lazy"></figure>
+<section class="hero-dark" style="--bg:url('/assets/img/photo/meeting.webp')">
+  <div class="wrap">
+    <span class="eyebrow">기업·단체</span>
+    <h1 class="h-hero">팀을 위한<br>완벽한 공간</h1>
+    <p class="lead">워크숍, 팀빌딩, 송년회, 촬영까지. 원하는 날짜와 인원만 알려 주시면 맞는 지점을 묶어서 안내해 드려요. 세금계산서와 현금영수증도 돼요.</p>
+    <div class="row wrap-ok" style="gap:10px;margin-top:26px"><a class="btn btn-red btn-lg" href="#form">단체 행사 문의</a><a class="btn btn-line btn-lg" href="/rooms?f=big">20명 넘는 지점 보기</a></div>
+    <div class="hd-stats"><span><b>20+</b>명 단체도 넉넉하게</span><span><b>전국</b>어디서나 대관</span><span><b>당일</b>세금계산서 발행</span></div>
+  </div>
+</section>
+<div class="wrap" style="padding-top:44px">
+  <div class="photo-grid">
+    <figure><img src="/assets/img/photo/meeting.webp" alt="쏘플파티룸에서 진행하는 회의" width="1400" height="1050" loading="lazy"><figcaption>회의와 발표</figcaption></figure>
+    <figure><img src="/assets/img/photo/theater.webp" alt="빔프로젝터로 발표를 보는 단체" width="1400" height="1050" loading="lazy"><figcaption>빔프로젝터 있는 큰 방</figcaption></figure>
+    <figure><img src="/assets/img/photo/party-table.webp" alt="긴 테이블에 둘러앉은 단체 모임" width="1400" height="1050" loading="lazy"><figcaption>회식과 송년회</figcaption></figure>
   </div>
 </div>
-<div class="wrap">
+<div class="wrap" style="margin-top:36px">
   <div class="grid g3">
     <div class="box"><span class="t-ic" style="width:46px;height:46px;border-radius:14px;background:var(--fog);display:grid;place-items:center;margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg></span><h2 class="h4">여러 지점을 한 번에</h2><p class="muted small" style="margin-top:4px">인원과 지역만 알려 주시면 그날 비어 있는 지점을 묶어서 안내해요.</p></div>
     <div class="box"><span class="t-ic" style="width:46px;height:46px;border-radius:14px;background:var(--fog);display:grid;place-items:center;margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-projector"/></svg></span><h2 class="h4">발표도 놀이도</h2><p class="muted small" style="margin-top:4px">빔프로젝터 있는 방에서 오전엔 회의, 오후엔 놀이터 도구로 팀 게임까지 할 수 있어요.</p></div>
     <div class="box"><span class="t-ic" style="width:46px;height:46px;border-radius:14px;background:var(--fog);display:grid;place-items:center;margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-won"/></svg></span><h2 class="h4">증빙 서류</h2><p class="muted small" style="margin-top:4px">세금계산서와 현금영수증이 필요하면 상담할 때 함께 알려 주세요.</p></div>
   </div>
-  <div class="sec-hd" style="margin-top:48px"><div><h2 class="h2">20명 넘게 쓸 수 있는 지점</h2><p>최대 인원이 많은 순서예요.</p></div><a class="sec-more" href="/rooms?f=big">조건으로 더 찾기<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
+  <div class="sec-hd" style="margin-top:56px"><div><span class="eyebrow">이런 구성이 많아요</span><h2 class="h2">목적별 단체 이용 구성</h2><p>인원·목적을 알려 주시면 지점과 패키지를 맞춰서 견적을 드려요. 요금은 지점의 낮·밤 패키지 요금 기준이에요.</p></div></div>
+  <div class="grid g3">
+    <a class="pick" href="#form" style="min-height:260px"><img src="/assets/img/photo/workshop.webp" alt="" loading="lazy" width="1400" height="1050"><div class="pick-body"><span class="pick-no">팀 워크숍</span><h3>빔프로젝터 + 평일 낮</h3><p>발표·토론 뒤 놀이터 도구로 팀 게임까지. 10~20명.</p></div></a>
+    <a class="pick" href="#form" style="min-height:260px"><img src="/assets/img/photo/party-table.webp" alt="" loading="lazy" width="1400" height="1050"><div class="pick-body"><span class="pick-no">팀 회식 · 연말 행사</span><h3>큰 방 + 바베큐·노래방</h3><p>20명 넘어도 넉넉한 지점, 시상식·장기자랑용 화면과 마이크.</p></div></a>
+    <a class="pick" href="#form" style="min-height:260px"><img src="/assets/img/photo/photowall.webp" alt="" loading="lazy" width="1400" height="1050"><div class="pick-body"><span class="pick-no">브랜드 행사 · 촬영</span><h3>넓고 밝은 공간, 시간 단위 대관</h3><p>팝업·촬영·소규모 세미나. 장비 반입과 동선은 미리 상담해요.</p></div></a>
+  </div>
+  <div class="sec-hd center" style="margin-top:56px"><div><span class="eyebrow">진행 순서</span><h2 class="h2">문의부터 정산까지</h2></div></div>
+  <ol class="how4">
+    <li><span class="how-ic"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></span><b>문의 접수</b><p>아래 폼이나 전화·카카오톡으로 인원·일정·예산을 알려 주세요.</p></li>
+    <li><span class="how-ic"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg></span><b>맞춤 안내</b><p>담당자가 지점·패키지를 추천하고 견적을 드려요.</p></li>
+    <li><span class="how-ic"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg></span><b>예약 확정</b><p>네이버 예약으로 결제하면 확정. 입실 안내 문자를 보내 드려요.</p></li>
+    <li><span class="how-ic"><svg class="ic" aria-hidden="true"><use href="#i-won"/></svg></span><b>행사 · 증빙</b><p>세금계산서·현금영수증 등 증빙을 당일 처리해 드려요.</p></li>
+  </ol>
+  <div class="sec-hd" style="margin-top:56px"><div><span class="eyebrow">지점</span><h2 class="h2">20명 넘게 쓸 수 있는 지점</h2><p>최대 인원이 많은 순서예요.</p></div><a class="sec-more" href="/rooms?f=big">조건으로 더 찾기<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
   <div class="rooms" id="bigRooms"></div>
 </div>
 <section class="sec fog" style="margin-top:56px" id="form">
@@ -220,11 +240,12 @@
   <div class="wrap">
     <div class="ft-top">
       <div class="ft-brand">
-        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
+        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo-white.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async" loading="lazy"></a>
+        <p class="ft-desc">사람들의 시간과 즐거움을 기억하는 공간. 2016년부터 전국에 파티룸을 만들고 운영해 온 쏘플이에요.</p>
         <div class="ft-cs"><span>고객센터</span><b data-set="cs.phone">1544-3523</b><span data-set="cs.hours">월~목 10:00~19:00 · 금~일 10:00~22:00</span></div>
         <a class="btn btn-kakao btn-sm" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" style="margin-top:14px"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카카오톡 상담</a>
       </div>
-      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비</h4><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/startup">창업안내</a><a href="/partners">제휴·협업</a><a href="/corporate">기업·단체 행사</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
@@ -248,7 +269,7 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261012" defer></script>
-<script src="/assets/js/corporate.js?v=20261012" defer></script>
+<script src="/assets/app.js?v=20261013" defer></script>
+<script src="/assets/js/corporate.js?v=20261013" defer></script>
 </body>
 </html>

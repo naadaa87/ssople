@@ -2,3 +2,5 @@
 import { sitemap } from './_lib/ssr.js';
 
 export const onRequestGet = (context) => sitemap(context);
+
+export const onRequestHead = onRequestGet;

@@ -2,3 +2,5 @@
 import { renderPage, inviteMeta } from '../_lib/ssr.js';
 
 export const onRequestGet = (context) => renderPage(context, '/invite-view', inviteMeta);
+
+export const onRequestHead = onRequestGet;

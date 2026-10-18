@@ -204,6 +204,9 @@ export const DEFAULTS = {
   'community.hide_at': '3',
   'signup.open': '1',
   'home.featured': '',
+  'seo.naver_verify': '',
+  'seo.google_verify': '',
+  'seo.bing_verify': '',
 };
 const PRIVATE_KEYS = new Set(['community.banned']);
 

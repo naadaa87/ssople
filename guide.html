@@ -31,7 +31,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261012">
+<link rel="stylesheet" href="/assets/app.css?v=20261013">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "홈페이지에 '빈 방'으로 보이면 꼭 예약되나요?", "acceptedAnswer": {"@type": "Answer", "text": "호스트 예약 현황을 10분 정도 간격으로 가져와 보여 드려요. 그 사이에 다른 예약이 들어올 수 있어서 마지막 확인은 네이버 예약 화면 기준이에요."}}, {"@type": "Question", "name": "예약 내역은 어디서 보나요?", "acceptedAnswer": {"@type": "Answer", "text": "네이버 앱이나 네이버 예약 사이트의 예약 내역에서 볼 수 있어요. 홈페이지 회원 정보와는 따로 관리돼요."}}, {"@type": "Question", "name": "미리 가서 공간을 볼 수 있나요?", "acceptedAnswer": {"@type": "Answer", "text": "대부분 지점이 사전 답사를 받아요. 다른 예약이 있을 수 있어서 꼭 미리 연락해 주세요. 지점 화면에 답사 가능 여부가 적혀 있어요."}}, {"@type": "Question", "name": "음식 배달을 시켜도 되나요?", "acceptedAnswer": {"@type": "Answer", "text": "네, 지점 주소로 배달시켜 드시면 돼요. 남은 음식은 음식물 쓰레기로 나눠 버려 주세요."}}, {"@type": "Question", "name": "반려동물과 같이 가도 되나요?", "acceptedAnswer": {"@type": "Answer", "text": "애견 동반이 되는 지점이 따로 있어요. 지점 찾기에서 '애견 동반'을 고르면 보여요. 대부분 애견 보증금이 따로 있어요."}}, {"@type": "Question", "name": "세금계산서나 현금영수증을 받을 수 있나요?", "acceptedAnswer": {"@type": "Answer", "text": "예약 후 카카오톡 상담으로 요청해 주세요. 사업자 정보와 예약 정보를 함께 알려 주시면 돼요."}}, {"@type": "Question", "name": "잠을 자고 가도 되나요?", "acceptedAnswer": {"@type": "Answer", "text": "쏘플파티룸은 파티와 모임을 위한 공간 대여 서비스라 숙박 목적으로는 이용할 수 없어요."}}]}</script>
 </head>
 <body data-page="guide" data-nav="rooms">
@@ -146,9 +146,9 @@
       <a href="/startup" data-nav="startup" class="gnb-biz">창업안내</a>
     </nav>
     <div class="hd-act">
-      <a class="ibtn hide-m" href="/rooms" aria-label="지점 찾기"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></a>
       <button class="ibtn" id="bellBtn" type="button" hidden aria-label="알림"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
-      <span id="hdUser" class="hide-m"><a class="btn btn-ink btn-sm" href="/login">로그인</a></span>
+      <span id="hdUser" class="hide-m"><a class="btn btn-ghost btn-sm" href="/login">로그인</a></span>
+      <a class="btn btn-red btn-sm hd-cta hide-m" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>빈 방 찾기</a>
       <button class="ibtn menu-btn" type="button" data-menu aria-label="메뉴 열기"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
     </div>
   </div>
@@ -202,7 +202,14 @@
     <div class="callout" style="margin-top:18px"><svg class="ic sm" aria-hidden="true"><use href="#i-info"/></svg><span>예약 확인·변경·취소는 네이버 예약(네이버 앱 → 예약 내역)에서 할 수 있어요.</span></div>
   </section>
   <section id="rules" style="margin-top:56px;scroll-margin-top:90px">
-    <h2 class="h2">공통 규정</h2>
+    <span class="eyebrow" style="display:block;margin-bottom:8px">이용 규칙</span>
+    <h2 class="h2">세 가지만 기억하면 돼요</h2>
+    <div class="grid g3" style="margin-top:18px">
+      <div class="box"><span class="t-ic" style="margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><h3 class="h3">입 · 퇴실</h3><ul class="checks" style="margin-top:10px;font-size:14.5px"><li>예약 시간에 맞춰 무인 입장</li><li>퇴실 시 기본 정리 부탁드려요</li><li>연장은 뒤 예약이 없을 때만 가능</li></ul></div>
+      <div class="box"><span class="t-ic" style="margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg></span><h3 class="h3">이용 매너</h3><ul class="checks" style="margin-top:10px;font-size:14.5px"><li>정원 초과 입장은 어려워요</li><li>이웃을 위한 소음 매너</li><li>반려동물은 동반 가능 지점만</li></ul></div>
+      <div class="box"><span class="t-ic" style="margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-won"/></svg></span><h3 class="h3">보증금</h3><ul class="checks" style="margin-top:10px;font-size:14.5px"><li>기본 8만원 (지점별 5만~10만원)</li><li>이상 없으면 다음 주 수요일 무렵 환급</li><li>파손·심한 오염은 기준표에 따라 차감</li></ul></div>
+    </div>
+    <h2 class="h2" style="margin-top:44px">공통 규정</h2>
     <p class="muted" style="margin-top:6px">전 지점 기준이에요. 지점마다 다른 경우 지점 화면과 네이버 예약 화면의 안내가 먼저예요.</p>
     <div class="tbl-wrap" style="margin-top:16px"><table class="tbl"><tbody>
       <tr><th style="width:150px">청소 보증금</th><td>기본 8만원이에요. 지점에 따라 5만~10만원으로 달라요.</td></tr>
@@ -244,11 +251,12 @@
   <div class="wrap">
     <div class="ft-top">
       <div class="ft-brand">
-        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
+        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo-white.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async" loading="lazy"></a>
+        <p class="ft-desc">사람들의 시간과 즐거움을 기억하는 공간. 2016년부터 전국에 파티룸을 만들고 운영해 온 쏘플이에요.</p>
         <div class="ft-cs"><span>고객센터</span><b data-set="cs.phone">1544-3523</b><span data-set="cs.hours">월~목 10:00~19:00 · 금~일 10:00~22:00</span></div>
         <a class="btn btn-kakao btn-sm" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" style="margin-top:14px"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카카오톡 상담</a>
       </div>
-      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비</h4><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/startup">창업안내</a><a href="/partners">제휴·협업</a><a href="/corporate">기업·단체 행사</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
@@ -272,6 +280,6 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261012" defer></script>
+<script src="/assets/app.js?v=20261013" defer></script>
 </body>
 </html>

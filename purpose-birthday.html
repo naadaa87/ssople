@@ -31,7 +31,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261012">
+<link rel="stylesheet" href="/assets/app.css?v=20261013">
 </head>
 <body data-page="purpose-birthday" data-nav="rooms">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -145,9 +145,9 @@
       <a href="/startup" data-nav="startup" class="gnb-biz">창업안내</a>
     </nav>
     <div class="hd-act">
-      <a class="ibtn hide-m" href="/rooms" aria-label="지점 찾기"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></a>
       <button class="ibtn" id="bellBtn" type="button" hidden aria-label="알림"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
-      <span id="hdUser" class="hide-m"><a class="btn btn-ink btn-sm" href="/login">로그인</a></span>
+      <span id="hdUser" class="hide-m"><a class="btn btn-ghost btn-sm" href="/login">로그인</a></span>
+      <a class="btn btn-red btn-sm hd-cta hide-m" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>빈 방 찾기</a>
       <button class="ibtn menu-btn" type="button" data-menu aria-label="메뉴 열기"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
     </div>
   </div>
@@ -178,21 +178,32 @@
 </div>
 
 <main id="main">
-<div class="wrap page-hd" id="purpose" data-k="birthday">
-  <nav class="crumb" aria-label="위치"><a href="/">처음</a><svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg><span>목적별 추천</span></nav>
-  <div class="row" style="gap:14px;align-items:center"><span class="pp-ic" style="width:56px;height:56px;border-radius:50%;background:var(--fog);display:grid;place-items:center"><svg class="ic lg" aria-hidden="true"><use href="#i-cake"/></svg></span><h1 class="h1">생일파티</h1></div>
-  <p class="lead">케이크 초를 끄고, 노래 한 곡 부르고, 사진은 벽 앞에서. 생일파티에 잘 맞는 방과 준비 요령을 모았어요.</p>
-  <div class="photo-hero"><img src="/assets/img/photo/birthday.webp" alt="쏘플파티룸에서 열린 생일파티 — 케이크와 풍선, 가랜드로 꾸민 방" width="1400" height="1050" fetchpriority="high"></div>
+<div class="wrap" id="purpose" data-k="birthday">
+  <nav class="crumb" aria-label="위치" style="padding-top:22px;margin-bottom:0"><a href="/">처음</a><svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg><span>목적별 추천</span><svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg><b>생일파티</b></nav>
+  <div class="purpose-hero">
+    <div>
+      <span class="eyebrow">생일파티</span>
+      <h1 class="h-hero">생일파티는,<br><em>우리끼리만</em> 있는 공간에서</h1>
+      <p class="lead">케이크 초를 끄고, 노래 한 곡 부르고, 사진은 벽 앞에서. 생일파티에 잘 맞는 방과 준비 요령을 모았어요.</p>
+      <div class="row wrap-ok" style="gap:10px"><a class="btn btn-red btn-lg" href="#picks">생일파티 지점 보기</a><a class="btn btn-kakao btn-lg" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카톡 상담</a></div>
+      <div class="mini-facts"><span><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>무인 스마트 입장</span><span><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>한 팀만 쓰는 단독 공간</span><span><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg>낮·밤 타임 요금</span></div>
+    </div>
+    <div class="ph-visual">
+      <img src="/assets/img/photo/birthday.webp" alt="쏘플파티룸에서 열린 생일파티 — 케이크와 풍선, 가랜드로 꾸민 방" width="1400" height="1050" fetchpriority="high">
+      <div class="hv-badge hv-b1"><b>케이크 OK</b><span>냉장고 있는 지점이면 바로 보관</span></div>
+      <div class="hv-badge hv-b2"><b>서프라이즈</b><span>사전 답사 되는 지점에서 미리 준비</span></div>
+    </div>
+  </div>
 </div>
 <section class="sec tight">
   <div class="wrap">
-    <h2 class="h3" style="margin-bottom:14px">이런 방을 골라 보세요</h2>
+    <div class="sec-hd" style="margin-bottom:16px"><div><span class="eyebrow">고르는 법</span><h2 class="h2">이런 방을 골라 보세요</h2></div></div>
     <div class="grid g3"><div class="box"><span class="t-ic" style="width:44px;height:44px;border-radius:14px;background:var(--fog);display:grid;place-items:center;margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></span><h3 class="h4">노래방이 있는 방</h3><p class="muted small" style="margin-top:4px">생일 노래는 역시 마이크로. 노래방 기계나 블루투스 마이크가 있는 지점이 좋아요.</p></div><div class="box"><span class="t-ic" style="width:44px;height:44px;border-radius:14px;background:var(--fog);display:grid;place-items:center;margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></span><h3 class="h4">기준 인원이 비슷한 방</h3><p class="muted small" style="margin-top:4px">기준 인원을 넘으면 1인 추가 요금이 붙어요. 오는 사람 수와 기준 인원이 비슷한 방이 알뜰해요.</p></div><div class="box"><span class="t-ic" style="width:44px;height:44px;border-radius:14px;background:var(--fog);display:grid;place-items:center;margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg></span><h3 class="h4">사전 답사가 되는 곳</h3><p class="muted small" style="margin-top:4px">서프라이즈를 준비한다면 미리 가 볼 수 있는 지점을 고르세요. 꾸밀 자리를 정해 두면 당일이 편해요.</p></div></div>
   </div>
 </section>
-<section class="sec tight">
+<section class="sec tight" id="picks">
   <div class="wrap">
-    <div class="sec-hd"><div><h2 class="h2">추천 지점</h2><p>조건에 맞는 지점을 후기와 날짜별 빈 방과 함께 보여 드려요.</p></div><a class="sec-more" href="/rooms?f=karaoke">조건으로 더 찾기<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
+    <div class="sec-hd"><div><span class="eyebrow">추천 지점</span><h2 class="h2">생일파티에 잘 맞는 지점</h2><p>조건에 맞는 지점을 후기와 날짜별 빈 방과 함께 보여 드려요.</p></div><a class="sec-more" href="/rooms?f=karaoke">조건으로 더 찾기<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
     <div class="rooms" id="pRooms"><div class="skel" style="aspect-ratio:4/3"></div><div class="skel" style="aspect-ratio:4/3"></div><div class="skel" style="aspect-ratio:4/3"></div></div>
   </div>
 </section>
@@ -217,11 +228,12 @@
   <div class="wrap">
     <div class="ft-top">
       <div class="ft-brand">
-        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
+        <a class="logo" href="/"><img class="logo-img" src="/assets/img/logo-white.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async" loading="lazy"></a>
+        <p class="ft-desc">사람들의 시간과 즐거움을 기억하는 공간. 2016년부터 전국에 파티룸을 만들고 운영해 온 쏘플이에요.</p>
         <div class="ft-cs"><span>고객센터</span><b data-set="cs.phone">1544-3523</b><span data-set="cs.hours">월~목 10:00~19:00 · 금~일 10:00~22:00</span></div>
         <a class="btn btn-kakao btn-sm" data-set-href="kakao.url" href="https://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" style="margin-top:14px"><svg class="ic fill" aria-hidden="true"><use href="#i-kakao"/></svg>카카오톡 상담</a>
       </div>
-      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비</h4><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>쏘플</h4><a href="/about">브랜드 소개</a><a href="/startup">창업안내</a><a href="/partners">제휴·협업</a><a href="/corporate">기업·단체 행사</a><a data-set-href="link.host" data-hide-empty hidden href="#" target="_blank" rel="noopener">호스트 센터</a></div>
@@ -245,7 +257,7 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261012" defer></script>
-<script src="/assets/js/purpose.js?v=20261012" defer></script>
+<script src="/assets/app.js?v=20261013" defer></script>
+<script src="/assets/js/purpose.js?v=20261013" defer></script>
 </body>
 </html>

@@ -2,3 +2,5 @@
 import { renderPage, crewMeta } from '../_lib/ssr.js';
 
 export const onRequestGet = (context) => renderPage(context, '/crew-view', crewMeta);
+
+export const onRequestHead = onRequestGet;
