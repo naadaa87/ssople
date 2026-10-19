@@ -212,7 +212,7 @@ export const DEFAULTS = {
   'seo.naver_verify': '',
   'seo.google_verify': '',
   'seo.bing_verify': '',
-  'seo.canonical_host': '',      // 예: ssople.com — 적어 두면 pages.dev 주소로 들어온 손님을 이 주소로 보낸다
+  'seo.canonical_host': '',      // 비우면 접속한 주소(ssople.pages.dev)가 대표 주소. 도메인 연결 뒤 ssople.com 같은 값을 적으면 pages.dev 접속을 그쪽으로 보낸다
   'host.premium_price': '50000',
   'host.plus_price': '30000',
   'host.discount6': '10',

@@ -20,9 +20,10 @@ export async function renderPage(context, template, metaFn) {
   if (!tpl.ok) return tpl;
   let meta = null;
   try {
-    if (env.DB) { await ensureSchema(env); env.__origin = url.origin; meta = await metaFn(env, context.params, url); }
+    if (env.DB) { await ensureSchema(env); env.__origin = siteBase(url, await getSettings(env.DB).catch(() => ({}))); meta = await metaFn(env, context.params, url); }
   } catch (e) { meta = null; }
-  const abs = (u) => (!u ? '' : /^https?:\/\//.test(u) ? u : url.origin + u);
+  const base = env.__origin || url.origin;
+  const abs = (u) => (!u ? '' : /^https?:\/\//.test(u) ? u : base + u);
   const title = meta?.title ? (meta.fullTitle ? meta.title : `${meta.title} | 쏘플파티룸`) : null;
   const verify = await verifyTags(env);
   const injected = meta?.html || {};
@@ -33,8 +34,8 @@ export async function renderPage(context, template, metaFn) {
     .on('meta[property="og:title"]', { element(el) { if (title) el.setAttribute('content', title); } })
     .on('meta[property="og:description"]', { element(el) { if (meta?.desc) el.setAttribute('content', meta.desc); } })
     .on('meta[property="og:image"]', { element(el) { if (meta?.image) el.setAttribute('content', abs(meta.image)); } })
-    .on('meta[property="og:url"]', { element(el) { el.setAttribute('content', url.origin + url.pathname); } })
-    .on('link[rel="canonical"]', { element(el) { el.setAttribute('href', url.origin + url.pathname); } })
+    .on('meta[property="og:url"]', { element(el) { el.setAttribute('content', base + url.pathname); } })
+    .on('link[rel="canonical"]', { element(el) { el.setAttribute('href', base + url.pathname); } })
     .on('head', {
       element(el) {
         if (verify) el.append(verify, { html: true });
@@ -51,27 +52,43 @@ export async function renderPage(context, template, metaFn) {
   return new Response(out.body, { status: meta ? 200 : 404, headers });
 }
 
-/** 고정 화면(홈·지점 찾기 등) — 공유 미리보기 주소만 실제 접속한 도메인으로 채운다 */
+/** 빌드 때 화면 파일에 넣어 둔 기본 주소 — 서버가 실제 주소로 바꿔 끼운다 (build.py SITE와 같아야 한다) */
+export const BUILD_SITE = 'https://ssople.pages.dev';
+
+/** 이 화면의 대표 주소: 설정에 대표 주소(seo.canonical_host)가 있으면 그것, 없으면 지금 접속한 주소 */
+export function siteBase(url, st) {
+  const host = String((st && st['seo.canonical_host']) || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (host) return 'https://' + host;
+  // 미리보기 배포(브랜치.ssople.pages.dev)는 정식 주소를 기본 주소로 가리킨다
+  if (/^[^.]+\.ssople\.pages\.dev$/.test(url.hostname)) return BUILD_SITE;
+  return url.origin;
+}
+
+/** 고정 화면(홈·지점 찾기·파티 가이드 등) — 정식 주소·공유 주소·빵부스러기를 실제 대표 주소로 채운다 */
 export async function renderStatic(context) {
-  const res = await context.next();
+  let res = await context.next();
   const ct = res.headers.get('content-type') || '';
   if (!res.ok || !ct.includes('text/html')) return res;
   const url = new URL(context.request.url);
-  const abs = (u) => (!u ? u : /^https?:\/\//.test(u) ? u : url.origin + (u.startsWith('/') ? u : '/' + u));
-  const here = url.origin + (url.pathname === '/index' ? '/' : url.pathname);
+  let st = {};
   let extra = '';
   try {
     if (context.env.DB) {
       await ensureSchema(context.env);
+      st = await getSettings(context.env.DB);
       extra += await verifyTags(context.env);
-      if (here === url.origin + '/') {
-        const st = await getSettings(context.env.DB);
-        extra += jsonLdTag(orgJsonLd(url.origin, st)) + jsonLdTag(websiteJsonLd(url.origin));
-      }
-    } else if (here === url.origin + '/') {
-      extra += jsonLdTag(orgJsonLd(url.origin, {})) + jsonLdTag(websiteJsonLd(url.origin));
     }
   } catch { /* DB 연결 전이면 기본 화면만 */ }
+  const base = siteBase(url, st);
+  const abs = (u) => (!u ? u : /^https?:\/\//.test(u) ? u : base + (u.startsWith('/') ? u : '/' + u));
+  const here = base + (url.pathname === '/index' ? '/' : url.pathname);
+  if (here === base + '/') extra += jsonLdTag(orgJsonLd(base, st)) + jsonLdTag(websiteJsonLd(base));
+  if (base !== BUILD_SITE) {
+    // 화면 파일 안의 기본 주소(정식 주소·빵부스러기·글 구조화 데이터)를 대표 주소로
+    const body = (await res.text()).split(BUILD_SITE).join(base);
+    const h = new Headers(res.headers); h.delete('content-length'); h.delete('etag');
+    res = new Response(body, { status: res.status, headers: h });
+  }
   return new HTMLRewriter()
     .on('meta[property="og:image"]', { element(el) { el.setAttribute('content', abs(el.getAttribute('content'))); } })
     .on('meta[property="og:url"]', { element(el) { if (!el.getAttribute('content')) el.setAttribute('content', here); } })
