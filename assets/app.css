@@ -320,7 +320,7 @@ select.sb-input { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 .t-ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: var(--red-tint); color: var(--red); flex: none; }
 .t-ic .ic { width: 22px; height: 22px; }
 .trust-card b { display: block; font-size: 15.5px; }
-.trust-card span { display: block; font-size: 13px; color: var(--graphite); margin-top: 3px; line-height: 1.45; }
+.trust-card > div > span { display: block; font-size: 13px; color: var(--graphite); margin-top: 3px; line-height: 1.45; }
 
 /* 이번 주 빈 방 + 주말 지점 */
 .avail-wrap { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 32px; align-items: start; }
@@ -535,7 +535,7 @@ select.sb-input { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 .family-card .t-ic .ic { width: 20px; height: 20px; }
 .family-card > div { flex: 1; min-width: 0; }
 .family-card b { display: block; font-size: 15px; }
-.family-card span { display: block; font-size: 12.5px; color: var(--graphite); line-height: 1.45; margin-top: 2px; }
+.family-card > div > span { display: block; font-size: 12.5px; color: var(--graphite); line-height: 1.45; margin-top: 2px; }
 .fam-ext { color: var(--ash); }
 .ft-family { margin-top: 34px; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .12); }
 .ft-family b { display: block; font-size: 13px; color: #fff; margin-bottom: 8px; }
