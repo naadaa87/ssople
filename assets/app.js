@@ -573,3 +573,16 @@
       <div><div class="inv-when">${SP.esc(when || '날짜는 곧 정해져요')}</div>${where ? `<div class="inv-where">${SP.esc(where)}</div>` : ''}${iv.msg ? `<div class="inv-msg">${SP.esc(iv.msg)}</div>` : ''}</div></div>`;
   };
 })();
+
+/* ---------------- 배경 영상 자동재생 보조 ----------------
+   아이폰 저전력 모드, 삼성 인터넷 자동재생 차단처럼 영상이 멈춘 채 열리는 휴대폰이 있다.
+   그럴 땐 처음 화면을 만지거나 스크롤할 때 한 번 더 재생을 시도한다. 그래도 안 되면 대표 사진이 그대로 보인다. */
+(function () {
+  const vids = Array.from(document.querySelectorAll('video[autoplay][muted]'));
+  if (!vids.length) return;
+  const kick = () => vids.forEach((v) => { v.muted = true; if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } });
+  const once = () => { kick(); ['touchstart', 'scroll', 'click'].forEach((ev) => window.removeEventListener(ev, once)); };
+  ['touchstart', 'scroll', 'click'].forEach((ev) => window.addEventListener(ev, once, { passive: true }));
+  if (document.readyState === 'complete') kick(); else window.addEventListener('load', kick, { once: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) kick(); });
+})();
