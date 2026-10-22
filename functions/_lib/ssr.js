@@ -6,6 +6,7 @@ import { imgUrl } from './community.js';
 import { getSettings } from './db.js';
 import { verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
 import { MAGAZINE } from './magazine-index.js';
+import { GAMES } from './games-index.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
@@ -217,6 +218,8 @@ export async function sitemap(context) {
   const urls = pages.map((p) => ({ loc: origin + p }));
   urls.push({ loc: origin + '/magazine' });
   for (const m of MAGAZINE) urls.push({ loc: `${origin}/magazine/${m.slug}`, lastmod: m.date });
+  urls.push({ loc: origin + '/games' });
+  for (const g of GAMES) urls.push({ loc: `${origin}/games/${g.slug}` });
   try {
     if (env.DB) {
       await ensureSchema(env);

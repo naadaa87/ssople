@@ -186,8 +186,11 @@ export async function canonicalRedirect(env, request) {
   try { host = String((await getSettings(env.DB))['seo.canonical_host'] || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''); } catch { return null; }
   if (!host) return null;
   const url = new URL(request.url);
-  // 정식 배포 주소(ssople.pages.dev)만 보내고, 미리보기 배포(브랜치.ssople.pages.dev)는 그대로 둔다
-  if (url.hostname === host || !/^[^.]+\.pages\.dev$/.test(url.hostname)) return null;
+  // 정식 배포 주소(ssople.pages.dev)와 www 붙은 주소만 보내고, 미리보기 배포(브랜치.ssople.pages.dev)는 그대로 둔다
+  const bare = (h) => h.replace(/^www\./, '');
+  const isPagesDev = /^[^.]+\.pages\.dev$/.test(url.hostname);
+  const isWwwTwin = url.hostname !== host && bare(url.hostname) === bare(host);
+  if (url.hostname === host || (!isPagesDev && !isWwwTwin)) return null;
   url.hostname = host; url.protocol = 'https:'; url.port = '';
   return Response.redirect(url.toString(), 301);
 }

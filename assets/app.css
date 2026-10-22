@@ -1410,6 +1410,9 @@ select.sb-input { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 .mag-body ul, .mag-body ol { margin: 12px 0; }
 .mag-body li { margin-top: 6px; }
 .mag-body li > p { margin: 0; }
+.mag-body ul { list-style: disc; padding-left: 22px; }
+.mag-body ol { list-style: decimal; padding-left: 24px; }
+.mag-body li::marker { color: var(--red); font-weight: 800; }
 .mag-body strong { font-weight: 800; color: var(--ink); }
 .mag-body a { color: var(--red); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .mag-body table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 16px 0; display: block; overflow-x: auto; }
