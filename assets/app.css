@@ -1475,3 +1475,179 @@ select.sb-input { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w
   .mag-toc { order: -1; }
   .mag-cta { margin-top: 4px; }
 }
+
+/* =========================================================
+   v6.1 — 메뉴 체계(드롭다운·서랍), 지점 화면 바로가기·준비 여정,
+   호스트 관리, 비품 목록, 네이버·인스타그램 후기
+   ========================================================= */
+
+/* ---------------- 머리글 드롭다운 ---------------- */
+.gnb-item { position: relative; display: flex; align-items: center; }
+.gnb-right { margin-left: auto; }
+.gnb .gnb-right .gnb-biz { margin-left: 0; }
+.gnb-panel { position: absolute; top: calc(100% + 12px); left: -12px; display: flex; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--shadow-pop); z-index: 60; opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease, visibility 0s linear .14s; }
+.gnb-panel::before { content: ''; position: absolute; left: 0; right: 0; top: -16px; height: 16px; }
+.gnb-panel.right { left: auto; right: -8px; }
+.gnb-item:hover > .gnb-panel, .gnb-item:focus-within > .gnb-panel { opacity: 1; visibility: visible; transform: none; transition: opacity .14s ease, transform .14s ease; }
+.gnb-item.shut > .gnb-panel { opacity: 0; visibility: hidden; }
+.gp-col { display: flex; flex-direction: column; width: 300px; }
+.gnb .gp-col a { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 12px; white-space: normal; font-weight: 500; font-size: 14px; color: var(--ink); }
+.gnb .gp-col a:hover { background: var(--fog); }
+.gnb .gp-col a .ic { margin-top: 1px; color: var(--red); }
+.gnb .gp-col a b { display: block; font-size: 15px; font-weight: 700; }
+.gnb .gp-col a small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.45; color: var(--graphite); }
+.gp-col.gp-mini { width: 176px; margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--line); }
+.gp-mini h4 { padding: 8px 8px 4px; font-size: 12.5px; font-weight: 700; color: var(--ash); }
+.gnb .gp-mini a { padding: 7px 8px; font-size: 14px; font-weight: 600; color: var(--ink-2); border-radius: 9px; }
+.gnb .gp-mini a:hover { color: var(--red); }
+@media (max-width: 1100px) {
+  .gp-col { width: 268px; }
+  .hd-in { gap: 18px; }
+}
+
+/* ---------------- 서랍 메뉴 (모바일) ---------------- */
+.drawer-panel nav a.dr-cta { justify-content: center; margin: 14px 0 6px; padding: 14px; border: 0; border-radius: 14px; background: var(--red); color: #fff; font-size: 16.5px; }
+.drawer-panel nav a.dr-cta .ic { color: #fff; }
+.dr-group { margin-top: 14px; }
+.dr-group h4 { padding: 6px 4px 2px; font-size: 12.5px; font-weight: 700; color: var(--ash); }
+.drawer-panel .dr-group a { padding: 11px 4px; font-size: 16px; font-weight: 600; }
+.drawer-panel .dr-group a .ic { color: var(--graphite); }
+.drawer-panel .dr-group a:last-child { border-bottom: 0; }
+
+/* ---------------- 지점 화면 — 바로가기 ---------------- */
+.room-nav { position: sticky; top: var(--hd); z-index: 20; display: flex; gap: 4px; margin-top: 22px; padding: 8px 0; overflow-x: auto; scrollbar-width: none; background: rgba(255, 255, 255, .96); border-bottom: 1px solid var(--line); }
+.room-nav::-webkit-scrollbar { display: none; }
+.room-nav a { flex: none; padding: 7px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--graphite); white-space: nowrap; }
+.room-nav a:hover { background: var(--fog); color: var(--ink); }
+.room-nav a.on { background: var(--ink); color: #fff; }
+.room-sec, #hostNews { scroll-margin-top: calc(var(--hd) + 64px); }
+
+/* 예약 뒤 준비 순서 */
+.journey { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; counter-reset: jy; }
+.journey li { counter-increment: jy; }
+.journey a { position: relative; display: flex; flex-direction: column; gap: 6px; height: 100%; padding: 18px 16px 16px; border: 1px solid var(--line-2); border-radius: var(--r-card); background: #fff; }
+.journey a:hover { border-color: var(--ink); }
+.journey a::after { content: counter(jy); position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--fog); color: var(--graphite); font-size: 12px; font-weight: 800; }
+.journey .ic { width: 24px; height: 24px; color: var(--red); margin-bottom: 4px; }
+.journey b { font-size: 15.5px; font-weight: 800; }
+.journey span { font-size: 13.5px; line-height: 1.5; color: var(--graphite); }
+@media (max-width: 960px) {
+  .journey { grid-template-columns: 1fr; gap: 8px; }
+  .journey a { display: grid; grid-template-columns: 26px minmax(0, 1fr); column-gap: 12px; row-gap: 2px; padding: 14px 44px 14px 14px; }
+  .journey .ic { grid-row: span 2; margin: 2px 0 0; }
+  .journey a::after { top: 50%; transform: translateY(-50%); }
+}
+
+/* ---------------- 비품 목록 (지점 화면) ---------------- */
+.items-view { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; }
+.iv-group h3 { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; font-size: 15px; font-weight: 800; }
+.iv-group h3 .ic { color: var(--red); }
+.iv-group ul { list-style: none; }
+.iv-group li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 8px 0; border-bottom: 1px dashed var(--line-2); font-size: 14.5px; }
+.iv-group li:last-child { border-bottom: 0; }
+.iv-group li span { flex: 1; min-width: 0; }
+.iv-group li b { padding: 1px 9px; border-radius: 999px; background: var(--fog); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.iv-group li small { flex-basis: 100%; font-size: 12.5px; color: var(--ash); }
+
+/* ---------------- 비품 편집기 (호스트·관리자) ---------------- */
+.ie-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ie-cats .chip { height: 34px; padding: 0 12px; font-size: 14px; }
+.ie-presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; margin-bottom: 12px; border-radius: 14px; background: var(--fog); }
+.ie-pre { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--line-2); background: #fff; font-size: 13.5px; font-weight: 600; color: var(--graphite); }
+.ie-pre:hover { border-color: var(--ink); color: var(--ink); }
+.ie-pre.on { border-color: var(--red); background: var(--red-tint); color: var(--red-deep); }
+.ie-add { display: flex; gap: 8px; margin-bottom: 8px; }
+.ie-add input[name="n"] { flex: 1; min-width: 0; }
+.ie-group { margin-top: 16px; }
+.ie-group h4 { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 14.5px; font-weight: 800; }
+.ie-group h4 .ic { color: var(--red); }
+.ie-row { display: grid; grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1fr) 40px; grid-template-areas: "n q m d"; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.ie-n { grid-area: n; }
+.ie-q { grid-area: q; display: inline-flex; align-items: center; height: 40px; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; background: #fff; }
+.ie-q button { width: 34px; height: 100%; font-size: 18px; font-weight: 700; color: var(--graphite); }
+.ie-q button:hover { background: var(--fog); color: var(--ink); }
+.ie-q input { width: 52px; height: 100%; border: 0; text-align: center; font: inherit; font-weight: 700; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.ie-q input::-webkit-outer-spin-button, .ie-q input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ie-m { grid-area: m; }
+.ie-row [data-del] { grid-area: d; }
+.ie-bulk { margin-top: 18px; }
+.ie-bulk summary { list-style: none; cursor: pointer; }
+.ie-bulk summary::-webkit-details-marker { display: none; }
+@media (max-width: 720px) {
+  .ie-row { grid-template-columns: minmax(0, 1fr) auto 40px; grid-template-areas: "n q d" "m m m"; }
+  .ie-add { flex-wrap: wrap; }
+}
+
+/* ---------------- 네이버·인스타그램 후기 ---------------- */
+.social-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sb { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 14px; background: #fff; }
+.sb:hover { border-color: var(--ink); }
+.sb > span { flex: 1; min-width: 0; }
+.sb b { display: block; font-size: 15px; font-weight: 700; }
+.sb small { display: block; margin-top: 1px; font-size: 12.5px; color: var(--graphite); }
+.sb > .ic:first-child { width: 22px; height: 22px; }
+.sb > .ic:last-child { color: var(--ash); }
+.sb-naver > .ic:first-child, .sb-blog > .ic:first-child, .sb-cafe > .ic:first-child { color: #03a94d; }
+.sb-insta > .ic:first-child { color: #d62976; }
+.sb-youtube > .ic:first-child { color: #e00; }
+.social-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sp-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; }
+.sp-card > a { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.sp-card > a b { font-size: 15px; font-weight: 700; }
+.sp-card > a:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.sp-card:has(.sp-embed iframe) { grid-column: 1 / -1; }
+.sp-embed { width: 100%; }
+.sp-embed:empty { display: none; }
+.sp-embed iframe { display: block; width: 100%; max-width: 540px; height: 620px; border: 0; border-radius: 10px; background: var(--fog); }
+.so-links { display: grid; gap: 8px; margin-top: 14px; }
+.so-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 40px; gap: 8px; align-items: center; }
+@media (max-width: 720px) {
+  .social-btns, .social-picks, .items-view { grid-template-columns: 1fr; }
+  .so-row { grid-template-columns: minmax(0, 1fr) 40px; }
+  .so-row [data-k="t"] { grid-column: 1; grid-row: 2; }
+  .so-row [data-rm] { grid-row: 1; grid-column: 2; }
+}
+
+/* ---------------- 호스트 — 내 공간 관리 ---------------- */
+.hs-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 30px; }
+.hs-stat { display: flex; flex-direction: column; gap: 4px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-card); background: #fff; }
+a.hs-stat:hover { border-color: var(--ink); }
+.hs-stat small { font-size: 13px; font-weight: 600; color: var(--graphite); }
+.hs-stat b { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+.hs-stat b .ic { width: 26px; height: 26px; color: var(--red); }
+.hs-stat span { font-size: 13px; color: var(--ash); }
+.hs-stat.hot { border-color: var(--red); background: var(--red-tint); }
+.hs-stat.hot b, .hs-stat.hot span { color: var(--red-deep); }
+.hs-sec + .hs-sec { margin-top: 34px; }
+.hs-card { display: flex; flex-direction: column; gap: 10px; }
+.hs-check { list-style: none; display: grid; gap: 5px; padding: 10px 0 4px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--graphite); }
+.hs-check li::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--line-2); vertical-align: 2px; }
+.hs-check li.ok::before { background: var(--ok); }
+.hs-check li.warn { color: var(--red-deep); font-weight: 700; }
+.hs-check li.warn::before { background: var(--red); }
+@media (max-width: 720px) {
+  .hs-sum { grid-template-columns: 1fr; gap: 8px; }
+  .hs-stat { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 14px 16px; }
+  .hs-stat b { grid-column: 2; grid-row: 1 / span 2; font-size: 22px; }
+}
+
+/* 지점 문의 — 답변 표시 */
+.badge.wait { background: var(--warn-tint); color: var(--warn); }
+
+/* 첫 화면 — 이용 흐름 5단계 */
+.how4.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.how4.five li { display: flex; flex-direction: column; padding: 20px 18px 18px; }
+.how-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 14px; }
+.how-links a { padding: 5px 10px; border-radius: 999px; background: var(--fog); font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.how-links a:hover { background: var(--red-tint); color: var(--red-deep); }
+@media (max-width: 1100px) { .how4.five { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 960px) { .how4.five { grid-template-columns: repeat(2, minmax(0, 1fr)); } .how4.five li:last-child { grid-column: 1 / -1; } }
+@media (max-width: 720px) {
+  .how4.five { grid-template-columns: 1fr; gap: 10px; }
+  .how4.five li { display: grid; grid-template-columns: 42px minmax(0, 1fr); column-gap: 14px; padding: 16px 16px 14px; }
+  .how4.five .how-ic { grid-row: span 3; margin: 0; }
+  .how4.five li::after { font-size: 20px; top: 12px; right: 14px; }
+  .how4.five .how-links { padding-top: 10px; }
+}
+.me-links { grid-column: 1 / -1; margin-top: 0; padding-top: 2px; }
+.room-layout > * { min-width: 0; }

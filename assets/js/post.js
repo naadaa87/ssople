@@ -2,24 +2,27 @@
 (function () {
   const { $, $$, esc, icon } = SP;
   const id = Number((location.pathname.match(/\/c\/(\d+)/) || [])[1] || SP.qs().id);
-  let post = null, me = null;
+  let post = null, me = null, canAnswer = false;
 
   async function init() {
     if (!id) return notFound();
     let d;
     try { d = await SP.api('/api/posts/' + id, { loginRedirect: false }); } catch (e) { return notFound(e.message); }
     post = d.post;
+    canAnswer = !!d.canAnswer;
     me = (await SP.me()).user;
     document.title = `${post.title} | 쏘플파티룸`;
-    const boardName = SP.BOARD[post.board] || '커뮤니티';
+    const boardName = post.board === 'qna' && post.code ? '지점 문의' : (SP.BOARD[post.board] || '커뮤니티');
     const back = post.board === 'mb' ? `/m/${post.scope}` : `/community${post.board === 'all' ? '' : '?b=' + post.board}`;
     $('#postRoot').innerHTML = `<article class="article">
       <nav class="crumb"><a href="${back}">${post.board === 'mb' ? '모임 게시판' : '커뮤니티'}</a>${icon('chev-r', 'sm')}<span>${esc(boardName)}</span></nav>
       ${post.hidden ? '<div class="callout red" style="margin-bottom:14px">신고가 쌓여 다른 사람에게는 가려진 글이에요. 운영진이 확인하고 있어요.</div>' : ''}
+      ${post.board === 'host' || (post.board === 'qna' && post.code) ? `<div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">${SP.boardBadge(post)}</div>` : ''}
       <h1>${esc(post.title)}</h1>
       <div class="row" style="margin-top:14px;gap:10px">${SP.avatar(post.author.avatar)}<div><b style="font-size:15px">${esc(post.author.nick)}</b><div class="tiny faint">${SP.ago(post.created_at)}${post.updated_at && post.updated_at !== post.created_at ? ' · 수정됨' : ''} · 조회 ${post.views}</div></div></div>
       ${post.board === 'review' ? `<div class="box fog" style="margin-top:18px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div>${SP.stars(post.rating || 0)} <b style="margin-left:6px">${post.rating}.0</b>${post.verified ? ' <span class="badge ok" style="margin-left:6px">방문 인증</span>' : ''}</div>${post.space ? `<a class="btn btn-line btn-sm" href="/room/${post.space.code}">${icon('pin', 'sm')}${esc(post.space.name)}</a>` : ''}</div>` : ''}
-      ${post.board !== 'review' && post.space ? `<a class="btn btn-soft btn-sm" style="margin-top:14px" href="/room/${post.space.code}">${icon('pin', 'sm')}${esc(post.space.name)}</a>` : ''}
+      ${post.board !== 'review' && post.space ? `<a class="btn btn-soft btn-sm" style="margin-top:14px" href="/room/${post.space.code}">${icon('pin', 'sm')}${esc(post.space.name)} 지점 보기</a>` : ''}
+      ${d.canAnswer && !post.answered ? `<div class="callout" style="margin-top:14px">${icon('chat', 'sm')}<span>이 지점의 호스트로 로그인돼 있어요. 아래 댓글로 답하면 "답변 완료"로 바뀌고 손님에게 알림이 가요.</span></div>` : ''}
       <div class="body">${linkify(post.body)}</div>
       ${post.imgs.length ? `<div class="imgs">${post.imgs.map((u, i) => `<img src="${esc(u)}" alt="첨부 사진 ${i + 1}" data-i="${i}" loading="lazy">`).join('')}</div>` : ''}
       <div class="act-bar">
@@ -33,6 +36,10 @@
     paintToggles(d.liked, d.saved);
     bind();
     $('#cmtSec').hidden = false;
+    if (me && d.canAnswer && $('#cmtBody')) {
+      $('#cmtBody').placeholder = '손님에게 답변을 남겨 주세요. 비품 수량, 반입 가능 여부처럼 정확하게 적어 주면 좋아요.';
+      const sb = $('#cmtForm button[type=submit]'); if (sb) sb.textContent = '답변 남기기';
+    }
     if (!me) $('#cmtForm').innerHTML = `<div class="box fog" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="muted">로그인하면 댓글을 남길 수 있어요.</span><a class="btn btn-ink btn-sm" href="/login?next=${encodeURIComponent(location.pathname)}">로그인</a></div>`;
     loadComments();
   }
@@ -79,7 +86,7 @@
       const roots = items.filter((c) => !c.parent_id);
       const kids = (pid) => items.filter((c) => c.parent_id === pid);
       const one = (c, reply) => `<div class="cmt${reply ? ' reply' : ''}" id="cmt-${c.id}" data-cid="${c.id}">
-        ${c.state === 'ok' ? `<div class="cmt-hd">${SP.avatar(c.author.avatar, 'sm')}<b>${esc(c.author.nick)}</b>${c.isWriter ? '<span class="badge mute">글쓴이</span>' : ''}<time>${SP.ago(c.created_at)}</time></div><div class="cmt-body">${linkify(c.body)}</div>
+        ${c.state === 'ok' ? `<div class="cmt-hd">${SP.avatar(c.author.avatar, 'sm')}<b>${esc(c.author.nick)}</b>${c.isHost ? '<span class="badge red">호스트</span>' : c.isStaff ? '<span class="badge ink">쏘플</span>' : ''}${c.isWriter ? '<span class="badge mute">글쓴이</span>' : ''}<time>${SP.ago(c.created_at)}</time></div><div class="cmt-body">${linkify(c.body)}</div>
           <div class="cmt-act">${!reply && me ? `<button type="button" data-reply="${c.id}">답글</button>` : ''}${c.mine ? `<button type="button" data-cdel="${c.id}">삭제</button>` : me ? `<button type="button" data-crep="${c.id}">신고</button>` : ''}</div>`
         : `<div class="cmt-body faint">${c.state === 'deleted' ? '지워진 댓글이에요.' : '신고로 가려진 댓글이에요.'}</div>`}
         </div>${kids(c.id).map((k) => one(k, true)).join('')}`;
@@ -98,7 +105,7 @@
       if (!$('#replyNote')) $('#cmtForm').insertAdjacentHTML('afterbegin', `<div class="tiny muted" id="replyNote" style="margin-bottom:6px">답글 쓰는 중 <button type="button" class="link" id="replyOff">취소</button></div>`);
       return;
     }
-    if (e.target.closest('#replyOff')) { replyTo = null; $('#replyNote').remove(); $('#cmtBody').placeholder = '따뜻한 댓글을 남겨 주세요'; return; }
+    if (e.target.closest('#replyOff')) { replyTo = null; $('#replyNote').remove(); $('#cmtBody').placeholder = canAnswer ? '손님에게 답변을 남겨 주세요.' : '따뜻한 댓글을 남겨 주세요'; return; }
     const d = e.target.closest('[data-cdel]');
     if (d) {
       if (!(await SP.confirm('댓글을 지울까요?', { ok: '지우기', danger: true }))) return;

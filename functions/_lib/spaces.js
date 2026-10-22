@@ -1,5 +1,5 @@
 // 지점 — 목록·상세, 관리자 수정
-import { HttpError, parseJSON, nowIso, str, int, url, isYmd } from './util.js';
+import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones } from './util.js';
 import { seedOf } from './db.js';
 
 let cache = null;
@@ -196,6 +196,8 @@ export function cleanSpaceInput(b, prev = {}) {
     }
     out.info = inf;
   }
+  if ('items' in b) out.items = cleanItems(b.items);
+  if ('social' in b && b.social && typeof b.social === 'object') out.social = cleanSocial(b.social);
   if ('listing' in b && b.listing && typeof b.listing === 'object') {
     const l = { ...(prev.listing || {}) };
     if ('type' in b.listing) l.type = LISTING_TYPES[b.listing.type] ? b.listing.type : 'managed';
@@ -204,6 +206,50 @@ export function cleanSpaceInput(b, prev = {}) {
     if ('hostName' in b.listing) l.hostName = str(b.listing.hostName, { max: 30, name: '호스트 표시 이름' });
     out.listing = l;
   }
+  return out;
+}
+
+/* ---------- 비품(세부 물품) 목록 — 고객 화면 "비품·물품"에 보여요 ---------- */
+export const ITEM_CATS = { kitchen: '주방·식기', furniture: '가구·좌석', av: '영상·음향', party: '파티·꾸미기', play: '놀이·게임', living: '생활·위생', etc: '기타' };
+export function cleanItems(v) {
+  if (v == null) return [];
+  if (!Array.isArray(v)) throw new HttpError(400, '비품 목록 형식이 올바르지 않아요.');
+  if (v.length > 150) throw new HttpError(400, '비품은 150개까지 적을 수 있어요.');
+  const seen = new Set();
+  const out = [];
+  for (const it of v) {
+    if (!it || typeof it !== 'object') continue;
+    const n = str(it.n, { max: 24 });
+    if (!n) continue;
+    const c = ITEM_CATS[it.c] ? it.c : 'etc';
+    const key = c + '|' + n;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const q = it.q === '' || it.q == null ? null : int(it.q, { min: 0, max: 9999, def: null, name: `${n} 수량` });
+    out.push({ c, n: maskPhones(n), q, m: maskPhones(str(it.m, { max: 40 }) || '') });
+  }
+  return out;
+}
+
+/* ---------- SNS·네이버 후기 연결 ---------- */
+const SOCIAL_HOSTS = /^(blog\.naver\.com|m\.blog\.naver\.com|naver\.me|map\.naver\.com|m\.place\.naver\.com|place\.naver\.com|(www\.)?instagram\.com|(www\.|m\.)?youtube\.com|youtu\.be|cafe\.naver\.com|m\.cafe\.naver\.com|in\.naver\.com|tv\.naver\.com)$/i;
+export function cleanSocial(v) {
+  const out = {};
+  const tag = String(v.tag || '').trim().replace(/^#/, '');
+  if (tag) {
+    if (!/^[0-9A-Za-z가-힣_]{2,30}$/.test(tag)) throw new HttpError(400, '인스타그램 해시태그는 띄어쓰기 없이 글자·숫자·_만 써 주세요.');
+    out.tag = tag;
+  }
+  if (v.naver) out.naver = url(v.naver, { name: '네이버 플레이스 주소' });
+  const links = Array.isArray(v.links) ? v.links.slice(0, 8) : [];
+  out.links = links.map((l, i) => {
+    const u = url(l && l.u, { name: `${i + 1}번째 후기 주소` });
+    if (!u) return null;
+    let host = '';
+    try { host = new URL(u).hostname; } catch { /* 아래에서 거름 */ }
+    if (!SOCIAL_HOSTS.test(host)) throw new HttpError(400, '후기 주소는 네이버 블로그·카페·플레이스, 인스타그램, 유튜브 주소만 넣을 수 있어요.');
+    return { u, t: str(l.t, { max: 60 }) || '' };
+  }).filter(Boolean);
   return out;
 }
 
@@ -219,7 +265,7 @@ export function zoneOf(s, today) {
 }
 
 /* ---------- 호스트(매장 운영자)가 자기 지점을 고치는 범위 ---------- */
-const HOST_FIELDS = ['intro', 'notice', 'tags', 'photos', 'feat', 'info', 'addFeeLabel', 'depositLabel', 'place'];
+const HOST_FIELDS = ['intro', 'notice', 'tags', 'photos', 'feat', 'info', 'addFeeLabel', 'depositLabel', 'place', 'items', 'social'];
 const HOST_FIELDS_OWN = ['pkgs', 'book', 'base', 'max', 'addFee'];   // 호스트 운영 공간이면 요금·예약 주소까지
 export function cleanHostInput(b, prev) {
   const allow = new Set(HOST_FIELDS.concat(prev.listing && prev.listing.type === 'host' ? HOST_FIELDS_OWN : []));

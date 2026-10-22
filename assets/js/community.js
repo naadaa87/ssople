@@ -41,7 +41,7 @@
     } else $('#noticeBox').innerHTML = '';
   }
 
-  $('#boardTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (!b) return; st.b = b.dataset.b; if (st.b !== 'review') st.code = ''; load(true); });
+  $('#boardTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (!b) return; st.b = b.dataset.b; if (!['review', 'qna', 'host'].includes(st.b)) st.code = ''; load(true); });
   $('#sortSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return; st.s = b.dataset.v; load(true); });
   $('#qForm').addEventListener('submit', (e) => { e.preventDefault(); st.q = $('#q').value.trim(); load(true); });
   $('#more').addEventListener('click', () => { st.page++; load(false); });

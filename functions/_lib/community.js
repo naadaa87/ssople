@@ -1,12 +1,27 @@
 // 커뮤니티 — 게시글·댓글·좋아요·저장·신고
 import { HttpError, str, int, nowIso, maskPhones, parseJSON, likeSafe, dispNick } from './util.js';
-import { getSettings, notiStmt, badgeStmt } from './db.js';
+import { getSettings, notiStmt, notiManyStmt, badgeStmt } from './db.js';
 import { loadSpaces, hostCodes } from './spaces.js';
 
 export const BOARDS = {
   review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', host: '지점 소식', mb: '모임 게시판',
 };
 const PUBLIC_BOARDS = ['review', 'tip', 'qna', 'free', 'notice', 'host'];
+/** 지점 소식 분류 — 공지·소식·이벤트 */
+export const HOST_TAGS = { notice: '공지', news: '소식', event: '이벤트' };
+
+/** 이 지점을 맡은 호스트 회원 (알림용, 최대 5명) */
+export async function hostUidsOf(db, code) {
+  if (!/^S-\d{4}$/.test(code || '')) return [];
+  const rows = (await db.prepare(`SELECT id FROM users WHERE status = 'active' AND host_codes LIKE ? LIMIT 5`).bind(`%"${code}"%`).all()).results || [];
+  return rows.map((r) => r.id);
+}
+/** 회원이 그 지점의 호스트(또는 운영진)인지 */
+export function isHostOf(u, code) {
+  if (!u || !code) return false;
+  if (u.role === 'admin' || u.role === 'staff') return true;
+  return hostCodes(u).includes(code);
+}
 
 export function imgUrl(k) { return k ? (/^https?:\/\//.test(k) ? k : '/api/img/' + k) : ''; }
 export function cleanImgs(v, max = 6) {
@@ -46,10 +61,12 @@ function listItem(r, spaceName) {
     img: imgs[0] ? imgUrl(imgs[0]) : '', imgCount: imgs.length, code: r.code || null, spaceName: spaceName || null,
     rating: r.rating, verified: !!r.verified, likes: r.likes, cmts: r.cmts, views: r.views, pinned: !!r.pinned,
     hidden: !!r.hidden, created_at: r.created_at, author: author(r),
+    tag: r.board === 'host' ? (HOST_TAGS[r.tag] ? r.tag : 'news') : null,
+    answered: r.board === 'qna' && r.code ? !!r.answered : null,
   };
 }
 
-export async function listPosts(db, { board, scope = 0, code, q, sort = 'new', page = 1, size = 20, uid, onlyMine, bookmarkedBy }) {
+export async function listPosts(db, { board, scope = 0, code, q, sort = 'new', page = 1, size = 20, uid, onlyMine, bookmarkedBy, tag, open, codes }) {
   const where = [];
   const binds = [];
   let join = '';
@@ -66,6 +83,9 @@ export async function listPosts(db, { board, scope = 0, code, q, sort = 'new', p
     else if (board) { where.push('p.board = ?'); binds.push(board); }
     if (board === 'mb') { where.push('p.scope = ?'); binds.push(scope); }
     if (code) { where.push('p.code = ?'); binds.push(code); }
+    if (codes && codes.length) { where.push(`p.code IN (${codes.map(() => '?').join(',')})`); binds.push(...codes); }
+    if (tag && board === 'host') { where.push(`COALESCE(p.tag, 'news') = ?`); binds.push(tag); }
+    if (open && board === 'qna') where.push('p.answered = 0 AND p.code IS NOT NULL');
     if (q) { where.push('(p.title LIKE ? OR p.body LIKE ?)'); binds.push(`%${q}%`, `%${q}%`); }
   }
   let order = 'p.pinned DESC, p.id DESC';
@@ -95,7 +115,11 @@ export function register(route) {
     const sort = ['new', 'hot', 'top'].includes(c.q.get('sort')) ? c.q.get('sort') : 'new';
     const page = int(c.q.get('page'), { min: 1, max: 500, def: 1 });
     const size = int(c.q.get('size'), { min: 1, max: 40, def: 20 });
-    return listPosts(c.db, { board, scope, code, q, sort, page, size });
+    const tag = HOST_TAGS[c.q.get('tag')] ? c.q.get('tag') : null;
+    const open = c.q.get('open') === '1';
+    // 여러 지점 한 번에 (호스트 화면: 내 지점들의 문의·소식)
+    const codes = String(c.q.get('codes') || '').split(',').filter((x) => /^S-\d{4}$/.test(x)).slice(0, 20);
+    return listPosts(c.db, { board, scope, code, q, sort, page, size, tag, open, codes });
   });
 
   route('GET', '/api/posts/:id', async (c) => {
@@ -123,8 +147,10 @@ export function register(route) {
         id: r.id, board: r.board, scope: r.scope, title: r.title || '', body: r.body, imgs: parseJSON(r.imgs, []).map(imgUrl), imgKeys: parseJSON(r.imgs, []),
         code: r.code, space, rating: r.rating, verified: !!r.verified, likes: r.likes, cmts: r.cmts, views: r.views + (mine ? 0 : 1),
         pinned: !!r.pinned, hidden: !!r.hidden, created_at: r.created_at, updated_at: r.updated_at, author: author(r),
+        tag: r.board === 'host' ? (HOST_TAGS[r.tag] ? r.tag : 'news') : null, answered: r.board === 'qna' && r.code ? !!r.answered : null,
       },
       liked, saved, mine: !!mine, canEdit: !!(mine || adm),
+      canAnswer: !!(r.board === 'qna' && r.code && (adm || isHostOf(await c.rawUser(), r.code))),
     };
   });
 
@@ -163,12 +189,20 @@ export function register(route) {
       code = b.code;
     }
     await checkText(c.db, title, body);
+    const tag = board === 'host' ? (HOST_TAGS[b.tag] ? b.tag : 'news') : null;
     const at = nowIso();
     const r = await c.db.prepare(
-      `INSERT INTO posts (board, scope, uid, title, body, imgs, code, rating, verified, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id`,
-    ).bind(board, scope, u.id, title, body, JSON.stringify(imgs), code, rating, verified, at, at).first();
+      `INSERT INTO posts (board, scope, uid, title, body, imgs, code, rating, verified, tag, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id`,
+    ).bind(board, scope, u.id, title, body, JSON.stringify(imgs), code, rating, verified, tag, at, at).first();
     const stmts = [badgeStmt(c.db, u.id, 'writer')];
     if (board === 'review') stmts.push(badgeStmt(c.db, u.id, 'reviewer'));
+    // 지점 문의·후기는 그 지점 호스트에게 알린다
+    if ((board === 'qna' || board === 'review') && code) {
+      const hosts = (await hostUidsOf(c.db, code)).filter((x) => x !== u.id);
+      const sp = (await loadSpaces(c.db, { all: true })).find((x) => x.code === code);
+      const what = board === 'qna' ? '새 문의' : '새 후기';
+      if (hosts.length) stmts.push(notiManyStmt(c.db, hosts, board === 'qna' ? 'comment' : 'like', `${sp ? sp.name : code}에 ${what}가 올라왔어요: "${title.slice(0, 24)}"`, `/c/${r.id}`));
+    }
     await c.db.batch(stmts);
     return { ok: true, id: r.id };
   });
@@ -186,8 +220,9 @@ export function register(route) {
     const imgs = 'imgs' in b ? JSON.stringify(cleanImgs(b.imgs, 6)) : p.imgs;
     const rating = p.board === 'review' && 'rating' in b ? int(b.rating, { min: 1, max: 5, name: '별점' }) : p.rating;
     await checkText(c.db, title, body);
-    await c.db.prepare('UPDATE posts SET title = ?, body = ?, imgs = ?, rating = ?, updated_at = ? WHERE id = ?')
-      .bind(title, body, imgs, rating, nowIso(), id).run();
+    const tag = p.board === 'host' && 'tag' in b ? (HOST_TAGS[b.tag] ? b.tag : 'news') : p.tag;
+    await c.db.prepare('UPDATE posts SET title = ?, body = ?, imgs = ?, rating = ?, tag = ?, updated_at = ? WHERE id = ?')
+      .bind(title, body, imgs, rating, tag, nowIso(), id).run();
     return { ok: true };
   });
 
@@ -230,12 +265,12 @@ export function register(route) {
   /* ---------- 댓글 ---------- */
   route('GET', '/api/posts/:id/comments', async (c) => {
     const id = int(c.params.id, { min: 1 });
-    const p = await c.db.prepare('SELECT board, scope, hidden, uid FROM posts WHERE id = ?').bind(id).first();
+    const p = await c.db.prepare('SELECT board, scope, hidden, uid, code FROM posts WHERE id = ?').bind(id).first();
     if (!p) throw new HttpError(404, '글을 찾을 수 없어요.');
     const me = await c.user();
     if (p.board === 'mb' && !(me && (await isMeetupMember(c.db, p.scope, me.id))) && !(await c.adminLevel())) throw new HttpError(403, '모임 멤버만 볼 수 있어요.');
     const rows = (await c.db.prepare(
-      `SELECT c.*, u.nick, u.avatar FROM comments c LEFT JOIN users u ON u.id = c.uid WHERE c.post_id = ? ORDER BY c.id LIMIT 500`,
+      `SELECT c.*, u.nick, u.avatar, u.role, u.host_codes FROM comments c LEFT JOIN users u ON u.id = c.uid WHERE c.post_id = ? ORDER BY c.id LIMIT 500`,
     ).bind(id).all()).results || [];
     const hasChild = new Set(rows.filter((r) => r.parent_id).map((r) => r.parent_id));
     const items = rows
@@ -245,6 +280,8 @@ export function register(route) {
         body: r.deleted ? '' : r.hidden ? '' : r.body,
         state: r.deleted ? 'deleted' : r.hidden ? 'hidden' : 'ok',
         author: r.deleted ? null : author(r), mine: !!(me && me.id === r.uid), isWriter: r.uid === p.uid,
+        // 지점 글(문의·후기·소식)에 그 지점 호스트가 단 댓글은 '호스트'로, 운영진은 '쏘플'로 보여 준다
+        isHost: !r.deleted && !!p.code && hostCodes(r).includes(p.code), isStaff: !r.deleted && (r.role === 'admin' || r.role === 'staff'),
       }));
     return { items };
   });
@@ -252,7 +289,7 @@ export function register(route) {
   route('POST', '/api/posts/:id/comments', async (c) => {
     const u = await c.needUser();
     const id = int(c.params.id, { min: 1 });
-    const p = await c.db.prepare('SELECT id, uid, title, board, scope, hidden FROM posts WHERE id = ?').bind(id).first();
+    const p = await c.db.prepare('SELECT id, uid, title, board, scope, hidden, code FROM posts WHERE id = ?').bind(id).first();
     if (!p || p.hidden) throw new HttpError(404, '글을 찾을 수 없어요.');
     if (p.board === 'mb' && !(await isMeetupMember(c.db, p.scope, u.id))) throw new HttpError(403, '모임 멤버만 댓글을 쓸 수 있어요.');
     await c.limit('co:' + u.id, 40, 3600, '댓글은 1시간에 40개까지 쓸 수 있어요.');
@@ -274,6 +311,17 @@ export function register(route) {
     const ttl = String(p.title || '').slice(0, 24);
     if (p.uid !== u.id) stmts.push(notiStmt(c.db, p.uid, 'comment', `${u.nick}님이 "${ttl}"에 댓글을 남겼어요.`, link));
     if (parent && parent.uid !== u.id && parent.uid !== p.uid) stmts.push(notiStmt(c.db, parent.uid, 'reply', `${u.nick}님이 내 댓글에 답글을 남겼어요.`, link));
+    if (p.code && (p.board === 'qna' || p.board === 'review')) {
+      const raw = await c.rawUser();
+      if (isHostOf(raw, p.code) || (await c.adminLevel())) {
+        // 호스트·운영진이 답하면 문의는 '답변 완료'
+        if (p.board === 'qna') stmts.push(c.db.prepare('UPDATE posts SET answered = 1 WHERE id = ?').bind(id));
+      } else if (p.board === 'qna') {
+        // 손님이 문의에 덧붙이면 호스트에게 알림
+        const hosts = (await hostUidsOf(c.db, p.code)).filter((x) => x !== u.id && x !== p.uid);
+        if (hosts.length) stmts.push(notiManyStmt(c.db, hosts, 'comment', `문의 "${ttl}"에 새 댓글이 달렸어요.`, link));
+      }
+    }
     await c.db.batch(stmts);
     return { ok: true };
   });

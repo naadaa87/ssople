@@ -4,7 +4,12 @@
   const q = SP.qs();
   const editId = Number(q.edit) || 0;
   const BOARDS = [['review', '이용후기'], ['tip', '파티 꿀팁'], ['qna', '질문'], ['free', '자유']];
-  const st = { board: BOARDS.some((b) => b[0] === q.b) ? q.b : (q.b === 'mb' ? 'mb' : q.b === 'host' ? 'host' : 'review'), scope: Number(q.scope) || 0, rating: 0, imgs: [], code: /^S-\d{4}$/.test(q.code || '') ? q.code : '' };
+  const st = { board: BOARDS.some((b) => b[0] === q.b) ? q.b : (q.b === 'mb' ? 'mb' : q.b === 'host' ? 'host' : 'review'), scope: Number(q.scope) || 0, rating: 0, imgs: [], code: /^S-\d{4}$/.test(q.code || '') ? q.code : '', tag: ['notice', 'news', 'event'].includes(q.tag) ? q.tag : 'news' };
+  const TAGS = [['news', '소식'], ['notice', '공지'], ['event', '이벤트·할인']];
+  function drawTags() {
+    $('#tagField').hidden = st.board !== 'host';
+    $('#tagPick').innerHTML = TAGS.map(([k, n]) => `<button type="button" class="chip${st.tag === k ? ' on' : ''}" role="radio" aria-checked="${st.tag === k}" data-tag="${k}">${n}</button>`).join('');
+  }
   let hostCodes = [];
 
   function drawBoards(admin) {
@@ -12,9 +17,10 @@
     let list = admin ? [...BOARDS, ['notice', '공지']] : BOARDS;
     if (hostCodes.length || admin) list = [...list, ['host', '지점 소식']];
     $('#boardPick').innerHTML = list.map(([k, n]) => `<button type="button" class="chip${st.board === k ? ' on' : ''}" role="radio" aria-checked="${st.board === k}" data-b="${k}">${n}</button>`).join('');
-    $('#reviewBox').hidden = st.board !== 'review' && st.board !== 'host';
+    $('#reviewBox').hidden = !['review', 'host', 'qna'].includes(st.board);
     $('#wStars').parentElement.hidden = st.board !== 'review';
-    $('#wCode').previousElementSibling.textContent = st.board === 'host' ? '소식을 올릴 지점' : '다녀온 지점';
+    $('#wCode').previousElementSibling.textContent = st.board === 'host' ? '소식을 올릴 지점' : st.board === 'qna' ? '문의할 지점 (선택 — 고르면 그 지점 담당자가 답해요)' : '다녀온 지점';
+    drawTags();
     if (st.board === 'host' && hostCodes.length && !admin) {
       $$('#wCode option').forEach((o) => { o.hidden = o.value && !hostCodes.includes(o.value); });
       if (!st.code && hostCodes.length === 1) { st.code = hostCodes[0]; $('#wCode').value = st.code; }
@@ -22,7 +28,7 @@
     $('#wBody').placeholder = st.board === 'review' ? '이용한 패키지, 좋았던 점, 아쉬웠던 점을 적어 주면 다른 분들께 큰 도움이 돼요.'
       : st.board === 'tip' ? '파티 준비하면서 알게 된 요령을 나눠 주세요.'
         : st.board === 'host' ? '지점의 새 소식, 이달의 꾸밈, 준비한 이벤트, 손님께 드리는 안내를 적어 주세요. 사진을 같이 올리면 더 좋아요.'
-          : st.board === 'qna' ? '궁금한 점을 자세히 적을수록 답이 빨리 달려요.' : '자유롭게 이야기해 주세요.';
+          : st.board === 'qna' ? (st.code ? '비품, 반입, 꾸미기, 주차처럼 궁금한 점을 적어 주세요. 모두가 보는 공개 질문이라 예약번호·연락처는 적지 말아 주세요.' : '궁금한 점을 자세히 적을수록 답이 빨리 달려요. 특정 지점에 대한 질문이면 위에서 지점을 골라 주세요.') : '자유롭게 이야기해 주세요.';
   }
   function drawStars() {
     $('#wStars').innerHTML = [1, 2, 3, 4, 5].map((n) => `<button type="button" role="radio" aria-checked="${st.rating === n}" aria-label="${n}점" class="${n <= st.rating ? 'on' : ''}" data-r="${n}">${icon('star-f')}</button>`).join('') + `<span class="muted small" style="align-self:center;margin-left:8px">${st.rating ? st.rating + '점' : '눌러서 고르기'}</span>`;
@@ -46,7 +52,7 @@
         const d = await SP.get('/api/posts/' + editId);
         if (!d.canEdit) { SP.toast('내가 쓴 글만 고칠 수 있어요.', true); return; }
         const p = d.post;
-        st.board = p.board; st.scope = p.scope; st.rating = p.rating || 0; st.code = p.code || '';
+        st.board = p.board; st.scope = p.scope; st.rating = p.rating || 0; st.code = p.code || ''; st.tag = p.tag || 'news';
         st.imgs = p.imgKeys.map((k, i) => ({ key: k, url: p.imgs[i] }));
         $('#wSubject').value = p.title; $('#wBody').value = p.body;
         $('#wTitle').textContent = '글 고치기';
@@ -73,10 +79,11 @@
     st.board = b.dataset.b;
     drawBoards(!!((await SP.me()).user || {}).admin);
   });
+  $('#tagPick').addEventListener('click', (e) => { const b = e.target.closest('[data-tag]'); if (!b) return; st.tag = b.dataset.tag; drawTags(); });
   $('#wStars').addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (!b) return; st.rating = Number(b.dataset.r); drawStars(); });
   $('#wCode').addEventListener('change', (e) => {
     st.code = e.target.value;
-    if (!$('#wSubject').value.trim() || / 이용후기$/.test($('#wSubject').value)) {
+    if (st.board === 'review' && (!$('#wSubject').value.trim() || / 이용후기$/.test($('#wSubject').value))) {
       const opt = e.target.selectedOptions[0];
       $('#wSubject').value = st.code ? `${opt.textContent} 이용후기` : '';
     }
@@ -116,6 +123,7 @@
     try {
       const payload = { title, body, imgs: st.imgs.map((x) => x.key) };
       if (st.board === 'review') payload.rating = st.rating;
+      if (st.board === 'host') payload.tag = st.tag;
       if (editId) {
         await SP.patch('/api/posts/' + editId, payload);
         location.href = '/c/' + editId;

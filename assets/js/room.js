@@ -7,7 +7,7 @@
   const m = location.pathname.match(/\/room\/(S-?\d{1,4})/i);
   let code = (m ? m[1] : (qs.code || qs.id || '')).toUpperCase();
   if (/^S-?\d{1,4}$/.test(code)) code = 'S-' + code.replace(/\D/g, '').padStart(4, '0');
-  let space = null, near = [], reviewStat = { n: 0, avg: null }, av = null;
+  let space = null, near = [], reviewStat = { n: 0, avg: null }, av = null, spyIO = null;
   let sel = qs.date && qs.date >= today && SP.dayDiff(today, qs.date) < DAYS ? qs.date : null;
   let month = (sel || today).slice(0, 7);
   const COLS = ['월~목', '금', '토', '일'];
@@ -49,26 +49,31 @@
             <div><small>인원 추가</small><b>${esc(s.addFeeLabel || '문의')}</b></div>
           </div>
           ${s.notice ? `<div class="callout red" style="margin-top:16px">${icon('megaphone')}<div class="prewrap">${esc(s.notice)}</div></div>` : ''}
-          ${s.intro ? `<section class="room-sec"><h2>공간 소개</h2><div class="prose prewrap">${esc(s.intro)}</div></section>` : ''}
-          <section class="room-sec"><h2>패키지와 요금</h2>${priceTable(s)}</section>
-          <section class="room-sec"><h2>편의시설</h2>${amenities(s)}</section>
-          <section class="room-sec"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
-          <section class="room-sec"><h2>찾아오는 길</h2>${route(s)}</section>
+          <nav class="room-nav" id="roomNav" aria-label="이 지점 안내 바로가기">${subnav(s)}</nav>
+          ${s.intro ? `<section class="room-sec" id="r-intro"><h2>공간 소개</h2><div class="prose prewrap">${esc(s.intro)}</div></section>` : ''}
           <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
+          <section class="room-sec" id="r-price"><h2>패키지와 요금</h2>${priceTable(s)}</section>
+          <section class="room-sec" id="r-feat"><h2>편의시설</h2>${amenities(s)}</section>
+          ${(s.items || []).length ? `<section class="room-sec" id="r-items"><div class="between" style="margin-bottom:12px"><h2 style="margin:0">비품·물품</h2><span class="small muted">${s.items.length}가지</span></div>${SP.itemsView(s.items)}<p class="tiny faint" style="margin-top:12px">호스트가 직접 적은 목록이에요. 수량은 바뀔 수 있으니 꼭 필요한 물품은 <a class="link" href="#r-qna">지점에 물어보기</a>로 확인해 주세요.</p></section>` : ''}
+          <section class="room-sec" id="r-rules"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
+          <section class="room-sec" id="r-route"><h2>찾아오는 길</h2>${route(s)}</section>
+          <section class="room-sec" id="r-qna"><div class="between" style="margin-bottom:6px"><h2 style="margin:0">지점에 물어보기</h2><a class="btn btn-ink btn-sm" href="/write?b=qna&code=${s.code}">${icon('chat', 'sm')}문의 남기기</a></div><p class="small muted" style="margin-bottom:12px">비품, 꾸미기, 반입, 주차처럼 궁금한 걸 남기면 ${isHost(s) ? '호스트가' : '지점 담당자가'} 답해요. 모두가 보는 공개 질문이라 예약번호·연락처는 적지 마세요. 급한 일은 카카오톡 상담이 빨라요.</p><div id="qaList"><div class="skel" style="height:60px"></div></div></section>
           <section class="room-sec" id="reviews"><div class="between" style="margin-bottom:12px"><h2 style="margin:0" id="rvHead">이용후기</h2><a class="btn btn-line btn-sm" href="/write?b=review&code=${s.code}">${icon('edit', 'sm')}후기 쓰기</a></div><div id="rvList"><div class="skel" style="height:80px"></div></div></section>
+          <section class="room-sec" id="r-social"><h2>네이버·인스타그램 후기</h2><p class="small muted" style="margin-bottom:12px">다녀간 분들이 네이버와 인스타그램에 남긴 글과 사진도 함께 보세요.</p><div id="socialBox">${SP.socialView ? SP.socialView(s, SP.settings) : ''}</div></section>
         </div>
         <aside class="book" id="book" aria-label="날짜 고르고 예약하기">
           <div class="between"><h2>날짜 고르고 예약</h2><span class="small muted" id="bookAsOf"></span></div>
           <div class="cal" id="cal"><div class="skel" style="height:260px"></div></div>
           <div id="calLegend" style="margin-top:10px"></div>
           <div id="pkgArea"></div>
-          <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${isHost(s) ? '이 지점은 호스트가 직접 운영해요. 예약·결제·취소는 네이버 예약에서, 자세한 문의는 호스트에게 이어져요.' : '예약·결제·취소는 네이버 예약에서 진행돼요. 달력의 빈 방 표시는 실제 예약 상황과 조금 다를 수 있어요.'}</span></div>
+          <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${isHost(s) ? '이 지점은 호스트가 직접 운영해요. 예약·결제·취소는 네이버 예약에서, 자세한 문의는 호스트에게 이어져요.' : '예약·결제·취소는 네이버 예약에서 진행돼요. 달력의 마감 표시는 참고용이고, 예약 가능 여부는 네이버 예약 화면이 기준이에요.'}</span></div>
           <div class="row" style="margin-top:12px;flex-wrap:wrap">
             <a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>
             <a class="btn btn-soft btn-sm" href="/planner?code=${s.code}#cost">${icon('won', 'sm')}예상 비용 계산</a>
           </div>
         </aside>
       </div>
+      ${journey(s)}
       ${guideCards(s)}
       <section class="sec" style="padding-top:44px"><div class="between" style="margin-bottom:18px"><h2 class="h2">근처 다른 지점</h2><a class="sec-more" href="/rooms?region=${encodeURIComponent(s.region)}">${esc(s.region)} 지점 전체</a></div><div class="rooms" id="nearList"></div></section>`;
     $('#mobileBook').hidden = false;
@@ -78,6 +83,23 @@
   }
 
   function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+  /* 긴 지점 화면 안에서 바로 가기 */
+  function subnav(s) {
+    const l = [['r-intro', '소개', !!s.intro], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
+    return l.filter((x) => x[2]).map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
+  }
+  /* 예약 뒤 이어지는 준비 — 지점 화면에서 쏘플의 다른 기능으로 */
+  function journey(s) {
+    const steps = [
+      ['send', '초대장 보내기', '날짜·장소가 들어간 초대장을 링크 하나로', `/invite?code=${s.code}`],
+      ['list', '준비물 · N빵', '체크리스트와 1인당 비용 계산', `/planner?code=${s.code}`],
+      ['game', '파티게임 띄우기', `TV${s.feat && s.feat.projector ? '·빔프로젝터' : ''}에 띄워 다 같이 퀴즈·라이어 게임`, '/games'],
+      ['chat', '지점에 물어보기', '비품·반입·꾸미기 궁금한 점', '#r-qna'],
+      ['star', '다녀와서 후기', '후기와 방문 인증으로 쏘플 클럽 혜택', `/write?b=review&code=${s.code}`],
+    ];
+    return `<section class="sec journey-sec" style="padding-top:44px;padding-bottom:0"><div class="between" style="margin-bottom:14px"><h2 class="h2">예약했다면, 이렇게 준비해요</h2></div>
+      <ol class="journey">${steps.map(([ic, t, d, u]) => `<li><a href="${u}">${icon(ic)}<b>${t}</b><span>${d}</span></a></li>`).join('')}</ol></section>`;
+  }
   /* 지점 시설에 맞는 파티 가이드 글 3개 */
   function guideSlugs(s) {
     const f = s.feat || {}, out = [];
@@ -125,8 +147,9 @@
     add('mic', '노래방', f.karaoke?.on ? f.karaoke.note : '없음', !!f.karaoke?.on);
     add('flame', '바베큐', f.bbq?.on ? f.bbq.note : '없음', !!f.bbq?.on);
     add('paw', '애견 동반', f.pet?.on ? (f.pet.note || '가능') : '불가', !!f.pet?.on);
+    const consoleName = (f.games || []).find((g) => /닌텐도|스위치|플레이스테이션|PS[45]|엑스박스|xbox/i.test(g)) || '';
     if (f.tv) add('tv', 'TV', f.console ? '게임기 연결' : '');
-    if (f.console && !f.tv) add('game', '게임기', '');
+    if (f.console) add('game', '게임기', consoleName);
     if (f.projector) add('projector', '빔프로젝터', '');
     if (f.cook) add('pot', '취사', f.cook, f.cook !== '취사 불가');
     if (f.fridge) add('fridge', '냉장고', '');
@@ -227,7 +250,7 @@
     list.forEach(({ p, price, st }) => {
       const booked = st === 'b';   // 마감 칸은 확실한 정보라 데이터가 오래됐어도 보여 준다 (비어 있음은 최신일 때만)
       const past = st === 'c';
-      const badge = past ? '<span class="badge mute">지난 시간</span>' : booked ? '<span class="badge mute">마감</span>' : live ? '<span class="badge ok">비어 있음</span>' : '';
+      const badge = past ? '<span class="badge mute">지난 시간</span>' : booked ? '<span class="badge mute">마감</span>' : live ? '<span class="badge ok">예약 가능</span>' : '';
       const href = SP.naverHref(p.url, sel);
       let btn;
       if (past) btn = '<button class="btn btn-soft btn-block btn-sm" disabled>이용 시간이 지났어요</button>';
@@ -248,7 +271,7 @@
         <p class="tiny faint" style="margin-top:8px">이 지점은 네이버 예약 페이지에서 ${esc(SP.mdw(sel))} 날짜와 패키지를 골라 주세요.</p>`;
     }
     const allBooked = live && list.length && list.every((x) => x.st === 'b' || x.st === 'c');
-    if (allBooked) html += '<div id="altBox" style="margin-top:16px"><h3 class="h4">같은 날 비어 있는 근처 지점</h3><div class="alt-list" id="altList"><p class="small muted" style="padding:8px 0">찾는 중…</p></div></div>';
+    if (allBooked) html += '<div id="altBox" style="margin-top:16px"><h3 class="h4">같은 날 예약할 수 있는 근처 지점</h3><div class="alt-list" id="altList"><p class="small muted" style="padding:8px 0">찾는 중…</p></div></div>';
     area.innerHTML = html;
     const minToday = list.filter((x) => x.st !== 'b' && x.st !== 'c').map((x) => x.price);
     $('#mbLabel').textContent = SP.mdw(sel);
@@ -285,7 +308,26 @@
       if (!d.items || !d.items.length) return;
       $('#hnList').innerHTML = d.items.map(SP.postRow).join('');
       $('#hostNews').hidden = false;
+      const nav = $('#roomNav');
+      if (nav && !nav.querySelector('[href="#hostNews"]')) {
+        const intro = nav.querySelector('[href="#r-intro"]');
+        if (intro) intro.insertAdjacentHTML('afterend', '<a href="#hostNews">소식</a>'); else nav.insertAdjacentHTML('afterbegin', '<a href="#hostNews">소식</a>');
+        if (spyIO) spyIO.observe($('#hostNews'));
+      }
     } catch { /* 소식은 없어도 돼요 */ }
+  }
+  async function loadQna() {
+    const el = $('#qaList');
+    if (!el) return;
+    try {
+      const d = await SP.get(`/api/posts?board=qna&code=${code}&size=4`);
+      el.innerHTML = d.items.length ? d.items.map(SP.postRow).join('') + `<a class="btn btn-soft btn-sm" style="margin-top:12px" href="/community?b=qna&code=${code}">문의 전체 보기</a>`
+        : `<div class="empty" style="padding:22px 18px"><h3>아직 남겨진 문의가 없어요</h3><p>"접시가 몇 개 있나요?", "풍선을 천장에 붙여도 되나요?" 같은 질문을 남겨 보세요.</p></div>`;
+    } catch { el.innerHTML = '<p class="muted small">문의를 불러오지 못했어요.</p>'; }
+  }
+  function drawSocial() {
+    const box = $('#socialBox');
+    if (box && SP.socialView) box.innerHTML = SP.socialView(space, SP.settings);
   }
   async function drawNear() {
     const el = $('#nearList');
@@ -324,6 +366,21 @@
       SP.share({ title: `${space.name} 파티룸`, text: `${space.region} ${space.area} · 최대 ${space.max}명`, url: location.origin + '/room/' + space.code });
     });
     $('#mbBtn').addEventListener('click', (e) => { e.preventDefault(); $('#book').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    spy();
+  }
+  /* 바로가기 — 지금 보고 있는 부분 표시 */
+  function spy() {
+    const nav = $('#roomNav');
+    if (!nav || !('IntersectionObserver' in window)) return;
+    spyIO = new IntersectionObserver((ents) => {
+      ents.forEach((en) => {
+        if (!en.isIntersecting) return;
+        nav.querySelectorAll('a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + en.target.id));
+        const on = nav.querySelector('a.on');
+        if (on && nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: Math.max(0, on.offsetLeft - 16) });
+      });
+    }, { rootMargin: '-35% 0px -60% 0px' });
+    nav.querySelectorAll('a').forEach((a) => { const t = document.getElementById(a.getAttribute('href').slice(1)); if (t) spyIO.observe(t); });
   }
 
   (async function init() {
@@ -332,7 +389,7 @@
     try {
       if (pre) {
         space = pre;
-        SP.get('/api/spaces/' + code).then((d) => { near = d.near || []; reviewStat = d.reviews || reviewStat; drawNear(); loadReviews(); loadHostNews(); }).catch(() => {});
+        SP.get('/api/spaces/' + code).then((d) => { near = d.near || []; reviewStat = d.reviews || reviewStat; drawNear(); loadReviews(); loadHostNews(); loadQna(); }).catch(() => {});
       } else {
         const d = await SP.get('/api/spaces/' + code);
         space = d.space; near = d.near || []; reviewStat = d.reviews || reviewStat;
@@ -343,6 +400,7 @@
     av = await SP.avail(today, DAYS, [code], true);
     drawCal();
     drawPkgs();
-    if (!pre) { loadReviews(); loadHostNews(); drawNear(); }
+    if (!pre) { loadReviews(); loadHostNews(); loadQna(); drawNear(); }
+    SP.site().then(({ settings }) => { SP.settings = SP.settings || settings; drawSocial(); }).catch(() => {});
   })();
 })();

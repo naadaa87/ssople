@@ -31,7 +31,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261022">
+<link rel="stylesheet" href="/assets/app.css?v=20261022b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "주차 되는 파티룸 모음 — 차로 가는 모임을 위한 쏘플 지점", "description": "차로 모이는 가족 모임, 짐이 많은 생일파티, 지방에서 올라오는 친구를 위해 주차가 되는 쏘플파티룸 지점만 모았어요. 무료 대수, 등록 방법, 근처 공영주차장까지 지점별로 정리했어요.", "image": ["https://ssople.pages.dev/assets/img/photo/storefront.webp"], "datePublished": "2026-10-18", "dateModified": "2026-10-18", "author": {"@type": "Organization", "name": "쏘플파티룸", "url": "https://ssople.pages.dev/"}, "publisher": {"@type": "Organization", "name": "쏘플파티룸", "logo": {"@type": "ImageObject", "url": "https://ssople.pages.dev/assets/img/logo.png"}}, "mainEntityOfPage": "https://ssople.pages.dev/magazine/partyroom-with-parking", "articleSection": "지역별 파티룸", "inLanguage": "ko", "keywords": "주차 되는 파티룸, 주차 가능 파티룸, 파티룸 주차, 서울 주차 파티룸, 경기 주차 파티룸, 가족 모임 파티룸, 차로 가는 파티룸"}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "지점 찾기에서 주차 되는 곳만 보려면요?", "acceptedAnswer": {"@type": "Answer", "text": "지점 찾기 화면에서 \"주차\" 필터를 켜면 돼요. 무료·유료 조건은 각 지점 화면 \"찾아오는 길\"에 적혀 있어요."}}, {"@type": "Question", "name": "무료 주차 대수를 넘으면 어떻게 하나요?", "acceptedAnswer": {"@type": "Answer", "text": "지점 화면에 안내된 근처 공영주차장을 써요. 대부분 걸어서 3~5분 안이에요."}}]}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "홈", "item": "https://ssople.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "파티 가이드", "item": "https://ssople.pages.dev/magazine"}, {"@type": "ListItem", "position": 3, "name": "지역별 파티룸", "item": "https://ssople.pages.dev/magazine#region"}, {"@type": "ListItem", "position": 4, "name": "주차 되는 파티룸 모음 — 차로 가는 모임을 위한 쏘플 지점", "item": "https://ssople.pages.dev/magazine/partyroom-with-parking"}]}</script>
@@ -139,15 +139,69 @@
   <div class="wrap hd-in">
     <a class="logo" href="/" aria-label="쏘플파티룸 처음으로"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a>
     <nav class="gnb" aria-label="주요 메뉴">
-      <a href="/rooms" data-nav="rooms room">지점 찾기</a>
-      <a href="/magazine" data-nav="magazine">파티 가이드</a>
-      <a href="/event" data-nav="event">행사</a>
-      <a href="/meetups" data-nav="meetups">모임</a>
-      <a href="/crew" data-nav="crew">파티팀</a>
-      <a href="/community" data-nav="community">커뮤니티</a>
-      <a href="/games" data-nav="games play">파티게임</a>
-      <a href="/membership" data-nav="membership">쏘플 클럽</a>
-      <a href="/host" data-nav="host startup academy" class="gnb-biz">호스트·창업</a>
+      <div class="gnb-item">
+        <a href="/rooms" data-nav="rooms room">지점 찾기</a>
+        <div class="gnb-panel">
+          <div class="gp-col">
+            <a href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span><b>지점 찾기</b><small>날짜·인원·노래방·바베큐로 고르기</small></span></a>
+            <a href="/locations"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg><span><b>지역별 지점</b><small>서울·경기·인천·대전·부산·전주</small></span></a>
+            <a href="/corporate"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg><span><b>기업·단체 행사</b><small>워크숍·송년회 단체 대관</small></span></a>
+          </div>
+          <div class="gp-col gp-mini">
+            <h4>모임별 추천</h4>
+            <a href="/purpose-birthday">생일파티</a><a href="/purpose-bridal">브라이덜 샤워</a><a href="/purpose-yearend">송년회·신년회</a><a href="/purpose-reunion">동창회·친구 모임</a><a href="/purpose-workshop">워크숍·스터디</a><a href="/purpose-filming">촬영 대관</a>
+          </div>
+        </div>
+      </div>
+      <div class="gnb-item">
+        <a href="/magazine" data-nav="magazine prep">파티 준비</a>
+        <div class="gnb-panel">
+          <div class="gp-col">
+            <a href="/planner"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg><span><b>준비물 체크리스트 · N빵</b><small>빠뜨린 것 없이, 1인당 비용까지</small></span></a>
+            <a href="/invite"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg><span><b>초대장 만들기</b><small>링크 하나로 보내고 참석 받기</small></span></a>
+            <a href="/magazine"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg><span><b>파티 가이드</b><small>꾸미기·음식·예산, 모임별 준비 요령</small></span></a>
+            <a href="/guide"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><span><b>이용 안내</b><small>예약·보증금·환불·입실 규칙</small></span></a>
+          </div>
+        </div>
+      </div>
+      <div class="gnb-item">
+        <a href="/games" data-nav="games play">파티게임</a>
+        <div class="gnb-panel">
+          <div class="gp-col">
+            <a href="/games"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg><span><b>쏘플 파티게임 8종</b><small>TV에 띄워 다 같이 — 퀴즈쇼·라이어 게임</small></span></a>
+            <a href="/play"><svg class="ic" aria-hidden="true"><use href="#i-wheel"/></svg><span><b>놀이터 · 파티 도구</b><small>팀 나누기·사다리·룰렛·타이머</small></span></a>
+            <a href="/games/demo"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span><b>폰 연결 체험판</b><small>가상 친구와 미리 해 보기</small></span></a>
+          </div>
+          <div class="gp-col gp-mini">
+            <h4>바로 시작</h4>
+            <a href="/games/quiz-show#play">쏘플 퀴즈쇼</a><a href="/games/balance-game#play">밸런스 게임</a><a href="/games/liar-game#play">라이어 게임</a><a href="/games/charades#play">몸으로 말해요</a><a href="/games/star-quiz#play">주인공 퀴즈</a><a href="/games/chosung-quiz#play">초성 퀴즈</a>
+          </div>
+        </div>
+      </div>
+      <div class="gnb-item">
+        <a href="/event" data-nav="event meetups crew community">같이 놀기</a>
+        <div class="gnb-panel">
+          <div class="gp-col">
+            <a href="/event"><svg class="ic" aria-hidden="true"><use href="#i-ticket"/></svg><span><b>행사</b><small>쏘플이 여는 파티·클래스</small></span></a>
+            <a href="/meetups"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg><span><b>모임</b><small>꾸준히 만나는 취미 모임</small></span></a>
+            <a href="/crew"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg><span><b>파티팀 모집</b><small>파티룸 같이 빌릴 사람 찾기</small></span></a>
+            <a href="/community"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg><span><b>커뮤니티</b><small>이용후기·꿀팁·질문·지점 소식</small></span></a>
+          </div>
+        </div>
+      </div>
+      <div class="gnb-item"><a href="/membership" data-nav="membership">쏘플 클럽</a></div>
+      <div class="gnb-item gnb-right">
+        <a href="/host" data-nav="host startup academy" class="gnb-biz">호스트·창업</a>
+        <div class="gnb-panel right">
+          <div class="gp-col">
+            <a href="/host"><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg><span><b>공간 등록 · 위탁운영</b><small>내 공간을 쏘플에 올리기</small></span></a>
+            <a href="/myspace"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg><span><b>내 공간 관리</b><small>호스트 — 문의 답변·소식·비품</small></span></a>
+            <a href="/startup"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg><span><b>파티룸 창업안내</b><small>공실을 파티룸으로</small></span></a>
+            <a href="/academy"><svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg><span><b>공간 아카데미</b><small>공간 운영 모임·교육</small></span></a>
+            <a href="/partners"><svg class="ic" aria-hidden="true"><use href="#i-handshake"/></svg><span><b>제휴·협업</b><small>브랜드·기업 파트너십</small></span></a>
+          </div>
+        </div>
+      </div>
     </nav>
     <div class="hd-act">
       <button class="ibtn" id="bellBtn" type="button" hidden aria-label="알림"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
@@ -163,25 +217,35 @@
     <div class="between" style="margin-bottom:6px"><a class="logo" href="/"><img class="logo-img" src="/assets/img/logo.png" alt="쏘플파티룸 SSOPLE Party Room" width="551" height="211" decoding="async"></a><button class="ibtn" type="button" data-x aria-label="메뉴 닫기"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <nav>
       <div id="drawerUser"><a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a></div>
-      <a href="/rooms">지점 찾기</a>
-      <a href="/locations">지역별 지점 안내</a>
-      <a href="/magazine">파티 가이드</a>
-      <a href="/event">행사</a>
-      <a href="/meetups">모임</a>
-      <a href="/crew">파티팀 모집</a>
-      <a href="/community">커뮤니티</a>
-      <a href="/games">파티게임</a>
-      <a href="/play">놀이터 (파티 도구)</a>
-      <a href="/planner">파티 준비 도구</a>
-      <a href="/invite">초대장 만들기</a>
-      <a href="/membership">쏘플 클럽</a>
-      <a href="/partners">제휴·협업</a>
-      <a href="/corporate">기업·단체 행사</a>
-      <a href="/host">호스트 센터 · 공간 등록</a>
-      <a href="/startup">파티룸 창업안내</a>
-      <a href="/academy">공간 아카데미</a>
-      <a href="/guide">이용 안내</a>
-      <a href="/about">브랜드 소개</a>
+      <a class="dr-cta" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>지점 찾기 · 예약</a>
+      <div class="dr-group"><h4>파티 준비</h4>
+        <a href="/planner"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg>준비물 체크리스트 · N빵</a>
+        <a href="/invite"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg>초대장 만들기</a>
+        <a href="/magazine"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg>파티 가이드</a>
+      </div>
+      <div class="dr-group"><h4>파티 당일</h4>
+        <a href="/games"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg>파티게임 8종</a>
+        <a href="/play"><svg class="ic" aria-hidden="true"><use href="#i-wheel"/></svg>놀이터 · 파티 도구</a>
+      </div>
+      <div class="dr-group"><h4>같이 놀기</h4>
+        <a href="/event"><svg class="ic" aria-hidden="true"><use href="#i-ticket"/></svg>행사</a>
+        <a href="/meetups"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>모임</a>
+        <a href="/crew"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg>파티팀 모집</a>
+        <a href="/community"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>커뮤니티</a>
+      </div>
+      <div class="dr-group"><h4>지점 · 안내</h4>
+        <a href="/locations"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg>지역별 지점</a>
+        <a href="/corporate"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg>기업·단체 행사</a>
+        <a href="/guide"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>이용 안내</a>
+        <a href="/membership"><svg class="ic" aria-hidden="true"><use href="#i-badge"/></svg>쏘플 클럽</a>
+      </div>
+      <div class="dr-group"><h4>호스트 · 쏘플</h4>
+        <a href="/host"><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>공간 등록 · 위탁운영</a>
+        <a href="/startup"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg>파티룸 창업안내</a>
+        <a href="/academy"><svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg>공간 아카데미</a>
+        <a href="/partners"><svg class="ic" aria-hidden="true"><use href="#i-handshake"/></svg>제휴·협업</a>
+        <a href="/about"><svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>브랜드 소개</a>
+      </div>
     </nav>
   </div>
 </div>
@@ -337,9 +401,9 @@
           <a class="btn btn-line btn-sm ft-insta" data-set-href="sns.instagram" href="https://www.instagram.com/ssople_partyroom" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-instagram"/></svg>인스타그램</a>
         </div>
       </div>
-      <div class="ft-col"><h4>공간</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/area/gyeonggi">경기 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>지점 찾기</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/area/gyeonggi">경기 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
-      <div class="ft-col"><h4>파티 준비</h4><a href="/magazine">파티 가이드</a><a href="/games">파티게임</a><a href="/play">놀이터</a><a href="/planner">파티 준비 도구</a><a href="/invite">초대장 만들기</a><a href="/membership">쏘플 클럽</a></div>
+      <div class="ft-col"><h4>파티 준비 · 당일</h4><a href="/planner">준비물 · N빵</a><a href="/invite">초대장 만들기</a><a href="/magazine">파티 가이드</a><a href="/games">파티게임</a><a href="/play">놀이터</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>호스트 · 쏘플</h4><a href="/host">공간 등록 · 위탁운영</a><a href="/startup">파티룸 창업안내</a><a href="/academy">공간 아카데미</a><a href="/partners">제휴·협업</a><a href="/about">브랜드 소개</a></div>
     </div>
     <div class="ft-family"><b>함께하는 공간·서비스</b><div class="ft-family-links"><a href="https://megaspot.kr" target="_blank" rel="noopener">메가스팟</a><a href="https://socialfactory.co.kr" target="_blank" rel="noopener">소셜팩토리</a><a href="https://playtion.kr" target="_blank" rel="noopener">플레이션</a><a href="https://hellomingle.kr" target="_blank" rel="noopener">밍글</a><a href="https://coremood.kr" target="_blank" rel="noopener">코어무드</a><a href="https://vacancy.co.kr" target="_blank" rel="noopener">공백 공간백서</a><a href="https://orbis-estate.com" target="_blank" rel="noopener">오르비스 부동산 중개법인</a><a href="https://choisijun.com" target="_blank" rel="noopener">최시준</a><a href="https://yeodeol.kr" target="_blank" rel="noopener">여덟글자</a></div></div>
@@ -357,12 +421,12 @@
 <nav class="tabbar" aria-label="아래 메뉴">
   <a href="/" data-nav="home"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg>홈</a>
   <a href="/rooms" data-nav="rooms room"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>지점 찾기</a>
-  <a href="/event" data-nav="event meetups crew"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>같이 놀기</a>
-  <a href="/community" data-nav="community"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>커뮤니티</a>
+  <a href="/games" data-nav="games play"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg>파티게임</a>
+  <a href="/event" data-nav="event meetups crew community"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>같이 놀기</a>
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261022" defer></script>
-<script src="/assets/js/mag.js?v=20261022" defer></script>
+<script src="/assets/app.js?v=20261022b" defer></script>
+<script src="/assets/js/mag.js?v=20261022b" defer></script>
 </body>
 </html>

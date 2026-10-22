@@ -21,7 +21,8 @@
       <a class="mq" href="/membership"><span class="mq-k">방문 인증</span><b>${t.n}번</b><small>${esc(next)}</small></a>
       <button class="mq" type="button" data-go-tab="noti"><span class="mq-k">안 읽은 알림</span><b>${info.unread || 0}개</b><small>모임·파티팀·행사 소식</small></button>
       <a class="mq" href="/invite"><span class="mq-k">초대장</span><b>${icon('send')}</b><small>링크 하나로 참석 받기</small></a>
-      <a class="mq" href="/rooms"><span class="mq-k">지점 찾기</span><b>${icon('search')}</b><small>날짜만 고르면 돼요</small></a>`;
+      <a class="mq" href="/rooms"><span class="mq-k">지점 찾기</span><b>${icon('search')}</b><small>날짜만 고르면 돼요</small></a>
+      <div class="how-links me-links"><a href="/planner">준비물 · N빵</a><a href="/games">파티게임</a><a href="/play">팀 나누기 · 룰렛</a><a href="/write?b=review">후기 쓰기</a><a href="/community?b=qna">지점 문의</a><a href="/magazine">파티 가이드</a></div>`;
     $('#meQuick').hidden = false;
   }
 

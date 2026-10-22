@@ -245,7 +245,7 @@
     }
     return h + '</div>';
   };
-  SP.legend = (live) => `<div class="legend"><span><i class="lg-d"></i>낮 ${live ? '빈 방' : ''}</span><span><i class="lg-n"></i>밤 ${live ? '빈 방' : ''}</span><span><i class="lg-b"></i>마감</span><span><i class="lg-c"></i>지난 시간</span></div>`;
+  SP.legend = (live) => `<div class="legend"><span><i class="lg-d"></i>낮 ${live ? '예약 가능' : ''}</span><span><i class="lg-n"></i>밤 ${live ? '예약 가능' : ''}</span><span><i class="lg-b"></i>마감</span><span><i class="lg-c"></i>지난 시간</span></div>`;
 
   /* ---------------- 지점 표지 · 카드 ---------------- */
   /* 사진이 없는 지점의 표지 — 시설에 맞는 분위기 사진 위에 동네 이름 (실제 사진이 아니라는 표시를 같이 둔다) */
@@ -352,8 +352,16 @@
         <div class="meet-foot"><span>${SP.icon('pin', 'sm')} ${SP.esc(m.region || '')}</span><span>${SP.icon('users', 'sm')} ${m.members}/${m.cap}명${m.next ? ` · 다음 모임 ${SP.mdw(m.next)}` : ''}</span></div></div></a>`;
   const BOARD = { review: '이용후기', tip: '파티 꿀팁', qna: '질문', free: '자유', notice: '공지', host: '지점 소식', mb: '모임' };
   SP.BOARD = BOARD;
+  const HOST_TAG = { notice: ['red', '공지'], news: ['mute', '소식'], event: ['sun', '이벤트'] };
+  SP.HOST_TAG = HOST_TAG;
+  const boardBadge = (p) => {
+    if (p.board === 'host') { const t = HOST_TAG[p.tag] || HOST_TAG.news; return `<span class="badge ${t[0]}">${t[1]}</span>${p.spaceName ? `<span class="badge mute">${SP.esc(p.spaceName)}</span>` : ''}`; }
+    if (p.board === 'qna' && p.code) return `<span class="badge ${p.answered ? 'ok' : 'warn'}">${p.answered ? '답변 완료' : '답변 대기'}</span><span class="badge mute">${SP.esc(p.spaceName || '지점 문의')}</span>`;
+    return `<span class="badge mute">${BOARD[p.board] || ''}</span>`;
+  };
+  SP.boardBadge = boardBadge;
   SP.postRow = (p) => `<a class="post-row" href="/c/${p.id}">
-      <div style="min-width:0"><h3>${p.pinned ? '<span class="badge red">고정</span>' : ''}<span class="badge mute">${BOARD[p.board] || ''}</span>${SP.esc(p.title)}${p.imgCount > 1 ? ` <span class="faint small">${SP.icon('image', 'sm')}</span>` : ''}</h3>
+      <div style="min-width:0"><h3>${p.pinned ? '<span class="badge red">고정</span>' : ''}${boardBadge(p)}${SP.esc(p.title)}${p.imgCount > 1 ? ` <span class="faint small">${SP.icon('image', 'sm')}</span>` : ''}</h3>
         ${p.board === 'review' && p.rating ? `<div style="margin-top:4px">${SP.stars(p.rating)} ${p.spaceName ? `<span class="small muted">${SP.esc(p.spaceName)}</span>` : ''}${p.verified ? ' <span class="badge ok">방문 인증</span>' : ''}</div>` : ''}
         <p class="clamp2">${SP.esc(p.excerpt)}</p>
         <div class="post-meta"><span>${SP.esc(p.author ? p.author.nick : '')}</span><span>${SP.ago(p.created_at)}</span><span>${SP.icon('heart', 'sm')}${p.likes}</span><span>${SP.icon('chat', 'sm')}${p.cmts}</span></div></div>
@@ -413,6 +421,13 @@
     const drawer = SP.$('.drawer');
     SP.$$('[data-menu]').forEach((b) => b.addEventListener('click', () => { drawer.classList.add('open'); document.body.style.overflow = 'hidden'; }));
     if (drawer) drawer.addEventListener('click', (e) => { if (e.target.closest('.drawer-bg') || e.target.closest('[data-x]') || e.target.closest('a')) { drawer.classList.remove('open'); document.body.style.overflow = ''; } });
+    // 머리글 드롭다운 — Esc로 닫기
+    SP.$$('.gnb-item').forEach((it) => {
+      it.addEventListener('keydown', (e) => { if (e.key === 'Escape') { it.classList.add('shut'); const a = it.querySelector('a'); if (a) a.focus(); } });
+      it.addEventListener('mouseleave', () => it.classList.remove('shut'));
+      it.addEventListener('focusout', (e) => { if (!it.contains(e.relatedTarget)) it.classList.remove('shut'); });
+      it.addEventListener('click', (e) => { if (e.target.closest('.gnb-panel a')) it.classList.add('shut'); });
+    });
 
     SP.site().then(({ settings: s }) => {
       if (!s) return;

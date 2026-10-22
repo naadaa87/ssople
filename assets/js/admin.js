@@ -623,7 +623,7 @@ async function run(env) {
     const ck = (k, label) => `<label class="check"><input type="checkbox" id="fb_${k}"${f[k] ? ' checked' : ''}><span>${label}</span></label>`;
     const m = SP.modal({
       title: `${s.name} 고치기`, wide: true,
-      body: `<div class="ed-tabs" id="edTabs"><button type="button" class="on" data-t="base">기본</button><button type="button" data-t="pkg">패키지 · 요금</button><button type="button" data-t="feat">시설</button><button type="button" data-t="info">이용 안내</button><button type="button" data-t="photo">사진 ${photos.length}</button></div>
+      body: `<div class="ed-tabs" id="edTabs"><button type="button" class="on" data-t="base">기본</button><button type="button" data-t="pkg">패키지 · 요금</button><button type="button" data-t="feat">시설</button><button type="button" data-t="items">비품</button><button type="button" data-t="info">이용 안내</button><button type="button" data-t="social">SNS·후기</button><button type="button" data-t="photo">사진 ${photos.length}</button></div>
       <div data-p="base"><div class="form-grid">
         ${ip('e_name', '지점 이름', s.name, 40)}${ip('e_short', '짧은 이름 (카드에 쓰여요)', s.short, 30)}
         <div class="field"><label class="label" for="e_region">권역</label><select class="select" id="e_region">${['서울', '경기', '인천', '대전', '부산', '전주', '기타'].map((r) => `<option${r === s.region ? ' selected' : ''}>${r}</option>`).join('')}</select></div>
@@ -644,7 +644,7 @@ async function run(env) {
       </div></div>
       <div data-p="pkg" hidden><p class="a-note" style="margin-bottom:10px">요금은 네이버 예약 화면과 같게 맞춰 주세요. 끝 시각이 시작보다 이르면 다음 날로 계산해요. 칸을 비우면 그 요일엔 팔지 않는 걸로 보여요.</p><div class="pkg-ed" id="pkgEd"></div>
         <button class="btn btn-soft btn-sm" type="button" id="pkgAdd" style="margin-top:10px">${icon('plus', 'sm')}패키지 추가</button></div>
-      <div data-p="feat" hidden><div class="form-grid">${ft('karaoke', '노래방')}${ft('bbq', '바베큐')}${ft('pet', '애견 동반')}</div>
+      <div data-p="feat" hidden><div class="form-grid">${ft('karaoke', '노래방')}${ft('bbq', '바베큐 (금액까지 — 예: 숯 바베큐 3만원 · 당일 추가 가능)')}${ft('pet', '애견 동반')}</div>
         <div class="chk-grid" style="margin-top:16px">${ck('tv', 'TV')}${ck('console', '게임기')}${ck('projector', '빔프로젝터')}${ck('fridge', '냉장고')}${ck('heating', '난방')}</div>
         <div class="form-grid" style="margin-top:16px">
           <div class="field"><label class="label" for="f_elevator">엘리베이터</label><select class="select" id="f_elevator"><option value=""${f.elevator == null ? ' selected' : ''}>모름</option><option value="1"${f.elevator === true ? ' selected' : ''}>있어요</option><option value="0"${f.elevator === false ? ' selected' : ''}>없어요</option></select></div>
@@ -655,12 +655,16 @@ async function run(env) {
         ${tx('i_size', '평수 · 크기', inf.size, 300, '약 25평')}${tx('i_parking', '주차', inf.parking, 300, '건물 뒤 2대, 먼저 오면 먼저 대요')}${tx('i_route', '찾아오는 길', inf.route, 300, '건대입구역 2번 출구에서 5분')}
         ${tx('i_noise', '소음 기준', inf.noise, 300, '밤 10시부터는 음악 소리를 줄여 주세요')}${tx('i_minors', '미성년자 이용', inf.minors, 300)}${tx('i_sameday', '당일 예약', inf.sameday, 300)}${tx('i_tour', '사전 방문', inf.tour, 300)}</div>
         <p class="tiny faint" style="margin-top:10px">도어락 번호, 와이파이 비밀번호, 점주 연락처, 입금 계좌는 고객 화면에 노출되니 절대 적지 마세요. 입실 안내 문자로만 보내 주세요.</p></div>
+      <div data-p="items" hidden><div id="edItems"></div></div>
+      <div data-p="social" hidden><div id="edSocial"></div></div>
       <div data-p="photo" hidden><p class="a-note" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 사진은 한 장에 5MB까지, 12장까지 올릴 수 있어요.</p><div class="ph-grid" id="phGrid"></div><input type="file" id="phFile" accept="image/*" multiple hidden></div>
       <div class="form-err" id="edErr" hidden></div>`,
       foot: `${isAdmin() ? '<button class="btn btn-ghost btn-sm" type="button" id="edReset" style="margin-right:auto">처음 데이터로 되돌리기</button>' : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="edSave">저장</button>`,
     });
     const P = (id) => m.$('#' + id);
     m.$('#edTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; m.$$('#edTabs button').forEach((x) => x.classList.toggle('on', x === b)); m.$$('[data-p]').forEach((p) => { p.hidden = p.dataset.p !== b.dataset.t; }); });
+    const itemsEd = SP.itemsEditor(P('edItems'), s.items || []);
+    const socialEd = SP.socialEditor(P('edSocial'), s.social || {});
 
     const drawPkgs = () => {
       P('pkgEd').innerHTML = pkgs.map((p, i) => `<div class="pkg-row" data-i="${i}">
@@ -730,6 +734,7 @@ async function run(env) {
         },
         info: { size: P('i_size').value.trim(), parking: P('i_parking').value.trim(), route: P('i_route').value.trim(), noise: P('i_noise').value.trim(), minors: P('i_minors').value.trim(), sameday: P('i_sameday').value.trim(), tour: P('i_tour').value.trim() },
         photos: photos.map((p) => p.k),
+        items: itemsEd.read(), social: socialEd.read(),
       };
       if (pkgs.some((p) => p.s == null || p.e == null)) { err.textContent = '패키지 시작·끝 시각을 19:00처럼 24시간 기준으로 넣어 주세요.'; err.hidden = false; m.$('#edTabs [data-t="pkg"]').click(); return; }
       const btn = P('edSave'); SP.busy(btn, true, '저장하는 중…');

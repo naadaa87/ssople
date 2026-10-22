@@ -1,4 +1,4 @@
-/* 지점 찾기 — 조건 필터 + 날짜별 낮/밤 빈 방 */
+/* 지점 찾기 — 조건 필터 + 날짜별 낮/밤 예약 현황 */
 (function () {
   const { $, $$, esc, icon } = SP;
   const today = SP.today();
@@ -108,7 +108,7 @@
       : '예약과 결제는 네이버 예약에서 이어져요';
     $('#rLegend').innerHTML = av && av.show !== false ? SP.legend(live) : '';
     if (!list.length) {
-      $('#rList').innerHTML = `<div class="empty" style="grid-column:1/-1">${icon('search')}<h3>조건에 맞는 지점이 없어요</h3><p>${st.open ? '빈 방만 보기를 끄거나 다른 날짜를 골라 보세요.' : '조건을 하나씩 빼 보면 더 많이 보여요.'}</p><button class="btn btn-ink" type="button" data-reset>조건 지우기</button></div>`;
+      $('#rList').innerHTML = `<div class="empty" style="grid-column:1/-1">${icon('search')}<h3>조건에 맞는 지점이 없어요</h3><p>${st.open ? '예약 가능만 보기를 끄거나 다른 날짜를 골라 보세요.' : '조건을 하나씩 빼 보면 더 많이 보여요.'}</p><button class="btn btn-ink" type="button" data-reset>조건 지우기</button></div>`;
       return;
     }
     $('#rList').innerHTML = list.map((s) => {

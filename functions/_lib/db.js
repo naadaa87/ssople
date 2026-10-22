@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -15,7 +15,7 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, pw TEXT NOT NULL, nick TEXT NOT NULL UNIQUE, birth TEXT, region TEXT, intro TEXT, avatar TEXT, role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'active', marketing INTEGER NOT NULL DEFAULT 0, memo TEXT, host_codes TEXT, created_at TEXT, last_at TEXT)`,
   `CREATE TABLE IF NOT EXISTS sessions (th TEXT PRIMARY KEY, uid INTEGER, admin INTEGER NOT NULL DEFAULT 0, exp INTEGER NOT NULL, created_at TEXT)`,
   `CREATE TABLE IF NOT EXISTS rl (k TEXT PRIMARY KEY, n INTEGER NOT NULL, reset INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, board TEXT NOT NULL, scope INTEGER NOT NULL DEFAULT 0, uid INTEGER NOT NULL, title TEXT, body TEXT NOT NULL, imgs TEXT NOT NULL DEFAULT '[]', code TEXT, rating INTEGER, verified INTEGER NOT NULL DEFAULT 0, likes INTEGER NOT NULL DEFAULT 0, cmts INTEGER NOT NULL DEFAULT 0, views INTEGER NOT NULL DEFAULT 0, reports INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, pinned INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, board TEXT NOT NULL, scope INTEGER NOT NULL DEFAULT 0, uid INTEGER NOT NULL, title TEXT, body TEXT NOT NULL, imgs TEXT NOT NULL DEFAULT '[]', code TEXT, rating INTEGER, verified INTEGER NOT NULL DEFAULT 0, likes INTEGER NOT NULL DEFAULT 0, cmts INTEGER NOT NULL DEFAULT 0, views INTEGER NOT NULL DEFAULT 0, reports INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, pinned INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT, tag TEXT, answered INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS idx_posts ON posts(board, scope, hidden, id)`,
   `CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER NOT NULL, uid INTEGER NOT NULL, parent_id INTEGER, body TEXT NOT NULL, reports INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, created_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_cmts ON comments(post_id, id)`,
@@ -70,6 +70,11 @@ export function ensureSchema(env) {
           // v2: 회원에 호스트 지점 연결(host_codes) 칸 추가
           try { await env.DB.prepare('ALTER TABLE users ADD COLUMN host_codes TEXT').run(); } catch { /* 이미 있으면 통과 */ }
         }
+        if (v && v < 3) {
+          // v3: 지점 소식 분류(tag: notice·news·event)와 지점 문의 답변 여부(answered)
+          try { await env.DB.prepare('ALTER TABLE posts ADD COLUMN tag TEXT').run(); } catch { /* 이미 있으면 통과 */ }
+          try { await env.DB.prepare('ALTER TABLE posts ADD COLUMN answered INTEGER NOT NULL DEFAULT 0').run(); } catch { /* 이미 있으면 통과 */ }
+        }
         const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM spaces').first();
         if (!c || !c.n) {
           await seedSpaces(env.DB);
@@ -113,6 +118,47 @@ export const seedOf = (code) => SEED_SPACES.find((s) => s.code === code) || null
 
 const itemNo = (u) => (String(u || '').match(/items\/(\d+)/) || [])[1] || '';
 export const pkgSig = (pkgs) => (pkgs || []).map((p) => `${p.k}:${itemNo(p.url)}`).join(',');
+
+/**
+ * 지점 데이터 바로잡기 — 관리자·호스트가 고친 지점에도 한 번 적용한다 (새 판을 올릴 때마다 한 번)
+ * 2026-10-22: 레스텔 게임기(닌텐도 스위치), 구로 어반아일랜드·대전 화양연화 바베큐 금액, 화양연화 '게임대' 문구 삭제
+ */
+const has원 = (t) => /\d\s*만?\s*원/.test(String(t || ''));
+/** 모든 지점 공통 정리 — '게임대대'처럼 잘못 들어간 시설 항목·문장을 뺀다 ("게임 대회" 같은 말은 그대로) */
+const BAD_ITEM = /^게임\s*대+$|게임\s*대\s*대/;
+const BAD_LINE = /게임\s*대\s*대/;
+export function cleanFacility(d) {
+  const f = d.feat;
+  if (f) for (const k of ['zones', 'games']) if (Array.isArray(f[k])) f[k] = f[k].filter((x) => !BAD_ITEM.test(String(x).trim()));
+  if (Array.isArray(d.tags)) d.tags = d.tags.filter((x) => !BAD_ITEM.test(String(x).trim()));
+  for (const k of ['intro', 'notice']) if (typeof d[k] === 'string' && BAD_LINE.test(d[k])) d[k] = d[k].split('\n').filter((l) => !BAD_LINE.test(l)).join('\n');
+  if (d.info) for (const [k, v] of Object.entries(d.info)) if (typeof v === 'string' && BAD_LINE.test(v)) d.info[k] = v.split('\n').filter((l) => !BAD_LINE.test(l)).join('\n') || null;
+  for (const it of ['karaoke', 'bbq', 'pet']) if (f && f[it] && typeof f[it].note === 'string' && BAD_LINE.test(f[it].note)) f[it].note = f[it].note.split('·').map((x) => x.trim()).filter((x) => !BAD_LINE.test(x)).join(' · ');
+}
+
+export const SEED_FIXES = {
+  'S-0009': (d) => {
+    d.feat = { ...(d.feat || {}), console: true };
+    d.feat.games = (d.feat.games || []).map((g) => (g === '닌텐도' ? '닌텐도 스위치' : g));
+    if (!d.feat.games.some((g) => /닌텐도|스위치/.test(g))) d.feat.games.unshift('닌텐도 스위치');
+    if (Array.isArray(d.tags) && !d.tags.includes('게임기')) d.tags.push('게임기');
+    d.intro = String(d.intro || '').replace('TJ 노래방과 TV, 이동식 인덕션, 냉장고가 있고 보드게임 11종이 비치돼 있어요.', 'TJ 노래방과 TV가 있고, TV에 연결해 쓰는 닌텐도 스위치(게임 타이틀 6종)와 보드게임 4종이 비치돼 있어요. 이동식 인덕션과 냉장고도 있어요.');
+  },
+  'S-0003': (d) => {
+    const f = (d.feat = { ...(d.feat || {}) });
+    if (f.bbq && f.bbq.on && !has원(f.bbq.note)) f.bbq = { on: true, note: '숯 바베큐 3만원 · 숯 추가 1만원 · 당일 추가 가능' };
+    d.intro = String(d.intro || '').replace('테라스에서 숯 바베큐를 할 수 있어서', '테라스에서 숯 바베큐(3만원)를 할 수 있어서');
+  },
+  'S-0042': (d) => {
+    const f = (d.feat = { ...(d.feat || {}) });
+    if (f.bbq && f.bbq.on && !has원(f.bbq.note)) f.bbq = { on: true, note: '숯 바베큐 3만원(세트) · 당일 추가 가능 · 최대 2세트 · 비 올 땐 6인 이하만' };
+    f.zones = (f.zones || []).filter((z) => !/게임\s*대/.test(z));
+    f.games = (f.games || []).filter((z) => !/게임\s*대/.test(z));
+    d.intro = String(d.intro || '').replace('루프탑에서 숯 바베큐(당일 추가 가능, 비 올 땐 6인 이하만)', '루프탑에서 숯 바베큐(세트 3만원, 당일 추가 가능, 비 올 땐 6인 이하만)')
+      .split('\n').filter((l) => !/게임\s*대\s*대/.test(l)).join('\n');
+    d.notice = String(d.notice || '').split('\n').filter((l) => !/게임\s*대\s*대/.test(l)).join('\n');
+  },
+};
 
 /**
  * 지점 기본 데이터 새 판 적용 (2026-10-11: 운영지점리스트 기준 예약 링크 · 운영하지 않는 지점 숨김)
@@ -161,6 +207,9 @@ export async function applySeedUpdate(db) {
         });
       }
     }
+    // 이번 판에서 바로잡는 내용(바베큐 요금·게임기 등) — 고친 지점이든 아니든 해당 문장·항목만 맞춘다
+    if (SEED_FIXES[seed.code]) SEED_FIXES[seed.code](next);
+    cleanFacility(next);
     upd.push({ ...next, code: seed.code });
   }
   for (const part of chunk(upd, 12)) await db.prepare(spaceUpsertSql(part, at)).run();
