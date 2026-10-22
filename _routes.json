@@ -27,6 +27,7 @@
     "/corporate",
     "/guide",
     "/about",
+    "/ceo",
     "/purpose-birthday",
     "/purpose-bridal",
     "/purpose-yearend",
@@ -83,7 +84,10 @@
     "/notice/*",
     "/Notice/*",
     "/event/*",
-    "/shop_view/*"
+    "/shop_view/*",
+    "/brand",
+    "/company",
+    "/history"
   ],
   "exclude": []
 }

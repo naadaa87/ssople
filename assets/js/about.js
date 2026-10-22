@@ -1,7 +1,10 @@
-/* 브랜드 소개 — 지점 수는 실제 데이터로 */
+/* 브랜드 이야기 — 위쪽 탭(브랜드 이야기 · 회사 정보)을 지금 보는 부분에 맞춘다 */
 (function () {
-  SP.site().then((s) => {
-    const n = Object.keys(s.regions || {}).length;
-    if (n) SP.$('#aRegions').textContent = n + '개';
-  });
+  const tabs = SP.$$('[data-tg]');
+  const mark = () => {
+    const co = location.hash === '#company';
+    tabs.forEach((a) => a.classList.toggle('on', a.dataset.tg === (co ? 'company' : 'about')));
+  };
+  mark();
+  window.addEventListener('hashchange', mark);
 })();

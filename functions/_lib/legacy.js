@@ -31,6 +31,9 @@ export const LEGACY_PATHS = {
   '/qna': '/community?b=qna',
   '/faq': '/guide#faq',
   '/blog': '/magazine',
+  '/brand': '/about',
+  '/company': '/about#company',
+  '/history': '/about#history',
 };
 
 /** 옛 지점 글(/home/?bmode=view&idx=…) → 새 지점 화면. 지금 운영하지 않는 지점은 가장 가까운 안내로 */

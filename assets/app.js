@@ -432,7 +432,13 @@
     SP.site().then(({ settings: s }) => {
       if (!s) return;
       SP.settings = s;
-      SP.$$('[data-set]').forEach((el) => { const v = s[el.dataset.set]; if (v) el.textContent = v; });
+      SP.$$('[data-set]').forEach((el) => {
+        const v = s[el.dataset.set];
+        if (v) el.textContent = v;
+        // 회사 정보처럼 값이 없으면 줄째로 숨기는 칸
+        if (el.dataset.hideEmpty !== undefined) { const row = el.closest('.co-row') || el; row.hidden = !v; }
+      });
+      SP.$$('[data-co2]').forEach((el) => { el.hidden = !s['biz2.name']; });
       SP.$$('[data-set-href]').forEach((el) => { const v = s[el.dataset.setHref]; if (v) { el.href = (el.dataset.setHref === 'cs.phone' ? 'tel:' : '') + v; if (el.dataset.hideEmpty !== undefined) el.hidden = false; } else if (el.dataset.hideEmpty !== undefined) el.hidden = true; });
       const bar = SP.$('.notice-bar');
       if (bar && s['site.notice']) {
@@ -441,8 +447,10 @@
       }
       const biz = SP.$('[data-biz]');
       if (biz) {
-        const parts = [s['biz.name'], s['biz.ceo'] && '대표 ' + s['biz.ceo'], s['biz.no'] && '사업자등록번호 ' + s['biz.no'], s['biz.mailorder'] && '통신판매업 ' + s['biz.mailorder'], s['biz.addr'], s['biz.email']].filter(Boolean);
-        biz.textContent = parts.join(' | ');
+        // 바닥글 사업자 정보 — 운영 회사, 함께 표시하는 회사 순서로 한 줄씩
+        const line = (p) => [s[p + '.name'], s[p + '.ceo'] && '대표 ' + s[p + '.ceo'], s[p + '.no'] && '사업자등록번호 ' + s[p + '.no'], s[p + '.mailorder'] && '통신판매업 ' + s[p + '.mailorder'], s[p + '.addr'], s[p + '.email']].filter(Boolean).join(' | ');
+        const lines = [line('biz'), s['biz2.name'] ? line('biz2') : ''].filter(Boolean);
+        if (lines.length) biz.innerHTML = lines.map((l) => `<div>${SP.esc(l)}</div>`).join('');
       }
       const sns = SP.$('[data-sns]');
       if (sns) {

@@ -213,7 +213,7 @@ export async function inviteMeta(env, params) {
 export async function sitemap(context) {
   const { env, request } = context;
   const origin = new URL(request.url).origin;
-  const pages = ['/', '/rooms', '/locations', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about',
+  const pages = ['/', '/rooms', '/locations', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
     '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy'];
   const urls = pages.map((p) => ({ loc: origin + p }));
   urls.push({ loc: origin + '/magazine' });

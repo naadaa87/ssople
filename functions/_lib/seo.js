@@ -84,6 +84,8 @@ export function orgJsonLd(origin, st = {}) {
     telephone: st['cs.phone'] ? '+82-' + String(st['cs.phone']).replace(/^0/, '').replace(/[^\d-]/g, '') : undefined,
     email: st['biz.email'] || undefined,
     foundingDate: '2016', areaServed: 'KR',
+    slogan: '사람들의 시간과 즐거움을 기억하는 공간',
+    founder: { '@type': 'Person', name: '최시준', url: origin + '/ceo', sameAs: ['https://choisijun.com'] },
     contactPoint: [{ '@type': 'ContactPoint', contactType: 'customer service', telephone: st['cs.phone'] ? '+82-' + String(st['cs.phone']).replace(/^0/, '').replace(/[^\d-]/g, '') : undefined, availableLanguage: 'Korean', hoursAvailable: st['cs.hours'] || undefined }],
     sameAs: same.length ? same : undefined,
   };

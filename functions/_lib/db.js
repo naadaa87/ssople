@@ -87,6 +87,7 @@ export function ensureSchema(env) {
       }
       // 지점 기본 데이터가 새 판으로 바뀌었으면(예약 링크·운영 지점 목록) 한 번만 맞춘다
       if ((await getMeta(env.DB, 'seed')) !== SEED_VERSION) await applySeedUpdate(env.DB);
+      if ((await getMeta(env.DB, 'biz_v')) !== BIZ_VERSION) await migrateBiz(env.DB);
     })().catch((e) => { ready = null; throw e; });
   }
   return ready;
@@ -219,6 +220,29 @@ export async function applySeedUpdate(db) {
   return { updated: upd.length, added: add.length };
 }
 
+/* ---------------- 사업자 정보 판 올림 ----------------
+ * 관리자 화면에서 설정을 한 번이라도 저장했다면 예전 기본값((주)소셜패밀리)이 DB에 남아 있다.
+ * 예전 기본값 그대로인 칸만 지워서 새 기본값(브이픽서(주))이 보이게 하고, 직접 고친 값은 그대로 둔다. */
+export const BIZ_VERSION = '2026-10-22';
+const OLD_BIZ = { 'biz.name': ['(주)소셜패밀리', '㈜소셜패밀리', '주식회사 소셜패밀리'], 'biz.email': ['contact@socialfamily.co.kr', 'ceo@socialfamily.co.kr'] };
+export async function migrateBiz(db) {
+  const rows = (await db.prepare(`SELECT k, v FROM settings WHERE k LIKE 'biz.%'`).all()).results || [];
+  const cur = Object.fromEntries(rows.map((r) => [r.k, r.v ?? '']));
+  const drop = [];
+  const oldName = !('biz.name' in cur) || OLD_BIZ['biz.name'].includes(String(cur['biz.name']).trim());
+  if ('biz.name' in cur && oldName) drop.push('biz.name');
+  if ('biz.email' in cur && OLD_BIZ['biz.email'].includes(String(cur['biz.email']).trim())) drop.push('biz.email');
+  if (oldName) {
+    // 상호가 예전 회사 그대로였다면 대표자·사업자번호도 예전 값이므로 새 기본값으로
+    if ('biz.ceo' in cur && String(cur['biz.ceo']).trim() === '최시준') drop.push('biz.ceo');
+    if ('biz.no' in cur && !String(cur['biz.no']).trim()) drop.push('biz.no');
+  }
+  if (drop.length) await db.batch(drop.map((k) => db.prepare('DELETE FROM settings WHERE k = ?').bind(k)));
+  setCache = null;
+  await setMeta(db, 'biz_v', BIZ_VERSION);
+  return drop;
+}
+
 /* ---------------- 설정 ---------------- */
 export const CLUB_BENEFITS = {
   welcome: ['클럽 회원 전용 행사 신청', '파티 초대장 · 놀이터 · 파티 준비 도구', '기념일 30일 전 알림'],
@@ -241,13 +265,20 @@ export const DEFAULTS = {
   'link.live': '',
   'link.chatbot': '',
   'link.host': '',
-  'biz.name': '(주)소셜패밀리',
-  'biz.ceo': '최시준',
-  'biz.no': '',
+  // 사업자 정보 — 바닥글·회사 정보·이용약관·개인정보처리방침에 들어간다 (2026.10.22 기존 홈페이지 기준)
+  'biz.name': '브이픽서(주)',
+  'biz.ceo': '김동준',
+  'biz.no': '895-88-03679',
   'biz.mailorder': '',
   'biz.addr': '',
-  'biz.email': 'contact@socialfamily.co.kr',
+  'biz.email': 'vfixer@naver.com',
   'biz.privacy_officer': '최시준',
+  // 함께 표시하는 회사 (이름을 비우면 숨김)
+  'biz2.name': '제이에스시스템즈(주)',
+  'biz2.ceo': '임동은',
+  'biz2.no': '716-86-04411',
+  'biz2.addr': '경기도 화성시 병점구 효행로 1069, 601호-H201',
+  'biz2.email': 'jssystems0@naver.com',
   'club.silver': '2',
   'club.gold': '4',
   'club.benefits': JSON.stringify(CLUB_BENEFITS),
