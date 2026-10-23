@@ -1836,3 +1836,11 @@ a.hs-stat:hover { border-color: var(--ink); }
   .gallery .more { right: 10px; bottom: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .rp-cell img { transition: none; } .rp-cell:hover img { transform: none; } }
+
+/* 소개 아래 예약 칸 */
+#r-book .qbook { margin-top: 14px; }
+.rbook-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+@media (max-width: 720px) {
+  .rbook-acts { display: grid; grid-template-columns: 1fr; }
+  .rbook-acts .btn { width: 100%; }
+}

@@ -51,6 +51,7 @@
           ${s.notice ? `<div class="callout red" style="margin-top:16px">${icon('megaphone')}<div class="prewrap">${esc(s.notice)}</div></div>` : ''}
           <nav class="room-nav" id="roomNav" aria-label="이 지점 안내 바로가기">${subnav(s)}</nav>
           ${s.intro ? `<section class="room-sec" id="r-intro"><h2>공간 소개</h2><div class="prose prewrap">${esc(s.intro)}</div></section>` : ''}
+          ${bookSec(s)}
           ${photoSec(s)}
           ${s.detail ? `<section class="room-sec" id="r-detail"><h2>공간 상세</h2>${detailView(s.detail)}${kwTags(s)}</section>` : ''}
           <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
@@ -161,6 +162,19 @@
     return `<div class="fac-list"><h3>시설 목록</h3>${rows.map((r) => `<div class="fac-row"><b>${esc(r.g)}</b><ul>${r.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`;
   }
   /* 긴 지점 화면 안에서 바로 가기 */
+  /* 소개 바로 아래 예약 칸 — 오른쪽(휴대폰은 아래) 달력 예약과 같은 네이버 예약으로 이어진다 */
+  function bookSec(s) {
+    const linked = (s.pkgs || []).filter((p) => p.url);
+    const fb = fallback(s);
+    if (!linked.length && !fb) return '';
+    const from = (p) => { const v = (p.p || []).filter((x) => x); return v.length ? `${SP.won(Math.min(...v))}부터` : ''; };
+    return `<section class="room-sec" id="r-book"><div class="between" style="margin-bottom:4px"><h2 style="margin:0">예약하기</h2><span class="small muted">네이버 예약</span></div>
+      <p class="small muted">패키지를 누르면 네이버 예약으로 바로 이어져요. 예약·결제·취소는 네이버 예약에서 진행돼요.</p>
+      ${linked.length ? `<div class="qbook">${linked.map((p) => `<a href="${esc(SP.naverHref(p.url))}" target="_blank" rel="noopener" data-track="${s.code}|book|${p.k}|"><span><b>${esc(p.label)}</b><small>${esc([p.hrs, from(p)].filter(Boolean).join(' · '))}</small></span><span class="go">네이버 예약${icon('ext', 'sm')}</span></a>`).join('')}</div>` : ''}
+      <div class="rbook-acts">${s.book ? `<a class="btn ${linked.length ? 'btn-line' : 'btn-naver'}" href="${esc(s.book)}" target="_blank" rel="noopener" data-track="${s.code}|book">${icon('ext', 'sm')}네이버 예약 페이지 열기</a>`
+        : !linked.length ? `<a class="btn btn-naver" href="${esc(fb.href)}" target="_blank" rel="noopener" data-track="${s.code}|${fb.kind}">${icon('ext', 'sm')}${esc(fb.label)}</a>` : ''}<a class="btn btn-soft" href="#book" data-tobook>${icon('calendar', 'sm')}날짜별 요금 보기</a></div></section>`;
+  }
+
   /* 공간 사진 — 지점 사진 전부를 바둑판으로, 9장 넘으면 접어 두기 */
   const PH_FOLD = 9;
   function photoSec(s) {
@@ -172,7 +186,7 @@
       ${fold ? `<button class="btn btn-line btn-block rp-more" type="button" id="rpMore">사진 ${photos.length - PH_FOLD}장 더 보기${icon('chev-d', 'sm')}</button>` : ''}</section>`;
   }
   function subnav(s) {
-    const l = [['r-intro', '소개', !!s.intro], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
+    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
     return l.filter((x) => x[2]).map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
   }
   /* 예약 뒤 이어지는 준비 — 지점 화면에서 쏘플의 다른 기능으로 */
@@ -398,8 +412,8 @@
       $('#hostNews').hidden = false;
       const nav = $('#roomNav');
       if (nav && !nav.querySelector('[href="#hostNews"]')) {
-        const intro = nav.querySelector('[href="#r-intro"]');
-        if (intro) intro.insertAdjacentHTML('afterend', '<a href="#hostNews">소식</a>'); else nav.insertAdjacentHTML('afterbegin', '<a href="#hostNews">소식</a>');
+        const prev = ['#r-detail', '#r-photos', '#r-book', '#r-intro'].map((h) => nav.querySelector(`[href="${h}"]`)).find(Boolean);
+        if (prev) prev.insertAdjacentHTML('afterend', '<a href="#hostNews">소식</a>'); else nav.insertAdjacentHTML('afterbegin', '<a href="#hostNews">소식</a>');
         if (spyIO) spyIO.observe($('#hostNews'));
       }
     } catch { /* 소식은 없어도 돼요 */ }
@@ -455,6 +469,8 @@
       SP.share({ title: `${space.name} 파티룸`, text: `${space.region} ${space.area} · 최대 ${space.max}명`, url: location.origin + '/room/' + space.code });
     });
     $('#mbBtn').addEventListener('click', (e) => { e.preventDefault(); $('#book').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    const toBook = $('[data-tobook]');
+    if (toBook) toBook.addEventListener('click', (e) => { e.preventDefault(); $('#book').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     spy();
   }
   /* 바로가기 — 지금 보고 있는 부분 표시 */
