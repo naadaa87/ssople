@@ -1,4 +1,5 @@
 // 사이트 정보 · 메인 화면 묶음 · 문의 · 제휴 · 사진 올리기
+import { naverBotHits } from './seo.js';
 import { HttpError, str, nowIso, todayKST, addDays, slug, kstNow, maskPhones, parseJSON, dispNick } from './util.js';
 import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
 import { loadSpaces } from './spaces.js';
@@ -31,7 +32,7 @@ export function register(route) {
       // 대표 도메인 — ssople.com 으로 첫 접속이 들어온 때 (그 전엔 null)
       out.domain = { primary: 'ssople.com', since: mv.domain_live || null };
       // 네이버 소유 확인·수집 로봇이 다녀간 기록 (최근 5건)
-      try { out.naver = JSON.parse(mv.naver_hits || '[]').slice(0, 5); } catch { out.naver = []; }
+      try { out.naver = naverBotHits(JSON.parse(mv.naver_hits || '[]')).slice(0, 5); } catch { out.naver = []; }
       out.sync = { host: mv.host_ok_at || null, cron: mv.cron_at || null };
     } catch (e) { out.ok = false; out.error = String(e.message || e); }
     return out;

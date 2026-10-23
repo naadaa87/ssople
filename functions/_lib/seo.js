@@ -230,8 +230,14 @@ export function canonicalHostOf(url, st, isLive) {
 /** 네이버 소유 확인·수집 로봇이 실제로 이 홈페이지에 왔는지 남긴다 (최근 10건, IP는 저장하지 않음)
  *  /api/health 의 naver 항목에서 볼 수 있다 — 소유확인을 눌렀는데 기록이 없으면 네이버가 아직 예전 주소(아임웹)를 보고 있는 것 */
 export const NAVER_FILE = '/naverbbbed6886d93c341e12b7ef250a11f53.html';
+// 네이버 로봇(Yeti)만 — 네이버 앱 안의 브라우저로 들어온 손님(UA에 NAVER 포함)은 남기지 않는다
+const NAVER_BOT = /\bYeti\b/i;
 export function isNaverProbe(request, url) {
-  return url.pathname === NAVER_FILE || /naver|yeti/i.test(request.headers.get('user-agent') || '');
+  return url.pathname === NAVER_FILE || NAVER_BOT.test(request.headers.get('user-agent') || '');
+}
+/** 저장된 기록 중 로봇 기록만 (예전에 섞여 들어간 손님 기록은 버린다) */
+export function naverBotHits(list) {
+  return (Array.isArray(list) ? list : []).filter((h) => h && (NAVER_BOT.test(h.ua || '') || h.path === NAVER_FILE) && !/inapp|NAVER\(/i.test(h.ua || ''));
 }
 export async function recordNaverHit(env, request, url, status) {
   if (!env || !env.DB) return;
@@ -239,7 +245,7 @@ export async function recordNaverHit(env, request, url, status) {
     const cf = request.cf || {};
     const hit = { at: new Date().toISOString(), method: request.method, host: url.hostname, path: url.pathname, status: status || null, ua: String(request.headers.get('user-agent') || '').slice(0, 160), country: cf.country || null, org: cf.asOrganization || null };
     let prev = [];
-    try { prev = JSON.parse((await getMeta(env.DB, 'naver_hits')) || '[]'); } catch { prev = []; }
+    try { prev = naverBotHits(JSON.parse((await getMeta(env.DB, 'naver_hits')) || '[]')); } catch { prev = []; }
     await setMeta(env.DB, 'naver_hits', JSON.stringify([hit, ...prev].slice(0, 10)));
   } catch { /* 기록은 없어도 된다 */ }
 }
