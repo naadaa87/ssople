@@ -6,6 +6,9 @@ let cache = null;
 let cacheAt = 0;
 export function invalidateSpaces() { cache = null; }
 
+/** 지점 사진 최대 장수 (아임웹 게시물 사진이 가장 많은 지점이 30장) */
+export const PHOTO_MAX = 40;
+
 export async function loadSpaces(db, { all = false } = {}) {
   if (!cache || Date.now() - cacheAt > 60000) {
     const rows = (await db.prepare('SELECT code, name, region, area, visible, sort, data, updated_at FROM spaces ORDER BY sort, code').all()).results || [];
@@ -26,7 +29,7 @@ export function photoUrl(p) {
 }
 
 export function publicSpace(s) {
-  const { aliases, visible, sort, edited, ...rest } = s;
+  const { aliases, visible, sort, edited, photoSrc, ...rest } = s;
   rest.photos = (s.photos || []).map(photoUrl).filter(Boolean);
   return rest;
 }
@@ -159,7 +162,7 @@ export function cleanSpaceInput(b, prev = {}) {
   if ('aliases' in b) out.aliases = (Array.isArray(b.aliases) ? b.aliases : String(b.aliases).split(',')).map((t) => str(t, { max: 40 })).filter(Boolean).slice(0, 10);
   if ('photos' in b) {
     if (!Array.isArray(b.photos)) throw new HttpError(400, '사진 목록 형식이 올바르지 않아요.');
-    out.photos = b.photos.slice(0, 12).map((p) => {
+    out.photos = b.photos.slice(0, PHOTO_MAX).map((p) => {
       const k = typeof p === 'string' ? p : p && p.k;
       if (!k || !(/^u\/[\w/.-]+$/.test(k) || /^https:\/\//.test(k))) throw new HttpError(400, '사진 주소가 올바르지 않아요.');
       return { k };
@@ -345,6 +348,7 @@ export function registerAdmin(route) {
     const prev = list.find((s) => s.code === c.params.code) || {};
     const { code, sort, visible, ...rest } = seed;
     rest.photos = (prev.photos && prev.photos.length) ? prev.photos : (rest.photos || []);
+    if (prev.photoSrc) rest.photoSrc = prev.photoSrc;   // 아임웹 사진 가져오기 기록
     rest.intro = prev.intro || '';
     rest.notice = prev.notice || rest.notice || '';
     rest.aliases = (prev.aliases && prev.aliases.length) ? prev.aliases : (rest.aliases || []);   // 호스트 지점 이름 짝은 지키기

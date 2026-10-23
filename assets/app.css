@@ -1813,3 +1813,26 @@ a.hs-stat:hover { border-color: var(--ink); }
 .ds-links a:hover { color: #fff; }
 .letter-talk { display: flex; justify-content: center; margin-top: 30px; }
 @media (max-width: 720px) { .letter-talk .btn { width: 100%; } }
+
+/* 공간 사진 — 지점 사진 전부 (아임웹 공간사진까지) */
+.rp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.rp-cell { position: relative; display: block; width: 100%; padding: 0; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 10px; background: var(--fog); cursor: zoom-in; }
+.rp-cell img { width: 100%; height: 100%; object-fit: cover; transition: transform .25s ease; }
+.rp-cell:hover img { transform: scale(1.03); }
+.rp-cell:focus-visible { outline-offset: -2px; }
+.rp-grid.fold .rp-cell:nth-child(n+10) { display: none; }
+.rp-more { margin-top: 12px; gap: 6px; }
+.lightbox { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.lightbox img { max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); }
+.lb-count { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 14px; font-weight: 700; letter-spacing: .02em; background: rgba(255, 255, 255, .14); padding: 5px 12px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+/* 위 사진 묶음의 "모두 보기" 버튼이 사진 안 오른쪽 아래에 붙도록 */
+.gallery { position: relative; }
+.gallery .more { z-index: 2; background: #fff; box-shadow: var(--sh-sm); }
+@media (min-width: 961px) { .gallery .more.m-only { display: none; } }
+@media (max-width: 960px) { .gallery > .more { display: inline-flex; } }
+@media (max-width: 720px) {
+  .rp-grid { gap: 4px; }
+  .rp-cell { border-radius: 8px; }
+  .gallery .more { right: 10px; bottom: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .rp-cell img { transition: none; } .rp-cell:hover img { transform: none; } }

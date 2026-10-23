@@ -108,7 +108,7 @@ export function breadcrumbJsonLd(origin, items) {
 }
 export function roomJsonLd(origin, s, st = {}) {
   const from = minPrice(s);
-  const photos = (s.photos || []).map(photoUrl).filter(Boolean).map((u) => (u.startsWith('/') ? origin + u : u));
+  const photos = (s.photos || []).slice(0, 10).map(photoUrl).filter(Boolean).map((u) => (u.startsWith('/') ? origin + u : u));
   return {
     '@context': 'https://schema.org', '@type': ['LocalBusiness', 'EventVenue'], '@id': `${origin}/room/${s.code}#place`,
     name: `쏘플파티룸 ${s.name}`, alternateName: s.name, url: `${origin}/room/${s.code}`,

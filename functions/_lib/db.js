@@ -187,6 +187,7 @@ export async function applySeedUpdate(db) {
       next = {
         ...fresh,
         photos: (cur.photos && cur.photos.length) ? cur.photos : (fresh.photos || []),
+        ...(cur.photoSrc ? { photoSrc: cur.photoSrc } : {}),
         intro: cur.intro || fresh.intro || '', notice: cur.notice || fresh.notice || '',
         aliases: (cur.aliases && cur.aliases.length) ? cur.aliases : (fresh.aliases || []),
         visible: sv !== false,

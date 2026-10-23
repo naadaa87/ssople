@@ -570,7 +570,7 @@ async function run(env) {
     const regions = [...new Set(list.map((s) => s.region))];
     const rows = list.filter((s) => (!SPF.region || s.region === SPF.region) && (!SPF.q || (s.name + s.area + s.code + (s.aliases || []).join('')).toLowerCase().includes(SPF.q.toLowerCase())));
     main.innerHTML = hd('지점 관리', '고객 화면에 보이는 지점 정보예요. 요금과 네이버 예약 주소는 네이버 예약 화면과 같게 맞춰 주세요. 도어락·와이파이·계좌 같은 내부 정보는 여기에 적지 마세요.',
-      isAdmin() ? `<button class="btn btn-red btn-sm" type="button" data-new>${icon('plus', 'sm')}새 지점</button>` : '')
+      isAdmin() ? `<button class="btn btn-line btn-sm" type="button" data-imweb>${icon('download', 'sm')}아임웹 사진 가져오기</button><button class="btn btn-red btn-sm" type="button" data-new>${icon('plus', 'sm')}새 지점</button>` : '')
       + `<div class="a-tools"><input class="input" id="spQ" placeholder="지점 이름·코드로 찾기" value="${esc(SPF.q)}"><select class="select" id="spRegion"><option value="">모든 권역</option>${regions.map((r) => `<option${r === SPF.region ? ' selected' : ''}>${esc(r)}</option>`).join('')}</select><span class="small muted">${rows.length}곳 · 공개 ${list.filter((s) => s.visible).length}곳</span></div>
       <div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>지점</th><th>권역 · 동네</th><th class="r">인원</th><th>패키지</th><th class="r">사진</th><th>네이버</th><th>공개</th><th></th></tr></thead><tbody>
       ${rows.map((s) => `<tr><td><b>${esc(s.name)}</b><span class="sub mono">${esc(s.code)}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
@@ -583,11 +583,81 @@ async function run(env) {
     main.onclick = (e) => {
       const ed = e.target.closest('[data-edit]'); if (ed) { editSpace(SPACES.find((s) => s.code === ed.dataset.edit)); return; }
       if (e.target.closest('[data-new]')) newSpace();
+      if (e.target.closest('[data-imweb]')) imwebBulk();
     };
     main.onchange = async (e) => {
       const v = e.target.closest('[data-vis]'); if (!v) return;
       try { await SP.put('/api/admin/spaces/' + v.dataset.vis, { visible: v.checked }); SP.toast(v.checked ? '고객 화면에 보여요.' : '고객 화면에서 숨겼어요.'); SPACES = null; }
       catch (er) { v.checked = !v.checked; SP.fail(er); }
+    };
+  }
+
+  /* ---------- 아임웹 사진 가져오기 ---------- */
+  // 지점 하나: 서버가 몇 장씩 받아 오니, 처음 보는 사진이 남아 있는 동안 이어서 부른다
+  async function importImweb(code, onStep) {
+    let added = [], failed = [], r = null, guard = 0;
+    do {
+      r = await SP.post(`/api/admin/spaces/${code}/imweb-photos`);
+      added = added.concat(r.addedPhotos || []);
+      failed = failed.concat(r.failed || []);
+      if (onStep) onStep(r);
+    } while (r.more && ++guard < 12);
+    return { added, failed, last: r };
+  }
+
+  async function imwebBulk() {
+    let info;
+    try { info = await SP.get('/api/admin/imweb-photos'); } catch (e) { SP.fail(e); return; }
+    const rows = info.spaces.filter((r) => r.pending > 0);
+    const vis = rows.filter((r) => r.visible), hid = rows.filter((r) => !r.visible);
+    const sum = (l) => l.reduce((a, r) => a + r.pending, 0);
+    let stop = false, running = false, moved = 0;
+    const m = SP.modal({
+      title: '아임웹 사진 가져오기',
+      body: `<p class="a-note">옛 아임웹 지점 게시물에 있던 공간사진을 쏘플 사진 저장소로 옮겨요. 이미 들어간 사진은 건너뛰고, 아임웹 게시물 순서대로 지점 사진 뒤에 붙여요. 지점마다 ${info.max}장까지 들어가요.</p>
+        ${rows.length ? `<div class="imw-sum"><div><b>${vis.length}</b><span>공개 지점</span></div><div><b>${sum(vis)}</b><span>옮길 사진</span></div></div>
+          ${hid.length ? `<label class="check" style="margin-top:12px"><input type="checkbox" id="imwHid"><span>숨김 지점도 함께 가져오기 <span class="muted">(${hid.length}곳 · ${sum(hid)}장)</span></span></label>` : ''}
+          <div class="imw-run" id="imwRun" hidden><div class="imw-bar"><b id="imwBar"></b></div><p class="a-note" id="imwNow" aria-live="polite"></p><ul class="imw-log" id="imwLog"></ul></div>`
+        : `<div class="callout" style="margin-top:14px">${icon('check-c')}<div>옮길 사진이 남아 있지 않아요. 아임웹 공간사진은 모두 들어가 있어요.</div></div>`}`,
+      foot: `<button class="btn btn-soft" data-x>닫기</button>${rows.length ? '<button class="btn btn-red" type="button" id="imwGo">가져오기 시작</button>' : ''}`,
+      onClose: () => { stop = true; if (moved) { SPACES = null; spacesView(); } },
+    });
+    if (!rows.length) return;
+    m.$('#imwGo').onclick = async () => {
+      if (running) return;
+      if (!BOUND.photos) { SP.toast('사진 저장소(PHOTOS)가 연결돼야 가져올 수 있어요.', true); return; }
+      running = true;
+      const go = m.$('#imwGo'); SP.busy(go, true, '가져오는 중…');
+      const hidBox = m.$('#imwHid'); if (hidBox) hidBox.disabled = true;
+      const list = vis.concat(hidBox && hidBox.checked ? hid : []);
+      const total = sum(list); let done = 0, bad = 0, dry = 0, why = '';
+      m.$('#imwRun').hidden = false;
+      const bar = m.$('#imwBar'), now = m.$('#imwNow'), log = m.$('#imwLog');
+      const paint = () => { bar.style.width = `${Math.min(100, Math.round((done / Math.max(1, total)) * 100))}%`; };
+      paint();
+      for (let i = 0; i < list.length && !stop; i++) {
+        const r = list[i];
+        now.textContent = `${r.name} 사진 가져오는 중 (${i + 1}/${list.length}곳)`;
+        try {
+          const out = await importImweb(r.code, (st) => { done += (st.addedPhotos || []).length + (st.failed || []).length; paint(); });
+          moved += out.added.length; bad += out.failed.length;
+          if (out.failed.length) why = out.failed[0].why;
+          log.insertAdjacentHTML('afterbegin', `<li><b>${esc(r.name)}</b><span>${out.added.length}장 추가${out.failed.length ? ` · <em>${out.failed.length}장 못 받음</em>` : ''}</span></li>`);
+          // 처음 두 지점에서 한 장도 못 받으면 원본 서버가 막힌 것 — 남은 지점은 건너뛰지 않고 멈춘다
+          dry = !out.added.length && out.failed.length ? dry + 1 : 0;
+          if (dry >= 2 && !moved) { stop = true; break; }
+        } catch (e) {
+          log.insertAdjacentHTML('afterbegin', `<li class="bad"><b>${esc(r.name)}</b><span>${esc(e.message)}</span></li>`);
+          if (e.status === 429 || e.status === 503 || e.status === 401 || e.status === 403) { stop = true; break; }
+        }
+      }
+      done = Math.max(done, moved + bad); paint();
+      now.textContent = dry >= 2 && !moved ? `아임웹 사진 서버에서 사진을 받지 못하고 있어요${why ? ` (${why})` : ''}. 이미 옮긴 사진은 그대로 있고, 잠시 뒤 다시 누르면 이어서 가져와요.`
+        : stop && moved + bad < total ? `멈췄어요. ${moved}장을 옮겼어요. 다시 누르면 남은 사진부터 이어서 가져와요.`
+        : `끝났어요. 사진 ${moved}장을 옮겼어요.${bad ? ` ${bad}장은 아임웹 사진 서버에서 받지 못했어요${why ? `(${why})` : ''}. 잠시 뒤 다시 누르면 그 사진만 다시 시도해요.` : ''}`;
+      SP.busy(go, false); go.hidden = true;
+      if (moved) SP.toast(`아임웹 사진 ${moved}장을 지점에 넣었어요.`);
+      running = false;
     };
   }
 
@@ -661,7 +731,7 @@ async function run(env) {
         <p class="tiny faint" style="margin-top:10px">도어락 번호, 와이파이 비밀번호, 점주 연락처, 입금 계좌는 고객 화면에 노출되니 절대 적지 마세요. 입실 안내 문자로만 보내 주세요.</p></div>
       <div data-p="items" hidden><div id="edItems"></div></div>
       <div data-p="social" hidden><div id="edSocial"></div></div>
-      <div data-p="photo" hidden><p class="a-note" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 사진은 한 장에 5MB까지, 12장까지 올릴 수 있어요.</p><div class="ph-grid" id="phGrid"></div><input type="file" id="phFile" accept="image/*" multiple hidden></div>
+      <div data-p="photo" hidden><p class="a-note" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 사진은 한 장에 5MB까지, 40장까지 올릴 수 있어요.</p><div id="imwBox"></div><div class="ph-grid" id="phGrid"></div><input type="file" id="phFile" accept="image/*" multiple hidden></div>
       <div class="form-err" id="edErr" hidden></div>`,
       foot: `${isAdmin() ? '<button class="btn btn-ghost btn-sm" type="button" id="edReset" style="margin-right:auto">처음 데이터로 되돌리기</button>' : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="edSave">저장</button>`,
     });
@@ -700,10 +770,26 @@ async function run(env) {
 
     const drawPhotos = () => {
       P('phGrid').innerHTML = photos.map((p, i) => `<div class="ph"><img src="${esc(p.url || ('/api/img/' + p.k))}" alt="">${i === 0 ? '<span class="badge ink first">대표</span>' : ''}<div class="ph-acts"><button type="button" data-mv="${i}|-1" aria-label="앞으로"${i === 0 ? ' disabled' : ''}>${icon('chev-l', 'sm')}</button><button type="button" data-del="${i}" aria-label="빼기">${icon('trash', 'sm')}</button><button type="button" data-mv="${i}|1" aria-label="뒤로"${i === photos.length - 1 ? ' disabled' : ''}>${icon('chev-r', 'sm')}</button></div></div>`).join('')
-        + (photos.length < 12 ? `<button type="button" class="ph-add" id="phAdd">${icon('camera')}<span>사진 올리기</span></button>` : '');
+        + (photos.length < 40 ? `<button type="button" class="ph-add" id="phAdd">${icon('camera')}<span>사진 올리기</span></button>` : '');
       m.$('#edTabs [data-t="photo"]').textContent = `사진 ${photos.length}`;
     };
     drawPhotos();
+    // 아임웹에 남은 사진이 있으면 이 지점만 가져오기
+    if (isAdmin()) {
+      SP.get('/api/admin/imweb-photos').then((info) => {
+        const row = (info.spaces || []).find((x) => x.code === s.code);
+        if (!row || !row.pending || !P('imwBox')) return;
+        P('imwBox').innerHTML = `<div class="imw-box">${icon('download')}<div><b>아임웹 게시물에 이 지점 사진이 ${row.pending}장 더 있어요.</b><span>가져오면 아임웹 순서대로 지금 사진 뒤에 붙고, 바로 저장돼요.</span></div><button class="btn btn-line btn-sm" type="button" id="imwOne">가져오기</button></div>`;
+        P('imwOne').onclick = async (e) => {
+          const btn = e.currentTarget; SP.busy(btn, true, '가져오는 중…');
+          try {
+            const out = await importImweb(s.code, (st) => { (st.addedPhotos || []).forEach((p) => photos.push({ k: p.k, url: p.url })); drawPhotos(); });
+            SPACES = null;
+            P('imwBox').innerHTML = `<div class="imw-box done">${icon('check-c')}<div><b>사진 ${out.added.length}장을 넣었어요.</b><span>${out.failed.length ? `${out.failed.length}장은 아임웹 사진 서버에서 받지 못했어요. 창을 닫았다가 다시 열면 그 사진만 다시 시도할 수 있어요.` : '순서를 바꾸거나 빼려면 아래에서 고친 뒤 저장해 주세요.'}</span></div></div>`;
+          } catch (er) { SP.busy(btn, false); SP.fail(er); }
+        };
+      }).catch(() => {});
+    }
     P('phGrid').addEventListener('click', (e) => {
       if (e.target.closest('#phAdd')) { if (!BOUND.photos) { SP.toast('사진 저장소(PHOTOS)가 연결돼야 올릴 수 있어요.', true); return; } P('phFile').click(); return; }
       const mv = e.target.closest('[data-mv]');
@@ -711,7 +797,7 @@ async function run(env) {
       const del = e.target.closest('[data-del]'); if (del) { photos.splice(Number(del.dataset.del), 1); drawPhotos(); }
     });
     P('phFile').onchange = async (e) => {
-      const files = [...e.target.files].slice(0, 12 - photos.length); e.target.value = '';
+      const files = [...e.target.files].slice(0, 40 - photos.length); e.target.value = '';
       for (const file of files) {
         try { const r = await SP.upload(file, 2000); photos.push({ k: r.key, url: r.url }); drawPhotos(); }
         catch (er) { SP.fail(er); }

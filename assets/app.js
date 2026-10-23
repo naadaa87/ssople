@@ -169,18 +169,48 @@
     m.$('[data-yes]').onclick = () => { done = true; resolve(true); m.close(); };
   });
   SP.lightbox = (urls, i = 0) => {
+    const n = urls.length;
+    if (!n) return;
     const bg = document.createElement('div');
     bg.className = 'lightbox';
-    const draw = () => { bg.innerHTML = `<img src="${SP.esc(urls[i])}" alt=""><button style="top:12px;right:12px" data-x aria-label="닫기">${SP.icon('x', 'lg')}</button>${urls.length > 1 ? `<button style="left:8px;top:50%" data-p aria-label="이전">${SP.icon('chev-l', 'lg')}</button><button style="right:8px;top:50%" data-n aria-label="다음">${SP.icon('chev-r', 'lg')}</button>` : ''}`; };
-    draw();
+    bg.setAttribute('role', 'dialog');
+    bg.setAttribute('aria-modal', 'true');
+    bg.setAttribute('aria-label', '사진 크게 보기');
+    bg.innerHTML = `<img alt="">${n > 1 ? '<span class="lb-count" aria-live="polite"></span>' : ''}<button style="top:12px;right:12px" data-x aria-label="닫기">${SP.icon('x', 'lg')}</button>${n > 1 ? `<button style="left:8px;top:50%" data-p aria-label="이전 사진">${SP.icon('chev-l', 'lg')}</button><button style="right:8px;top:50%" data-n aria-label="다음 사진">${SP.icon('chev-r', 'lg')}</button>` : ''}`;
+    const img = bg.querySelector('img');
+    const cnt = bg.querySelector('.lb-count');
+    const draw = () => {
+      img.src = urls[i];
+      if (cnt) cnt.textContent = `${i + 1} / ${n}`;
+      if (n > 1) [1, -1].forEach((d) => { const im = new Image(); im.src = urls[(i + d + n) % n]; });   // 옆 사진 미리 받기
+    };
+    const go = (d) => { if (n < 2) return; i = (i + d + n) % n; draw(); };
+    const prevOv = document.documentElement.style.overflow;
+    const close = () => { bg.remove(); document.removeEventListener('keydown', k); document.documentElement.style.overflow = prevOv; };
     bg.addEventListener('click', (e) => {
-      if (e.target.closest('[data-p]')) { i = (i - 1 + urls.length) % urls.length; draw(); return; }
-      if (e.target.closest('[data-n]')) { i = (i + 1) % urls.length; draw(); return; }
-      if (e.target === bg || e.target.closest('[data-x]')) { bg.remove(); document.removeEventListener('keydown', k); }
+      if (e.target.closest('[data-p]')) { go(-1); return; }
+      if (e.target.closest('[data-n]')) { go(1); return; }
+      if (e.target === bg || e.target.closest('[data-x]')) close();
     });
-    const k = (e) => { if (e.key === 'Escape') { bg.remove(); document.removeEventListener('keydown', k); } };
+    // 휴대폰에서 옆으로 밀어 넘기기
+    let x0 = null, y0 = 0;
+    bg.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; } else x0 = null; }, { passive: true });
+    bg.addEventListener('touchend', (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) go(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    const k = (e) => {
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowLeft') go(-1);
+      else if (e.key === 'ArrowRight') go(1);
+    };
     document.addEventListener('keydown', k);
+    document.documentElement.style.overflow = 'hidden';
+    draw();
     document.body.appendChild(bg);
+    bg.querySelector('[data-x]').focus({ preventScroll: true });
   };
   SP.busy = (btn, on, label) => {
     if (!btn) return;

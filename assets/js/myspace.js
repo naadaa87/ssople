@@ -73,7 +73,7 @@
         <li>지점 소식 올리기 — 공지·소식·이벤트로 나눠 지점 화면 맨 위쪽과 커뮤니티에 보여요</li>
         <li>비품 목록 — 접시·의자·멀티탭처럼 손님이 챙길지 고민하는 물품과 수량</li>
         <li>후기 연결 — 네이버 블로그·인스타그램에 올라온 좋은 후기를 골라 지점 화면에 걸기</li>
-        <li>소개·지점 공지·태그·사진(12장)·시설·이용 안내 고치기, 호스트 운영 공간이면 요금표와 네이버 예약 주소까지</li></ul>
+        <li>소개·지점 공지·태그·사진(40장)·시설·이용 안내 고치기, 호스트 운영 공간이면 요금표와 네이버 예약 주소까지</li></ul>
         <p class="tiny faint" style="margin-top:10px">도어락 번호, 와이파이 비밀번호, 연락처, 계좌번호는 고객 화면에 그대로 보이니 절대 적지 마세요. 입실 안내 문자로만 보내 주세요.</p></div>
       <section id="hsPosts" class="hs-sec"></section>`;
     $('#hsList').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) edit(spaces.find((s) => s.code === b.dataset.edit), b.dataset.tab); });
@@ -111,7 +111,7 @@
         ${ip('h_addFeeLabel', '인원 추가 요금 (보이는 글)', s.addFeeLabel, 40, '1인당 1만원')}${ip('h_depositLabel', '청소 보증금', s.depositLabel, 30, '8만원')}
         ${ip('h_place', '네이버 지도 주소', s.place, 300, 'https://naver.me/...', 'url', 'full')}
       </div></div>
-      <div data-p="photo" hidden><p class="muted small" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 한 장에 5MB까지, 12장까지.</p><div class="img-pick" id="hsPhotos"></div></div>
+      <div data-p="photo" hidden><p class="muted small" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 한 장에 5MB까지, 40장까지.</p><div class="img-pick" id="hsPhotos"></div></div>
       <div data-p="feat" hidden><div class="form-grid">${ft('karaoke', '노래방', '예) TJ 노래방 · 밤 12시까지')}${ft('bbq', '바베큐', '금액도 같이 — 예) 숯 바베큐 3만원 · 당일 추가 가능')}${ft('pet', '애견 동반', '예) 애견 보증금 3만원 추가')}</div>
         <div class="row wrap-ok" style="gap:14px;margin-top:16px">${ck('tv', 'TV')}${ck('console', '게임기')}${ck('projector', '빔프로젝터')}${ck('fridge', '냉장고')}${ck('heating', '난방')}</div>
         <div class="form-grid" style="margin-top:16px">${ip('f_aircon', '에어컨', f.aircon, 60, '스탠드 1대')}${ip('f_cook', '조리', f.cook, 60, '인덕션, 전자레인지')}${ip('f_floor', '층', f.floor, 60, '3층')}${ip('f_toilet', '화장실', f.toilet, 60, '실내 1개')}${ip('f_zones', '특별한 공간 (쉼표)', (f.zones || []).join(', '), 120, '루프탑, 테라스')}${ip('f_games', '보드게임·게임 (쉼표)', (f.games || []).join(', '), 600, '할리갈리, 루미큐브, 닌텐도 스위치')}${tx('h_facs', '시설 목록 — 한 줄에 "분류: 항목, 항목"', s.facs, 800, '주방: 싱크대, 전자레인지, 전기포트')}</div></div>
@@ -135,7 +135,7 @@
     /* 사진 */
     const drawPhotos = () => {
       P('hsPhotos').innerHTML = photos.map((p, i) => `<div class="pk"><img src="${esc(p.url)}" alt="사진 ${i + 1}"><button type="button" data-rm="${i}" aria-label="빼기">${icon('x', 'sm')}</button>${i ? `<button type="button" data-up="${i}" aria-label="앞으로" style="right:auto;left:4px">${icon('chev-l', 'sm')}</button>` : ''}</div>`).join('')
-        + (photos.length < 12 ? `<button type="button" class="add" id="phAdd">${icon('camera')}<br>사진 추가</button>` : '');
+        + (photos.length < 40 ? `<button type="button" class="add" id="phAdd">${icon('camera')}<br>사진 추가</button>` : '');
     };
     drawPhotos();
     P('hsPhotos').addEventListener('click', async (e) => {
@@ -144,7 +144,7 @@
       if (e.target.closest('#phAdd')) {
         const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
         inp.onchange = async () => {
-          for (const file of Array.from(inp.files).slice(0, 12 - photos.length)) {
+          for (const file of Array.from(inp.files).slice(0, 40 - photos.length)) {
             try { const r = await SP.upload(file, 2000); photos.push({ k: r.key, url: r.url }); drawPhotos(); } catch (er) { SP.fail(er); }
           }
         };
