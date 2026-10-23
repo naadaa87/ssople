@@ -117,6 +117,28 @@ function roomGuideLinks(s) {
   return `<p class="muted small" style="margin-top:14px">파티 준비 가이드: ${arts.map((a) => `<a class="link" href="/magazine/${esc(a.slug)}">${esc(a.title)}</a>`).join(' · ')} · <a class="link" href="/magazine">전체 보기</a></p>`;
 }
 
+/** 공간 상세(아임웹 지점 안내)를 검색 로봇이 읽을 글로 — 고객 화면은 room.js가 카드로 다시 그린다 */
+function detailSsr(s) {
+  const src = String(s.detail || '').trim();
+  if (!src) return '';
+  const out = [];
+  let list = [];
+  const flush = () => { if (list.length) { out.push(`<ul>${list.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`); list = []; } };
+  for (const raw of src.split('\n')) {
+    const l = raw.trim();
+    if (!l) continue;
+    if (l.startsWith('## ')) { flush(); out.push(`<h3>${esc(l.slice(3).trim())}</h3>`); continue; }
+    if (l.startsWith('> ### ')) { flush(); out.push(`<h3>${esc(l.slice(6).trim())}</h3>`); continue; }
+    const t = l.replace(/^>\s?(###\s)?/, '').replace(/^[-·•]\s/, '').trim();
+    if (!t) continue;
+    if (/^[-·•]\s/.test(l) || l.startsWith('>')) { list.push(t); continue; }
+    flush(); out.push(`<p>${esc(t)}</p>`);
+  }
+  flush();
+  const kw = (s.kw || []).filter(Boolean);
+  return `<section class="prose" style="margin-top:18px"><h2 class="h3">${esc(s.name)} 공간 상세</h2>${out.join('')}${kw.length ? `<p class="muted small">${kw.map((k) => '#' + esc(k)).join(' ')}</p>` : ''}</section>`;
+}
+
 export async function roomMeta(env, params, url, base = "") {
   const code = String(params.code || '').toUpperCase();
   const s = (await loadSpaces(env.DB)).find((x) => x.code === code);
@@ -139,11 +161,12 @@ export async function roomMeta(env, params, url, base = "") {
 <p class="lead">${esc(s.addr || '')}${s.base && s.max ? ` · 기준 ${esc(s.base)}명, 최대 ${esc(s.max)}명` : ''}${s.info?.size ? ` · ${esc(s.info.size)}` : ''}${from ? ` · ${esc(won(from))}부터` : ''}</p>
 ${all.length ? `<p class="muted">${all.map((f) => esc(f)).join(' · ')}</p>` : ''}
 ${s.intro ? String(s.intro).split(/\n\s*\n/).map((pg) => `<p style="margin-top:12px">${esc(pg.trim())}</p>`).join('') : ''}
+${detailSsr(s)}
 ${roomGuideLinks(s)}
 <div class="skel" style="height:360px;margin-top:22px;border-radius:22px"></div>`;
   return {
     title: `${s.name} 파티룸 — ${s.region} ${s.area}`, desc, image: (s.photos || [])[0] ? photoUrl(s.photos[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
-    keywords: [`${s.area} 파티룸`, `${s.region} 파티룸`, `${s.area} 파티룸 대여`, `${s.name}`, '쏘플파티룸', ...all.slice(0, 4).map((f) => `${f} 파티룸`)].join(', '),
+    keywords: [...new Set([`${s.area} 파티룸`, `${s.region} 파티룸`, `${s.area} 파티룸 대여`, `${s.name}`, '쏘플파티룸', ...all.slice(0, 4).map((f) => `${f} 파티룸`), ...(s.kw || []).slice(0, 8)])].join(', '),
     jsonld: [roomJsonLd(origin, s, st), breadcrumbJsonLd(origin, [['홈', '/'], ['지역별 지점', '/locations'], [`${s.region} ${s.area}`, `/area/${encodeURIComponent(s.area)}`], [s.name, `/room/${s.code}`]])],
     html: { '#roomRoot': summary },
   };

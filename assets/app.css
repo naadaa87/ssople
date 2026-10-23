@@ -896,6 +896,48 @@ select.sb-input { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 .amen small { display: block; color: var(--graphite); font-size: 13px; line-height: 1.45; }
 .amen .off { color: var(--ash); text-decoration: line-through; }
 .amen .off .ic { color: var(--ash); }
+/* 공간 상세 (아임웹에서 옮긴 지점 안내) */
+.dt-lead { display: grid; gap: 2px; margin-bottom: 18px; font-size: 15.5px; line-height: 1.75; color: var(--ink-2); }
+.dt-lead p:first-child { font-weight: 700; color: var(--ink); }
+.dt-lead ul, .dt-blk ul { list-style: none; display: grid; gap: 6px; }
+.dt-lead li, .dt-blk li { position: relative; padding-left: 14px; font-size: 14.5px; line-height: 1.6; }
+.dt-lead li::before, .dt-blk li::before { content: ""; position: absolute; left: 2px; top: .68em; width: 5px; height: 5px; border-radius: 50%; background: var(--red); }
+.dt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dt-blk { display: grid; align-content: start; gap: 8px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r-card); background: #fff; min-width: 0; }
+.dt-blk h3 { font-size: 15.5px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.4; text-wrap: balance; }
+.dt-blk p { font-size: 14.5px; line-height: 1.65; color: var(--ink-2); }
+.dt-blk.wide { grid-column: 1 / -1; }
+.dt-blk.note { grid-column: 1 / -1; background: var(--fog); border-color: transparent; }
+.dt-blk.note h3 { display: flex; align-items: center; gap: 6px; }
+.dt-blk.note h3 .ic { color: var(--graphite); }
+.dt-blk.note li::before { background: var(--graphite); }
+.dt-box { display: flex; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--fog); font-size: 13.5px; line-height: 1.6; color: var(--graphite); }
+.dt-box > .ic { flex: none; margin-top: 3px; color: var(--graphite); }
+.dt-box b { display: block; margin-bottom: 4px; color: var(--ink); font-size: 14px; }
+.dt-box ul { display: grid; gap: 4px; }
+.dt-box li { padding-left: 0; font-size: 13.5px; }
+.dt-box li::before { display: none; }
+.dt-lead > .dt-box { margin-top: 10px; }
+.dt-rest { margin-top: 12px; }
+.dt-rest > summary { list-style: none; display: inline-flex; cursor: pointer; }
+.dt-rest > summary::-webkit-details-marker { display: none; }
+.dt-rest[open] > summary { display: none; }
+.kw-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.kw-tags span { font-size: 13px; color: var(--graphite); background: var(--fog); padding: 3px 9px; border-radius: 8px; }
+.fac-list { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--line-2); display: grid; gap: 10px; }
+.fac-list h3 { font-size: 15px; font-weight: 800; }
+.fac-row { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px; align-items: start; }
+.fac-row b { min-width: 34px; font-size: 13.5px; color: var(--graphite); padding-top: 3px; }
+.fac-row ul { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.fac-row li { font-size: 13.5px; padding: 3px 10px; border-radius: 8px; background: var(--fog); color: var(--ink-2); }
+.care-list { list-style: none; display: grid; gap: 8px; margin-bottom: 18px; padding: 14px 16px; border-radius: 14px; background: var(--fog); }
+.care-list li { position: relative; padding-left: 16px; font-size: 14.5px; line-height: 1.6; }
+.care-list li::before { content: "·"; position: absolute; left: 4px; top: 0; font-weight: 800; color: var(--red); }
+@media (max-width: 720px) {
+  .dt-grid { grid-template-columns: 1fr; }
+  .fac-row { grid-template-columns: 1fr; gap: 4px; }
+  .fac-row b { padding-top: 0; }
+}
 .price-tbl td, .price-tbl th { text-align: center; }
 .price-tbl td:first-child, .price-tbl th:first-child { text-align: left; }
 .price-tbl td.na { color: var(--ash); }

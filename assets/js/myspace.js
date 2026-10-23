@@ -106,6 +106,7 @@
       <div data-p="base"><div class="form-grid">
         ${tx('h_intro', '소개', s.intro, 1500, '이 지점만의 분위기와 어울리는 파티를 적어 주세요.')}
         ${tx('h_notice', '지점 공지 (지점 화면 위쪽에 빨간 띠로 보여요)', s.notice, 400, '예) 10월 한 달 동안 엘리베이터 점검이 있어요.')}
+        ${tx('h_detail', '공간 상세 — 줄 맨 앞에 ## 소제목 · - 목록 · > 회색 안내 상자', s.detail, 3000, '## 대형 TV & OTT\n- 넷플릭스, 유튜브 시청 가능\n> OTT는 고객님 계정으로 이용해요.')}
         ${ip('h_tags', '태그 (쉼표로 나눠요)', (s.tags || []).join(', '), 200, '생일파티, 브라이덜샤워', 'text', 'full')}
         ${ip('h_addFeeLabel', '인원 추가 요금 (보이는 글)', s.addFeeLabel, 40, '1인당 1만원')}${ip('h_depositLabel', '청소 보증금', s.depositLabel, 30, '8만원')}
         ${ip('h_place', '네이버 지도 주소', s.place, 300, 'https://naver.me/...', 'url', 'full')}
@@ -113,9 +114,9 @@
       <div data-p="photo" hidden><p class="muted small" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 한 장에 5MB까지, 12장까지.</p><div class="img-pick" id="hsPhotos"></div></div>
       <div data-p="feat" hidden><div class="form-grid">${ft('karaoke', '노래방', '예) TJ 노래방 · 밤 12시까지')}${ft('bbq', '바베큐', '금액도 같이 — 예) 숯 바베큐 3만원 · 당일 추가 가능')}${ft('pet', '애견 동반', '예) 애견 보증금 3만원 추가')}</div>
         <div class="row wrap-ok" style="gap:14px;margin-top:16px">${ck('tv', 'TV')}${ck('console', '게임기')}${ck('projector', '빔프로젝터')}${ck('fridge', '냉장고')}${ck('heating', '난방')}</div>
-        <div class="form-grid" style="margin-top:16px">${ip('f_aircon', '에어컨', f.aircon, 60, '스탠드 1대')}${ip('f_cook', '조리', f.cook, 60, '인덕션, 전자레인지')}${ip('f_floor', '층', f.floor, 60, '3층')}${ip('f_toilet', '화장실', f.toilet, 60, '실내 1개')}${ip('f_zones', '특별한 공간 (쉼표)', (f.zones || []).join(', '), 120, '루프탑, 테라스')}${ip('f_games', '보드게임·게임 (쉼표)', (f.games || []).join(', '), 600, '할리갈리, 루미큐브, 닌텐도 스위치')}</div></div>
+        <div class="form-grid" style="margin-top:16px">${ip('f_aircon', '에어컨', f.aircon, 60, '스탠드 1대')}${ip('f_cook', '조리', f.cook, 60, '인덕션, 전자레인지')}${ip('f_floor', '층', f.floor, 60, '3층')}${ip('f_toilet', '화장실', f.toilet, 60, '실내 1개')}${ip('f_zones', '특별한 공간 (쉼표)', (f.zones || []).join(', '), 120, '루프탑, 테라스')}${ip('f_games', '보드게임·게임 (쉼표)', (f.games || []).join(', '), 600, '할리갈리, 루미큐브, 닌텐도 스위치')}${tx('h_facs', '시설 목록 — 한 줄에 "분류: 항목, 항목"', s.facs, 800, '주방: 싱크대, 전자레인지, 전기포트')}</div></div>
       <div data-p="items" hidden><div id="hsItems"></div></div>
-      <div data-p="info" hidden><div class="form-grid">${tx('i_size', '평수 · 크기', inf.size, 300, '약 25평')}${tx('i_parking', '주차', inf.parking, 300)}${tx('i_route', '찾아오는 길', inf.route, 300)}${tx('i_noise', '소음 기준', inf.noise, 300)}${tx('i_minors', '미성년자 이용', inf.minors, 300)}${tx('i_sameday', '당일 예약', inf.sameday, 300)}${tx('i_tour', '사전 방문', inf.tour, 300)}</div></div>
+      <div data-p="info" hidden><div class="form-grid">${tx('i_size', '평수 · 크기', inf.size, 300, '약 25평')}${tx('i_parking', '주차', inf.parking, 300)}${tx('i_route', '찾아오는 길', inf.route, 300)}${tx('i_noise', '소음 기준', inf.noise, 300)}${tx('i_minors', '미성년자 이용', inf.minors, 300)}${tx('i_sameday', '당일 예약', inf.sameday, 300)}${tx('i_tour', '사전 방문', inf.tour, 300)}${tx('h_care', '지점 이용 안내 — 한 줄에 하나씩', s.care, 1000, '내부에선 구비된 실내화로 갈아신어 주세요.')}</div></div>
       <div data-p="social" hidden><div id="hsSocial"></div></div>
       ${own ? `<div data-p="pkg" hidden><p class="muted small" style="margin-bottom:10px">요금은 네이버 예약 화면과 같게 맞춰 주세요. 요일별(월~목·금·토·일) 요금이고, 비우면 그 요일엔 팔지 않는 걸로 보여요.</p>
         ${ip('h_base', '기준 인원', s.base, 0, '', 'number')}${ip('h_max', '최대 인원', s.max, 0, '', 'number')}${ip('h_addFee', '인원 추가 요금 (원, 계산용)', s.addFee, 0, '10000', 'number')}
@@ -178,6 +179,7 @@
       const err = P('hsErr'); err.hidden = true;
       const body = {
         intro: P('h_intro').value.trim(), notice: P('h_notice').value.trim(), tags: list(P('h_tags').value),
+        detail: P('h_detail').value.trim(), care: P('h_care').value.trim(), facs: P('h_facs').value.trim(),
         addFeeLabel: P('h_addFeeLabel').value.trim(), depositLabel: P('h_depositLabel').value.trim(), place: P('h_place').value.trim(),
         photos: photos.map((p) => p.k),
         feat: {

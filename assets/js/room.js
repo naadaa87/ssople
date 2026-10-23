@@ -51,6 +51,7 @@
           ${s.notice ? `<div class="callout red" style="margin-top:16px">${icon('megaphone')}<div class="prewrap">${esc(s.notice)}</div></div>` : ''}
           <nav class="room-nav" id="roomNav" aria-label="이 지점 안내 바로가기">${subnav(s)}</nav>
           ${s.intro ? `<section class="room-sec" id="r-intro"><h2>공간 소개</h2><div class="prose prewrap">${esc(s.intro)}</div></section>` : ''}
+          ${s.detail ? `<section class="room-sec" id="r-detail"><h2>공간 상세</h2>${detailView(s.detail)}${kwTags(s)}</section>` : ''}
           <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
           <section class="room-sec" id="r-price"><h2>패키지와 요금</h2>${priceTable(s)}</section>
           <section class="room-sec" id="r-feat"><h2>편의시설</h2>${amenities(s)}</section>
@@ -83,9 +84,84 @@
   }
 
   function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+
+  /* 공간 상세 — 한 줄씩: "## 소제목", "- 목록", "> 안내 상자"(첫 줄 "> ### 제목"), 그 밖은 문단 */
+  function detailParse(src) {
+    const lead = [], groups = [];
+    let g = null, box = null;
+    const target = () => (g ? g.body : lead);
+    for (const raw of String(src || '').split('\n')) {
+      const l = raw.trim();
+      if (!l) { box = null; continue; }
+      if (l.startsWith('## ')) { box = null; g = { h: l.slice(3).trim(), body: [] }; groups.push(g); continue; }
+      if (l.startsWith('>')) {
+        const t = l.replace(/^>\s?/, '').trim();
+        if (t.startsWith('### ')) {
+          // 제목 있는 안내 상자는 따로 한 칸(가로 전체)으로
+          g = { h: t.slice(4).trim(), note: true, body: [] }; groups.push(g);
+          box = { t: 'ul', items: [] }; g.body.push(box);
+          continue;
+        }
+        if (g && g.note) { if (t) box.items.push(t); continue; }
+        if (!box) { box = { t: 'box', title: '', lines: [] }; target().push(box); }
+        if (t) box.lines.push(t);
+        continue;
+      }
+      if (g && g.note) { g = { h: '', body: [] }; groups.push(g); }   // 안내 칸이 끝나면 이어지는 글은 새 칸으로
+      box = null;
+      const b = target();
+      if (/^[-·•]\s/.test(l)) {
+        const last = b[b.length - 1];
+        if (last && last.t === 'ul') last.items.push(l.slice(2).trim()); else b.push({ t: 'ul', items: [l.slice(2).trim()] });
+        continue;
+      }
+      b.push({ t: 'p', text: l });
+    }
+    return { lead, groups };
+  }
+  function detailBody(arr) {
+    return arr.map((n) => {
+      if (n.t === 'p') return `<p>${esc(n.text)}</p>`;
+      if (n.t === 'ul') return `<ul>${n.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
+      const many = n.title || n.lines.length > 1;
+      return `<div class="dt-box">${icon('info', 'sm')}<div>${n.title ? `<b>${esc(n.title)}</b>` : ''}${many ? `<ul>${n.lines.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : `<p>${esc(n.lines[0] || '')}</p>`}</div></div>`;
+    }).join('');
+  }
+  function detailView(src) {
+    const { lead } = detailParse(src);
+    const groups = detailParse(src).groups.filter((x) => x.body.some((n) => (n.items ? n.items.length : true)));
+    // 두 칸씩 놓다가 홀수로 끝나는 칸은 가로 전체로 (빈자리 없이)
+    let run = [];
+    const close = () => { if (run.length % 2) run[run.length - 1].wide = true; run = []; };
+    groups.forEach((x) => { if (x.note) close(); else run.push(x); });
+    close();
+    const SHOW = 6;
+    const blk = (x) => (x.note
+      ? `<div class="dt-blk note"><h3>${icon('info', 'sm')}${esc(x.h)}</h3>${detailBody(x.body)}</div>`
+      : `<div class="dt-blk${x.wide ? ' wide' : ''}">${x.h ? `<h3>${esc(x.h)}</h3>` : ''}${detailBody(x.body)}</div>`);
+    const first = groups.slice(0, SHOW), rest = groups.slice(SHOW);
+    return `${lead.length ? `<div class="dt-lead">${detailBody(lead)}</div>` : ''}
+      ${first.length ? `<div class="dt-grid">${first.map(blk).join('')}</div>` : ''}
+      ${rest.length ? `<details class="dt-rest"><summary class="btn btn-soft btn-sm">${icon('plus', 'sm')}상세 ${rest.length}가지 더 보기</summary><div class="dt-grid">${rest.map(blk).join('')}</div></details>` : ''}`;
+  }
+  function kwTags(s) {
+    const kw = (s.kw || []).filter(Boolean);
+    return kw.length ? `<div class="kw-tags" aria-label="해시태그">${kw.map((k) => `<span>#${esc(k)}</span>`).join('')}</div>` : '';
+  }
+  /* 시설 목록 — 한 줄에 "분류: 항목, 항목" */
+  function facsView(src) {
+    const rows = String(src || '').split('\n').map((l) => {
+      const i = l.indexOf(':');
+      if (i < 1) return null;
+      const items = l.slice(i + 1).split(',').map((x) => x.trim()).filter(Boolean);
+      return items.length ? { g: l.slice(0, i).trim(), items } : null;
+    }).filter(Boolean);
+    if (!rows.length) return '';
+    return `<div class="fac-list"><h3>시설 목록</h3>${rows.map((r) => `<div class="fac-row"><b>${esc(r.g)}</b><ul>${r.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+  }
   /* 긴 지점 화면 안에서 바로 가기 */
   function subnav(s) {
-    const l = [['r-intro', '소개', !!s.intro], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
+    const l = [['r-intro', '소개', !!s.intro], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
     return l.filter((x) => x[2]).map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
   }
   /* 예약 뒤 이어지는 준비 — 지점 화면에서 쏘플의 다른 기능으로 */
@@ -159,7 +235,7 @@
     if (f.toilet) add('door', '화장실', f.toilet);
     (f.zones || []).forEach((z) => add('umbrella', z, ''));
     const games = (f.games || []).length ? `<details style="margin-top:16px"><summary class="btn btn-soft btn-sm" style="display:inline-flex">${icon('dice', 'sm')}보드게임·게임 ${f.games.length}가지 보기</summary><p class="muted small" style="margin-top:10px;line-height:1.8">${f.games.map(esc).join(', ')}</p></details>` : '';
-    return `<div class="amen">${items.join('')}</div>${games}<p class="tiny faint" style="margin-top:12px">비품과 시설은 지점 사정에 따라 바뀔 수 있어요.</p>`;
+    return `<div class="amen">${items.join('')}</div>${games}${facsView(s.facs)}<p class="tiny faint" style="margin-top:12px">비품과 시설은 지점 사정에 따라 바뀔 수 있어요.</p>`;
   }
 
   function rules(s) {
@@ -170,7 +246,8 @@
     rows.push(['미성년자', i.minors || '미성년자끼리는 낮·올데이 패키지만 이용할 수 있고, 전원 보호자 동의서가 필요해요.']);
     if (i.noise) rows.push(['소음', i.noise]);
     rows.push(['숙박', '파티·모임을 위한 공간이라 숙박 목적으로는 이용할 수 없어요.']);
-    return `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+    const care = String(s.care || '').split('\n').map((x) => x.trim()).filter(Boolean);
+    return `${care.length ? `<ul class="care-list">${care.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
       <p class="small" style="margin-top:14px"><a class="link" href="/guide#rules">보증금·환불·인원 추가 같은 공통 규정 보기</a></p>`;
   }
 

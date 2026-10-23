@@ -635,6 +635,8 @@ async function run(env) {
         ${ip('e_tags', '태그 (쉼표로 나눠요)', (s.tags || []).join(', '), 200, '생일파티, 브라이덜샤워')}${ip('e_aliases', '다른 이름 (호스트·엑셀에 다르게 적힌 이름)', (s.aliases || []).join(', '), 400, '건대점, 건대 캐치볼')}
         ${tx('e_intro', '소개', s.intro, 1500, '이 지점만의 분위기와 어울리는 파티를 적어 주세요.')}
         ${tx('e_notice', '지점 공지 (빨간 띠로 보여요)', s.notice, 400, '예) 10월 한 달 동안 엘리베이터 점검이 있어요.')}
+        ${tx('e_detail', '공간 상세 — 줄 맨 앞에 ## 소제목 · - 목록 · > 회색 안내 상자', s.detail, 3000, '## 프라이빗 PC방 : 고성능 PC 6대\n- 게임은 입실 후 직접 설치해 주세요.\n> 유료 게임은 고객님 계정으로 이용해요.')}
+        ${ip('e_kw', '검색 해시태그 (쉼표로 나눠요)', (s.kw || []).join(', '), 300, '건대파티룸, 건대생일파티', 'text', 'full')}
         <div class="field"><label class="switch"><input type="checkbox" id="e_visible"${s.visible ? ' checked' : ''}><span>고객 화면에 공개</span></label></div>
         ${ip('e_sort', '보여 주는 순서 (작을수록 앞)', s.sort, 0, '', 'number')}
         <div class="field full" style="margin-top:6px"><div class="a-note">운영 방식과 노출 존 — 호스트 센터에서 신청한 공간은 여기서 운영 방식을 정하고, 유료 노출 존은 결제 기간에 맞춰 끝 날짜를 넣어요. 끝 날짜가 지나면 존 표시가 자동으로 빠져요.</div></div>
@@ -650,10 +652,12 @@ async function run(env) {
           <div class="field"><label class="label" for="f_elevator">엘리베이터</label><select class="select" id="f_elevator"><option value=""${f.elevator == null ? ' selected' : ''}>모름</option><option value="1"${f.elevator === true ? ' selected' : ''}>있어요</option><option value="0"${f.elevator === false ? ' selected' : ''}>없어요</option></select></div>
           ${ip('f_aircon', '에어컨', f.aircon, 60, '스탠드 1대')}${ip('f_cook', '조리', f.cook, 60, '인덕션, 전자레인지')}${ip('f_floor', '층', f.floor, 60, '3층')}
           ${ip('f_floorNote', '층 설명', f.floorNote, 60, '계단으로만 올라가요')}${ip('f_toilet', '화장실', f.toilet, 60, '실내 1개')}
-          ${ip('f_zones', '특별한 공간 (쉼표)', (f.zones || []).join(', '), 120, '루프탑, 테라스')}${ip('f_games', '보드게임 (쉼표)', (f.games || []).join(', '), 600, '할리갈리, 루미큐브')}</div></div>
+          ${ip('f_zones', '특별한 공간 (쉼표)', (f.zones || []).join(', '), 120, '루프탑, 테라스')}${ip('f_games', '보드게임 (쉼표)', (f.games || []).join(', '), 600, '할리갈리, 루미큐브')}
+          ${tx('e_facs', '시설 목록 — 한 줄에 "분류: 항목, 항목"', s.facs, 800, '주방: 싱크대, 전자레인지, 전기포트')}</div></div>
       <div data-p="info" hidden><div class="form-grid">
         ${tx('i_size', '평수 · 크기', inf.size, 300, '약 25평')}${tx('i_parking', '주차', inf.parking, 300, '건물 뒤 2대, 먼저 오면 먼저 대요')}${tx('i_route', '찾아오는 길', inf.route, 300, '건대입구역 2번 출구에서 5분')}
-        ${tx('i_noise', '소음 기준', inf.noise, 300, '밤 10시부터는 음악 소리를 줄여 주세요')}${tx('i_minors', '미성년자 이용', inf.minors, 300)}${tx('i_sameday', '당일 예약', inf.sameday, 300)}${tx('i_tour', '사전 방문', inf.tour, 300)}</div>
+        ${tx('i_noise', '소음 기준', inf.noise, 300, '밤 10시부터는 음악 소리를 줄여 주세요')}${tx('i_minors', '미성년자 이용', inf.minors, 300)}${tx('i_sameday', '당일 예약', inf.sameday, 300)}${tx('i_tour', '사전 방문', inf.tour, 300)}
+        ${tx('e_care', '지점 이용 안내 — 한 줄에 하나씩 (이용 안내 맨 위에 보여요)', s.care, 1000, '내부에선 구비된 실내화로 갈아신어 주세요.')}</div>
         <p class="tiny faint" style="margin-top:10px">도어락 번호, 와이파이 비밀번호, 점주 연락처, 입금 계좌는 고객 화면에 노출되니 절대 적지 마세요. 입실 안내 문자로만 보내 주세요.</p></div>
       <div data-p="items" hidden><div id="edItems"></div></div>
       <div data-p="social" hidden><div id="edSocial"></div></div>
@@ -722,6 +726,7 @@ async function run(env) {
         name: P('e_name').value.trim(), short: P('e_short').value.trim(), region: P('e_region').value, area: P('e_area').value.trim(), addr: P('e_addr').value.trim(),
         base: P('e_base').value, max: P('e_max').value, addFeeLabel: P('e_addFeeLabel').value.trim(), addFee: P('e_addFee').value, depositLabel: P('e_depositLabel').value.trim(),
         place: P('e_place').value.trim(), book: P('e_book').value.trim(), tags: list(P('e_tags').value), aliases: list(P('e_aliases').value), intro: P('e_intro').value.trim(), notice: P('e_notice').value.trim(),
+        detail: P('e_detail').value.trim(), care: P('e_care').value.trim(), facs: P('e_facs').value.trim(), kw: list(P('e_kw').value),
         visible: P('e_visible').checked, sort: P('e_sort').value,
         listing: { type: P('e_ltype').value, zone: P('e_lzone').value, until: P('e_luntil').value, hostName: P('e_lhost').value.trim() },
         pkgs: pkgs.map((p) => ({ k: p.k, label: p.label, s: p.s, e: p.e, p: p.p, url: p.url })),

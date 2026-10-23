@@ -150,6 +150,11 @@ export function cleanSpaceInput(b, prev = {}) {
   if ('book' in b) out.book = url(b.book, { name: '네이버 예약 페이지 주소' });
   if ('intro' in b) out.intro = str(b.intro, { max: 1500, multiline: true, name: '소개' });
   if ('notice' in b) out.notice = str(b.notice, { max: 400, multiline: true, name: '지점 공지' });
+  // 공간 상세(## 소제목 / - 목록 / > 안내 상자), 지점 이용 안내(한 줄에 하나), 시설 목록("분류: 항목, 항목"), 검색 해시태그
+  if ('detail' in b) out.detail = maskPhones(str(b.detail, { max: 3000, multiline: true, name: '공간 상세' }));
+  if ('care' in b) out.care = maskPhones(str(b.care, { max: 1000, multiline: true, name: '지점 이용 안내' }));
+  if ('facs' in b) out.facs = str(b.facs, { max: 800, multiline: true, name: '시설 목록' });
+  if ('kw' in b) out.kw = (Array.isArray(b.kw) ? b.kw : String(b.kw).split(',')).map((t) => str(String(t).replace(/^#/, ''), { max: 20 })).filter(Boolean).slice(0, 12);
   if ('tags' in b) out.tags = (Array.isArray(b.tags) ? b.tags : String(b.tags).split(',')).map((t) => str(t, { max: 12 })).filter(Boolean).slice(0, 12);
   if ('aliases' in b) out.aliases = (Array.isArray(b.aliases) ? b.aliases : String(b.aliases).split(',')).map((t) => str(t, { max: 40 })).filter(Boolean).slice(0, 10);
   if ('photos' in b) {
@@ -265,7 +270,7 @@ export function zoneOf(s, today) {
 }
 
 /* ---------- 호스트(매장 운영자)가 자기 지점을 고치는 범위 ---------- */
-const HOST_FIELDS = ['intro', 'notice', 'tags', 'photos', 'feat', 'info', 'addFeeLabel', 'depositLabel', 'place', 'items', 'social'];
+const HOST_FIELDS = ['intro', 'notice', 'detail', 'care', 'facs', 'tags', 'photos', 'feat', 'info', 'addFeeLabel', 'depositLabel', 'place', 'items', 'social'];
 const HOST_FIELDS_OWN = ['pkgs', 'book', 'base', 'max', 'addFee'];   // 호스트 운영 공간이면 요금·예약 주소까지
 export function cleanHostInput(b, prev) {
   const allow = new Set(HOST_FIELDS.concat(prev.listing && prev.listing.type === 'host' ? HOST_FIELDS_OWN : []));
@@ -339,7 +344,7 @@ export function registerAdmin(route) {
     const list = await loadSpaces(c.db, { all: true });
     const prev = list.find((s) => s.code === c.params.code) || {};
     const { code, sort, visible, ...rest } = seed;
-    rest.photos = prev.photos || [];
+    rest.photos = (prev.photos && prev.photos.length) ? prev.photos : (rest.photos || []);
     rest.intro = prev.intro || '';
     rest.notice = prev.notice || rest.notice || '';
     rest.aliases = (prev.aliases && prev.aliases.length) ? prev.aliases : (rest.aliases || []);   // 호스트 지점 이름 짝은 지키기

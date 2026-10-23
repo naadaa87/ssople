@@ -122,6 +122,7 @@ export const pkgSig = (pkgs) => (pkgs || []).map((p) => `${p.k}:${itemNo(p.url)}
 
 /**
  * 지점 데이터 바로잡기 — 관리자·호스트가 고친 지점에도 한 번 적용한다 (새 판을 올릴 때마다 한 번)
+ * 2026-10-23: 바로잡기 없음 — 아임웹 지점 상세(공간 상세·이용 안내·시설 목록·해시태그)를 빈 칸에만 채운다
  * 2026-10-22: 레스텔 게임기(닌텐도 스위치), 구로 어반아일랜드·대전 화양연화 바베큐 금액, 화양연화 '게임대' 문구 삭제
  */
 const has원 = (t) => /\d\s*만?\s*원/.test(String(t || ''));
@@ -185,7 +186,8 @@ export async function applySeedUpdate(db) {
     if (!touched) {
       next = {
         ...fresh,
-        photos: cur.photos || [], intro: cur.intro || fresh.intro || '', notice: cur.notice || fresh.notice || '',
+        photos: (cur.photos && cur.photos.length) ? cur.photos : (fresh.photos || []),
+        intro: cur.intro || fresh.intro || '', notice: cur.notice || fresh.notice || '',
         aliases: (cur.aliases && cur.aliases.length) ? cur.aliases : (fresh.aliases || []),
         visible: sv !== false,
       };
@@ -194,6 +196,10 @@ export async function applySeedUpdate(db) {
       next = { ...cur, code: seed.code, name: r.name, region: r.region, area: r.area, visible: sv === false ? false : !!r.visible, edited: true };
       if (!cur.book && fresh.book) next.book = fresh.book;
       if (!cur.intro && fresh.intro) next.intro = fresh.intro;   // 소개가 비어 있던 지점만 새 소개 글로 채운다
+      // 2026-10-23 아임웹 지점 상세: 비어 있는 칸만 채운다 (관리자·호스트가 쓴 내용은 그대로)
+      for (const k of ['detail', 'care', 'facs']) if (!cur[k] && fresh[k]) next[k] = fresh[k];
+      if (!(cur.kw && cur.kw.length) && fresh.kw && fresh.kw.length) next.kw = fresh.kw;
+      if (!(cur.photos && cur.photos.length) && fresh.photos && fresh.photos.length) next.photos = fresh.photos;
       if (fresh.place && (!cur.place || cur.place === prevPlace)) next.place = fresh.place;
       if (pkgSig(cur.pkgs) === prevSig) {
         // 패키지 구성·링크를 손대지 않았으면 새 목록 기준으로 맞추고, 요금·시간은 관리자가 고친 값을 쓴다
