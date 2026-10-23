@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -38,6 +38,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS annivs (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER NOT NULL, title TEXT NOT NULL, md TEXT NOT NULL, noti_year INTEGER, created_at TEXT)`,
   `CREATE TABLE IF NOT EXISTS notis (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER NOT NULL, kind TEXT, text TEXT NOT NULL, link TEXT, read INTEGER NOT NULL DEFAULT 0, created_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_notis ON notis(uid, id)`,
+  // v4: 시즌 준비 — 기본 할 일의 체크·고친 값과 직접 더한 할 일
+  `CREATE TABLE IF NOT EXISTS season_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, skey TEXT NOT NULL, tkey TEXT, title TEXT, cat TEXT, due TEXT, owner TEXT, memo TEXT, done INTEGER NOT NULL DEFAULT 0, done_at TEXT, hidden INTEGER NOT NULL DEFAULT 0, custom INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT, UNIQUE (skey, tkey))`,
 ];
 
 let ready = null;

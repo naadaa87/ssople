@@ -6,6 +6,7 @@ import { loadSpaces } from './spaces.js';
 import { imgUrl } from './community.js';
 import { INQUIRY_KINDS } from './misc.js';
 import { tierOf } from './account.js';
+import { loadPlan, summarize } from './seasons.js';
 
 export function register(route) {
   route('GET', '/api/admin/overview', async (c) => {
@@ -29,11 +30,15 @@ export function register(route) {
     ]);
     const nm = Object.fromEntries((await loadSpaces(c.db, { all: true })).map((s) => [s.code, s.name]));
     const d = parseJSON(diag, null);
+    let season = null;
+    try { season = summarize(await loadPlan(c.db, today)); } catch { season = null; }
     return {
       counts: {
         users: users.n, users7: users7.n, posts7: posts7.n, reports: reports.n, inquiries: inq.n,
         eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n,
+        seasonDue: season ? season.late + season.week : 0,
       },
+      season,
       clicks7: (clicks7.results || []).map((r) => ({ ...r, name: nm[r.code] || r.code })),
       occ: occ.results || [],
       sync: d ? { at: d.at, ok: d.ok, error: d.error || null, active: d.active, blocks: d.blocks, unmatched: (d.unmatched || []).length, latest: d.latest || null, okAt: okAt || null, cronAt: cronAt || null } : null,
