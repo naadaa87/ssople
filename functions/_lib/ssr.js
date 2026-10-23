@@ -4,7 +4,7 @@ import { loadSpaces, publicSpace, photoUrl } from './spaces.js';
 import { parseJSON, todayKST } from './util.js';
 import { imgUrl } from './community.js';
 import { getSettings } from './db.js';
-import { verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
+import { domainLive, canonicalHostOf, verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
 import { MAGAZINE } from './magazine-index.js';
 import { GAMES } from './games-index.js';
 
@@ -20,10 +20,14 @@ export async function renderPage(context, template, metaFn) {
   const tpl = await env.ASSETS.fetch(new Request(new URL(template, url.origin), { headers: { accept: 'text/html' } }));
   if (!tpl.ok) return tpl;
   let meta = null;
+  let base = url.origin;
   try {
-    if (env.DB) { await ensureSchema(env); env.__origin = siteBase(url, await getSettings(env.DB).catch(() => ({}))); meta = await metaFn(env, context.params, url); }
+    if (env.DB) {
+      await ensureSchema(env);
+      base = siteBase(url, await getSettings(env.DB).catch(() => ({})), await domainLive(env));
+      meta = await metaFn(env, context.params, url, base);   // base: 절대 주소(구조화 데이터)용 대표 주소
+    }
   } catch (e) { meta = null; }
-  const base = env.__origin || url.origin;
   const abs = (u) => (!u ? '' : /^https?:\/\//.test(u) ? u : base + u);
   const title = meta?.title ? (meta.fullTitle ? meta.title : `${meta.title} | 쏘플파티룸`) : null;
   const verify = await verifyTags(env);
@@ -54,11 +58,11 @@ export async function renderPage(context, template, metaFn) {
 }
 
 /** 빌드 때 화면 파일에 넣어 둔 기본 주소 — 서버가 실제 주소로 바꿔 끼운다 (build.py SITE와 같아야 한다) */
-export const BUILD_SITE = 'https://ssople.pages.dev';
+export const BUILD_SITE = 'https://ssople.com';   // 화면 파일에 적힌 기본 주소 — 실제 대표 주소(연결 전엔 ssople.pages.dev)로 바꿔 끼운다
 
 /** 이 화면의 대표 주소: 설정에 대표 주소(seo.canonical_host)가 있으면 그것, 없으면 지금 접속한 주소 */
-export function siteBase(url, st) {
-  const host = String((st && st['seo.canonical_host']) || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+export function siteBase(url, st, isLive = false) {
+  const host = canonicalHostOf(url, st, isLive);
   if (host) return 'https://' + host;
   // 미리보기 배포(브랜치.ssople.pages.dev)는 정식 주소를 기본 주소로 가리킨다
   if (/^[^.]+\.ssople\.pages\.dev$/.test(url.hostname)) return BUILD_SITE;
@@ -80,7 +84,7 @@ export async function renderStatic(context) {
       extra += await verifyTags(context.env);
     }
   } catch { /* DB 연결 전이면 기본 화면만 */ }
-  const base = siteBase(url, st);
+  const base = siteBase(url, st, await domainLive(context.env));
   const abs = (u) => (!u ? u : /^https?:\/\//.test(u) ? u : base + (u.startsWith('/') ? u : '/' + u));
   const here = base + (url.pathname === '/index' ? '/' : url.pathname);
   if (here === base + '/') extra += jsonLdTag(orgJsonLd(base, st)) + jsonLdTag(websiteJsonLd(base));
@@ -113,7 +117,7 @@ function roomGuideLinks(s) {
   return `<p class="muted small" style="margin-top:14px">파티 준비 가이드: ${arts.map((a) => `<a class="link" href="/magazine/${esc(a.slug)}">${esc(a.title)}</a>`).join(' · ')} · <a class="link" href="/magazine">전체 보기</a></p>`;
 }
 
-export async function roomMeta(env, params) {
+export async function roomMeta(env, params, url, base = "") {
   const code = String(params.code || '').toUpperCase();
   const s = (await loadSpaces(env.DB)).find((x) => x.code === code);
   if (!s) return null;
@@ -128,7 +132,7 @@ export async function roomMeta(env, params) {
     .filter(Boolean).join(' | ') + ' — 요금 확인하고 네이버 예약으로 바로 잡으세요.';
   let st = {};
   try { st = await getSettings(env.DB); } catch { st = {}; }
-  const origin = env.__origin || '';
+  const origin = base || '';
   const all = featList(s);
   const summary = `<nav class="crumb" aria-label="현재 위치" style="padding-top:22px"><a href="/">홈</a><span>›</span><a href="/locations">지역별 지점</a><span>›</span><a href="/area/${esc(encodeURIComponent(s.area))}">${esc(s.region)} ${esc(s.area)}</a><span>›</span><b>${esc(s.name)}</b></nav>
 <h1 class="h1" style="margin-top:10px">${esc(s.name)} <span class="muted" style="font-size:.55em;font-weight:600">${esc(s.region)} ${esc(s.area)} 파티룸</span></h1>
@@ -145,11 +149,11 @@ ${roomGuideLinks(s)}
   };
 }
 
-export async function areaMeta(env, params) {
+export async function areaMeta(env, params, url, base = "") {
   const spaces = (await loadSpaces(env.DB)).filter((s) => s.visible);
   const a = findArea(params.slug, spaces);
   if (!a) return null;
-  const origin = env.__origin || '';
+  const origin = base || '';
   const names = a.list.map((s) => s.name).slice(0, 6).join(', ');
   const feats = [...new Set(a.list.flatMap((s) => featList(s)))].slice(0, 5);
   return {
@@ -210,9 +214,16 @@ export async function inviteMeta(env, params) {
   return { title: `${i.title} 초대장`, desc: `${i.host || i.nick}님이 초대했어요. ${md}`.trim() + ' — 참석 여부를 알려 주세요.', image: i.cover ? imgUrl(i.cover) : '/assets/img/og-invite.png', noindex: true };
 }
 
+/** 사이트맵·RSS 주소의 기준 — 대표 주소가 정해져 있으면 그 주소 */
+async function baseOf(env, url) {
+  let st = {};
+  try { if (env.DB) { await ensureSchema(env); st = await getSettings(env.DB); } } catch { st = {}; }
+  return siteBase(url, st, await domainLive(env));
+}
+
 export async function sitemap(context) {
   const { env, request } = context;
-  const origin = new URL(request.url).origin;
+  const origin = await baseOf(env, new URL(request.url));
   const pages = ['/', '/rooms', '/locations', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
     '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy'];
   const urls = pages.map((p) => ({ loc: origin + p }));
@@ -243,7 +254,7 @@ export async function sitemap(context) {
 /** RSS — 네이버 서치어드바이저 "RSS 제출"용. 행사·공지·팁·후기 글을 최근 순으로 */
 export async function rss(context) {
   const { env, request } = context;
-  const origin = new URL(request.url).origin;
+  const origin = await baseOf(env, new URL(request.url));
   const items = [];
   const rfc = (iso) => { const d = iso ? new Date(iso) : new Date(); return Number.isNaN(d.getTime()) ? new Date().toUTCString() : d.toUTCString(); };
   const cut = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);

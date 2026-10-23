@@ -1769,3 +1769,5 @@ a.hs-stat:hover { border-color: var(--ink); }
 .ds-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 18px; margin-top: 26px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, .12); }
 .ds-links a { display: inline-flex; align-items: center; gap: 4px; font-size: 14.5px; font-weight: 700; color: rgba(255, 255, 255, .86); }
 .ds-links a:hover { color: #fff; }
+.letter-talk { display: flex; justify-content: center; margin-top: 30px; }
+@media (max-width: 720px) { .letter-talk .btn { width: 100%; } }

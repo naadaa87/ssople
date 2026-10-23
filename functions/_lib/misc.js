@@ -4,7 +4,7 @@ import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
 import { loadSpaces } from './spaces.js';
 import { imgUrl, checkText } from './community.js';
 
-export const APP_VERSION = '2026.10.22';
+export const APP_VERSION = '2026.10.23';
 
 export const INQUIRY_KINDS = {
   partner: '제휴 혜택 제공',
@@ -25,9 +25,11 @@ export function register(route) {
       const n = await c.db.prepare('SELECT COUNT(*) AS n, SUM(visible) AS v FROM spaces').first();
       out.spaces = n?.n ?? 0;
       out.open = n?.v ?? 0;
-      const m = (await c.db.prepare(`SELECT k, v FROM meta WHERE k IN ('seed', 'host_ok_at', 'cron_at')`).all()).results || [];
+      const m = (await c.db.prepare(`SELECT k, v FROM meta WHERE k IN ('seed', 'host_ok_at', 'cron_at', 'domain_live')`).all()).results || [];
       const mv = Object.fromEntries(m.map((r) => [r.k, r.v]));
       out.seed = mv.seed || null;
+      // 대표 도메인 — ssople.com 으로 첫 접속이 들어온 때 (그 전엔 null)
+      out.domain = { primary: 'ssople.com', since: mv.domain_live || null };
       out.sync = { host: mv.host_ok_at || null, cron: mv.cron_at || null };
     } catch (e) { out.ok = false; out.error = String(e.message || e); }
     return out;

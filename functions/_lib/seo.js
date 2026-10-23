@@ -1,5 +1,5 @@
 // 검색 노출용 — 지역 페이지 주소, 구조화 데이터(JSON-LD), 검색엔진 소유 확인 태그
-import { getSettings } from './db.js';
+import { getSettings, getMeta, setMeta } from './db.js';
 import { photoUrl } from './spaces.js';
 import { AREA_GUIDES } from './area-guides.js';
 import { MAGAZINE } from './magazine-index.js';
@@ -182,14 +182,58 @@ ${areaGuideHtml(a)}`;
 
 /* ---------- 대표 주소(정식 도메인)로 보내기 ---------- */
 /** 설정 seo.canonical_host(예: ssople.com)가 있고, 지금 접속한 주소가 *.pages.dev 이면 정식 도메인으로 301 */
+/* ---------- 대표 주소 (ssople.com) ----------
+ * 도메인을 Cloudflare Pages(ssople 프로젝트)의 사용자 지정 도메인으로 연결하면 그때부터 자동으로 대표 주소가 된다.
+ *  - ssople.com 으로 들어온 첫 요청을 보고 "도메인 연결됨"을 DB에 적어 둔다 (DNS가 아직 아임웹을 가리키면 이 요청은 여기 오지 않는다)
+ *  - 그 뒤로 ssople.pages.dev 와 www.ssople.com 접속은 ssople.com 으로 301 이동, 정식 주소·사이트맵·RSS도 ssople.com 기준
+ *  - 관리자 설정 "대표 주소"에 값을 적으면 그 값이 우선 (되돌리려면 ssople.pages.dev 를 적으면 된다)
+ * 미리보기 배포(브랜치.ssople.pages.dev)와 /api·/admin 은 옮기지 않는다. */
+export const PRIMARY_HOST = 'ssople.com';
+const normHost = (h) => String(h || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '');
+let live = null;
+let liveAt = 0;
+/** 도메인이 이 홈페이지로 연결된 적이 있는지 (한 번 연결되면 true, 아니면 1분마다 다시 확인) */
+export async function domainLive(env) {
+  if (live === true) return true;
+  if (!env || !env.DB) return false;
+  if (live === false && Date.now() - liveAt < 60e3) return false;
+  try { live = !!(await getMeta(env.DB, 'domain_live')); } catch { live = false; }
+  liveAt = Date.now();
+  return live;
+}
+/** 테스트용 — 기억해 둔 연결 상태를 지운다 */
+export function _resetDomainCache() { live = null; liveAt = 0; }
+/** ssople.com·www.ssople.com 으로 들어온 요청이면 "도메인 연결됨"을 남긴다 */
+export async function markDomainLive(env, url) {
+  if (live === true || !env || !env.DB) return;
+  if (url.hostname.toLowerCase().replace(/^www\./, '') !== PRIMARY_HOST) return;
+  try {
+    if (!(await getMeta(env.DB, 'domain_live'))) await setMeta(env.DB, 'domain_live', new Date().toISOString());
+    live = true;
+  } catch { /* meta 표가 아직 없으면 다음 요청에서 다시 */ }
+}
+/** 지금 쓸 대표 도메인 — 설정값 > 연결된 ssople.com > (없음: 접속한 주소 그대로) */
+export function canonicalHostOf(url, st, isLive) {
+  const set = normHost(st && st['seo.canonical_host']);
+  if (set) return set;
+  const h = url.hostname.toLowerCase();
+  if (h === PRIMARY_HOST || h === 'www.' + PRIMARY_HOST || isLive) return PRIMARY_HOST;
+  return '';
+}
 export async function canonicalRedirect(env, request) {
-  if (!env.DB) return null;
-  let host = '';
-  try { host = String((await getSettings(env.DB))['seo.canonical_host'] || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''); } catch { return null; }
-  if (!host) return null;
   const url = new URL(request.url);
-  // 정식 배포 주소(ssople.pages.dev)와 www 붙은 주소만 보내고, 미리보기 배포(브랜치.ssople.pages.dev)는 그대로 둔다
+  let st = {};
+  try { if (env && env.DB) st = await getSettings(env.DB); } catch { st = {}; }
+  await markDomainLive(env, url);
+  const host = canonicalHostOf(url, st, await domainLive(env));
+  if (!host) return null;
   const bare = (h) => h.replace(/^www\./, '');
+  // 대표 도메인인데 http 로 들어왔으면 https 로
+  if (url.hostname === host && url.protocol === 'http:' && !/^(localhost|127\.)/.test(url.hostname)) {
+    url.protocol = 'https:'; url.port = '';
+    return Response.redirect(url.toString(), 301);
+  }
+  // 정식 배포 주소(ssople.pages.dev)와 www 붙은 주소만 보내고, 미리보기 배포(브랜치.ssople.pages.dev)는 그대로 둔다
   const isPagesDev = /^[^.]+\.pages\.dev$/.test(url.hostname);
   const isWwwTwin = url.hostname !== host && bare(url.hostname) === bare(host);
   if (url.hostname === host || (!isPagesDev && !isWwwTwin)) return null;
