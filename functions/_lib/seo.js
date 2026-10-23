@@ -73,14 +73,20 @@ export const featList = (s) => {
   return out;
 };
 
+/** 검색 결과에 보이는 웹사이트 이름·설명 (첫 화면 title·description, og:site_name 과 같게) */
+export const SITE_NAME = '쏘플 파티룸 l 프라이빗 공간 · 파티룸은 쏘플!';
+export const SITE_DESC = '즐거움이 가득한 쏘플 파티룸! 국내 No.1. 서울/수원/부산/광주/인천/대전/대구 등 전국 120여개 파티룸, 공간대여, 파티룸창업, 공실 솔루션. 생일파티·브라이덜샤워·기념일·송년회·회식·워크숍·동창회·촬영 대관까지 노래방·바베큐·루프탑 파티룸을 네이버 예약으로 바로 예약하세요.';
+/** 네이버 서치어드바이저 소유 확인 (https://ssople.com) — 화면 머리 부분에 고정으로 들어가 있다 */
+export const NAVER_VERIFY = '2b49069616c8ffe8d562333d7fa408da4fbbe2d3';
+
 export function orgJsonLd(origin, st = {}) {
   const same = ['sns.instagram', 'sns.blog', 'sns.youtube', 'kakao.url'].map((k) => st[k]).filter(Boolean);
   return {
     '@context': 'https://schema.org', '@type': 'Organization', '@id': origin + '/#org',
-    name: '쏘플파티룸', alternateName: ['SSOPLE', 'SSOPLE Party Room', '쏘플'], url: origin + '/',
+    name: '쏘플파티룸', alternateName: ['쏘플 파티룸', 'SSOPLE', 'SSOPLE Party Room', '쏘플'], url: origin + '/',
     logo: { '@type': 'ImageObject', url: origin + '/assets/img/logo.png', width: 551, height: 211 },
     image: origin + '/assets/img/og.jpg',
-    description: '2016년부터 전국에 파티룸을 기획·운영해 온 브랜드. 생일파티, 브라이덜 샤워, 송년회, 워크숍, 촬영 대관까지 낮·밤 타임으로 빌릴 수 있어요.',
+    description: SITE_DESC,
     telephone: st['cs.phone'] ? '+82-' + String(st['cs.phone']).replace(/^0/, '').replace(/[^\d-]/g, '') : undefined,
     email: st['biz.email'] || undefined,
     foundingDate: '2016', areaServed: 'KR',
@@ -92,7 +98,7 @@ export function orgJsonLd(origin, st = {}) {
 }
 export function websiteJsonLd(origin) {
   return {
-    '@context': 'https://schema.org', '@type': 'WebSite', '@id': origin + '/#website', url: origin + '/', name: '쏘플파티룸', inLanguage: 'ko-KR',
+    '@context': 'https://schema.org', '@type': 'WebSite', '@id': origin + '/#website', url: origin + '/', name: SITE_NAME, alternateName: ['쏘플 파티룸', '쏘플파티룸', '쏘플', 'SSOPLE'], description: SITE_DESC, inLanguage: 'ko-KR',
     publisher: { '@id': origin + '/#org' },
     potentialAction: { '@type': 'SearchAction', target: { '@type': 'EntryPoint', urlTemplate: origin + '/rooms?q={search_term_string}' }, 'query-input': 'required name=search_term_string' },
   };
@@ -157,7 +163,8 @@ export async function verifyTags(env) {
   try {
     const st = await getSettings(env.DB);
     let out = '';
-    if (st['seo.naver_verify']) out += `<meta name="naver-site-verification" content="${esc(st['seo.naver_verify'])}">`;
+    // 기본 네이버 확인 코드는 화면 파일에 이미 들어 있어서, 설정에 다른 코드를 넣었을 때만 덧붙인다
+    if (st['seo.naver_verify'] && st['seo.naver_verify'].trim() !== NAVER_VERIFY) out += `<meta name="naver-site-verification" content="${esc(st['seo.naver_verify'].trim())}">`;
     if (st['seo.google_verify']) out += `<meta name="google-site-verification" content="${esc(st['seo.google_verify'])}">`;
     if (st['seo.bing_verify']) out += `<meta name="msvalidate.01" content="${esc(st['seo.bing_verify'])}">`;
     return out;
