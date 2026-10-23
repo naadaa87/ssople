@@ -250,6 +250,20 @@ export async function recordNaverHit(env, request, url, status) {
   } catch { /* 기록은 없어도 된다 */ }
 }
 
+/** 링크 미리보기 로봇(카카오톡·페이스북·슬랙 등) — 미리보기가 안 뜰 때 로봇이 실제로 다녀갔는지 확인용 */
+const PREVIEW_BOT = /kakaotalk-scrap|facebookexternalhit|Slackbot|Twitterbot|TelegramBot|Discordbot|LinkedInBot|Line\/|WhatsApp/i;
+export const isPreviewBot = (request) => PREVIEW_BOT.test(request.headers.get('user-agent') || '');
+export async function recordPreviewHit(env, request, url, status) {
+  if (!env || !env.DB) return;
+  try {
+    const cf = request.cf || {};
+    const hit = { at: new Date().toISOString(), host: url.hostname, path: url.pathname, status: status || null, ua: String(request.headers.get('user-agent') || '').slice(0, 120), country: cf.country || null, org: cf.asOrganization || null };
+    let prev = [];
+    try { prev = JSON.parse((await getMeta(env.DB, 'preview_hits')) || '[]'); } catch { prev = []; }
+    await setMeta(env.DB, 'preview_hits', JSON.stringify([hit, ...(Array.isArray(prev) ? prev : [])].slice(0, 20)));
+  } catch { /* 기록은 없어도 된다 */ }
+}
+
 export async function canonicalRedirect(env, request) {
   const url = new URL(request.url);
   let st = {};
