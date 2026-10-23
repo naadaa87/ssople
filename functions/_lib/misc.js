@@ -25,11 +25,13 @@ export function register(route) {
       const n = await c.db.prepare('SELECT COUNT(*) AS n, SUM(visible) AS v FROM spaces').first();
       out.spaces = n?.n ?? 0;
       out.open = n?.v ?? 0;
-      const m = (await c.db.prepare(`SELECT k, v FROM meta WHERE k IN ('seed', 'host_ok_at', 'cron_at', 'domain_live')`).all()).results || [];
+      const m = (await c.db.prepare(`SELECT k, v FROM meta WHERE k IN ('seed', 'host_ok_at', 'cron_at', 'domain_live', 'naver_hits')`).all()).results || [];
       const mv = Object.fromEntries(m.map((r) => [r.k, r.v]));
       out.seed = mv.seed || null;
       // 대표 도메인 — ssople.com 으로 첫 접속이 들어온 때 (그 전엔 null)
       out.domain = { primary: 'ssople.com', since: mv.domain_live || null };
+      // 네이버 소유 확인·수집 로봇이 다녀간 기록 (최근 5건)
+      try { out.naver = JSON.parse(mv.naver_hits || '[]').slice(0, 5); } catch { out.naver = []; }
       out.sync = { host: mv.host_ok_at || null, cron: mv.cron_at || null };
     } catch (e) { out.ok = false; out.error = String(e.message || e); }
     return out;

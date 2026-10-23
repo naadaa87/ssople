@@ -227,6 +227,23 @@ export function canonicalHostOf(url, st, isLive) {
   if (h === PRIMARY_HOST || h === 'www.' + PRIMARY_HOST || isLive) return PRIMARY_HOST;
   return '';
 }
+/** 네이버 소유 확인·수집 로봇이 실제로 이 홈페이지에 왔는지 남긴다 (최근 10건, IP는 저장하지 않음)
+ *  /api/health 의 naver 항목에서 볼 수 있다 — 소유확인을 눌렀는데 기록이 없으면 네이버가 아직 예전 주소(아임웹)를 보고 있는 것 */
+export const NAVER_FILE = '/naverbbbed6886d93c341e12b7ef250a11f53.html';
+export function isNaverProbe(request, url) {
+  return url.pathname === NAVER_FILE || /naver|yeti/i.test(request.headers.get('user-agent') || '');
+}
+export async function recordNaverHit(env, request, url, status) {
+  if (!env || !env.DB) return;
+  try {
+    const cf = request.cf || {};
+    const hit = { at: new Date().toISOString(), method: request.method, host: url.hostname, path: url.pathname, status: status || null, ua: String(request.headers.get('user-agent') || '').slice(0, 160), country: cf.country || null, org: cf.asOrganization || null };
+    let prev = [];
+    try { prev = JSON.parse((await getMeta(env.DB, 'naver_hits')) || '[]'); } catch { prev = []; }
+    await setMeta(env.DB, 'naver_hits', JSON.stringify([hit, ...prev].slice(0, 10)));
+  } catch { /* 기록은 없어도 된다 */ }
+}
+
 export async function canonicalRedirect(env, request) {
   const url = new URL(request.url);
   let st = {};
