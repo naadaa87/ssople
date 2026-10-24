@@ -5,7 +5,7 @@ import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
 import { loadSpaces } from './spaces.js';
 import { imgUrl, checkText } from './community.js';
 
-export const APP_VERSION = '2026.10.24a';
+export const APP_VERSION = '2026.10.24b';
 
 export const INQUIRY_KINDS = {
   partner: '제휴 혜택 제공',

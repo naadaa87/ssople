@@ -141,7 +141,7 @@
     const max = Math.max(1, ...d.clicks7.map((r) => r.n));
     main.innerHTML = hd('한눈에', '오늘 처리할 일과 예약 데이터 상태를 먼저 보여 줘요.', d.bound.host ? `<button class="btn btn-ink btn-sm" type="button" data-sync>${icon('refresh', 'sm')}예약 지금 불러오기</button>` : '')
       + `<div class="a-grid c4">${todo.map(tile).join('')}</div>`
-      + seasonCard(d.season)
+      + seasonCard(d.season, d.seasonPlan)
       + `<div class="a-grid c4" style="margin-top:14px">
           <div class="tile"><div class="k">활동 회원</div><div class="v">${SP.fmt(c.users)}</div><div class="s">이번 주 가입 ${c.users7}명</div></div>
           <div class="tile"><div class="k">이번 주 새 글</div><div class="v">${c.posts7}</div><div class="s">후기·꿀팁·질문·자유</div></div>
@@ -157,44 +157,326 @@
       const b = e.target.closest('[data-sync]'); if (b) { await runSync(b); overview(); }
     };
   }
-  function seasonCard(sz) {
-    if (!sz) return '';
-    const head = [sz.now.length ? `지금 <b>${sz.now.map((n) => esc(n.name)).join(' · ')}</b>` : '', sz.next ? `다음 <b>${esc(sz.next.name)}</b> <span class="muted">${szDday(sz.next.dday)} · ${szMd(sz.next.start)}부터</span>` : ''].filter(Boolean).join('<span class="sz-dot"></span>');
-    return `<div class="a-card sz-ov" style="margin-top:14px"><div class="a-card-hd"><h2>${icon('flag', 'sm')} 시즌 준비</h2><div class="row">${sz.late ? `<span class="badge red">지난 마감 ${sz.late}</span>` : ''}<span class="badge mute">일주일 안 ${sz.week}</span><button class="btn btn-ghost btn-sm" type="button" data-go="season">자세히</button></div></div>
+  function seasonCard(sz, sp) {
+    if (!sz && !sp) return '';
+    const top = [
+      ...((sp && sp.top) || []).map((x) => ({ due: x.due, dday: x.dday, title: x.title, sub: x.sub })),
+      ...((sz && sz.top) || []).map((x) => ({ due: x.due, dday: x.dday, title: x.title, sub: x.season })),
+    ].sort((a, b) => a.due.localeCompare(b.due)).slice(0, 6);
+    const late = (sz ? sz.late : 0) + (sp ? sp.late : 0);
+    const week = (sz ? sz.week : 0) + (sp ? sp.week : 0);
+    const t = sp && sp.today;
+    const head = t ? `오늘 ${szMd(t.d)}(${szW(t.d)}) ${gr(t.g, true)}${t.events.length ? `<span class="muted">${t.events.map((n) => esc(n)).join(' · ')}</span>` : ''}`
+      : sz && sz.now.length ? `지금 <b>${sz.now.map((n) => esc(n.name)).join(' · ')}</b>` : '';
+    return `<div class="a-card sz-ov" style="margin-top:14px"><div class="a-card-hd"><h2>${icon('flag', 'sm')} 시즌 준비</h2><div class="row">${late ? `<span class="badge red">늦은 일 ${late}</span>` : ''}<span class="badge mute">일주일 안 ${week}</span><button class="btn btn-ghost btn-sm" type="button" data-go="season">자세히</button></div></div>
       <p class="sz-ov-head">${head || '다가오는 시즌이 없어요.'}</p>
-      ${sz.top.length ? `<ul class="sz-ov-list">${sz.top.map((x) => `<li class="${x.dday < 0 ? 'late' : ''}"><b>${szMd(x.due)}</b><span>${esc(x.title)}</span><em>${esc(x.season)} · ${szDday(x.dday)}</em></li>`).join('')}</ul>` : '<p class="a-note" style="margin-top:8px">일주일 안에 챙길 일이 없어요.</p>'}</div>`;
+      ${top.length ? `<ul class="sz-ov-list">${top.map((x) => `<li class="${x.dday < 0 ? 'late' : ''}"><b>${szMd(x.due)}</b><span>${esc(x.title)}</span><em>${esc(x.sub || '')} · ${szDday(x.dday)}</em></li>`).join('')}</ul>` : '<p class="a-note" style="margin-top:8px">일주일 안에 챙길 일이 없어요.</p>'}</div>`;
   }
 
-  /* ================= 시즌 준비 ================= */
-  const SZ = { show: 'open', sel: '' };
+  /* ================= 시즌 준비 =================
+     기획서(2026 하반기 · 2027) 운영판 — 이번 주 · 달력 · 노출 일정 · 일정 모음 · 기준표
+     + 운영 체크(전 지점 공통 시즌 할 일, 고객 데이터 계절지수 기준) */
+  const SZ = { tab: 'week', wk: '', ym: '', show: 'open', op: 'left', evP: '', evM: '', evG: '', evKey: false, evChk: false, evPast: false, refP: '' };
+  try { const t = localStorage.getItem('sp.adm.szTab'); if (t) SZ.tab = t; } catch { /* 무시 */ }
+  const SZD = { ver: null, data: null, marks: new Map(), canEdit: false, today: '', ev: [], evById: new Map(), ops: null, T: new Map(), mi: {}, miSrc: '' };
+  const WD = ['일', '월', '화', '수', '목', '금', '토'];
+  const GRN = { S: '최성수기', A: '성수', B: '기본', C: '평일·비수기' };
+  const GV = { S: 4, A: 3, B: 2, C: 1 };
   const szMd = (d) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
   const szDday = (n) => (n === 0 ? '오늘' : n > 0 ? `D-${n}` : `${-n}일 지남`);
+  const szW = (d) => WD[new Date(d + 'T00:00:00Z').getUTCDay()];
+  const szAdd = (d, n) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const szDiff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
+  const szMon = (d) => szAdd(d, -((new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7));
+  const szYm = (ym, n) => { let y = +ym.slice(0, 4), m = +ym.slice(5, 7) + n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return `${y}-${String(m).padStart(2, '0')}`; };
+  const szMdw = (d) => `${szMd(d)}(${szW(d)})`;
+  const gr = (g, long) => (g ? `<span class="gr g${g}" title="${GRN[g] || ''}">${g}${long ? `<i>${GRN[g]}</i>` : ''}</span>` : '');
   const SZ_VIEW = () => Object.fromEntries(NAV.filter((n) => n[0] !== 'g').map((n) => [n[0], n[1]]));
-  async function season() {
-    const d = await SP.get('/api/admin/seasons');
-    const T = new Map();
-    const tid = (t) => t.skey + '|' + (t.tkey || 'c' + t.id);
-    d.seasons.forEach((i) => i.tasks.forEach((t) => T.set(tid(t), { ...t, season: i.name })));
+  const SZ_TABS = [['week', '이번 주'], ['cal', '달력'], ['open', '노출 일정'], ['ev', '일정 모음'], ['ref', '기준표'], ['ops', '운영 체크']];
+  const CAL_MIN = '2026-10', CAL_MAX = '2027-12';
+
+  const mkOf = (k) => SZD.marks.get(k) || null;
+  const mDone = (k) => !!(mkOf(k) && mkOf(k).done);
+  const planOf = (id) => SZD.data.plans.find((p) => p.id === id);
+  const byG = (a, b) => (GV[b.g] - GV[a.g]) || a.s.localeCompare(b.s);
+  const onDay = (e, d) => (e.ds ? e.ds.includes(d) : e.s <= d && d <= e.e);
+  const inWeek = (e, a, b) => (e.ds ? e.ds.some((x) => x >= a && x <= b) : e.s <= b && e.e >= a);
+  const leadOf = (e) => (e.od ? szDiff(e.od, e.s) : null);
+  const span = (s, e) => (s === e ? szMdw(s) : `${szMdw(s)}~${szMdw(e)}`);
+
+  /** 고친 날짜·등급·메모를 얹은 일정 목록 (체크가 바뀔 때마다 다시 만든다) */
+  function szIndex() {
+    SZD.ev = SZD.data.events.map((e) => {
+      const m = mkOf('e:' + e.id);
+      const v = (m && m.val) || {};
+      const s = v.s || e.s, en = v.e || e.e, moved = !!(v.s || v.e);
+      return { ...e, s, e: en, g: v.g || e.g, od: v.od || e.od, ds: moved ? null : e.ds || null, lb: moved ? span(s, en) : e.lb,
+        fixed: !!(v.s || v.e || v.g || v.od), memo: (m && m.memo) || '', owner: (m && m.owner) || '', ok: !!(m && m.done) };
+    });
+    SZD.evById = new Map(SZD.ev.map((e) => [e.id, e]));
+  }
+  function dayOf(d) {
+    const r = SZD.data.days[d];
+    if (!r) return null;
+    const m = mkOf('d:' + d);
+    const g = (m && m.val && m.val.g) || r[0];
+    return { d, g, g0: r[0], base: r[1], hol: r[2], ev: r[3], pr: r[4], memo: r[5], note: (m && m.memo) || '', moved: g !== r[0] };
+  }
+  const evsOn = (d) => SZD.ev.filter((e) => onDay(e, d)).sort(byG);
+
+  /** 이번 주(월~일)에 챙길 것 — 메뉴 숫자와 이번 주 화면이 같은 기준을 쓴다 */
+  function weekWork(mon) {
+    const T0 = SZD.today, sun = szAdd(mon, 6), cur = mon === szMon(T0);
+    const w26 = SZD.data.weeks.find((w) => w.s === mon);
+    const todo = [];
+    if (w26) w26.todo.forEach(([t, due], j) => todo.push({ k: `w:26-${w26.i}:${j}`, title: t, due: due || w26.e, tag: `${w26.i}주차` }));
+    const monthAll = [];
+    for (const mo of SZD.data.months) {
+      [['o', mo.ops, '운영 포인트'], ['p', mo.prep, '다음 달 준비']].forEach(([c, list, nm]) => list.forEach(([t, due], j) => {
+        monthAll.push({ k: `m:${mo.ym}:${c}${j}`, title: t, due, ym: mo.ym, tag: `${+mo.ym.slice(5)}월 ${nm}` });
+      }));
+    }
+    for (const x of monthAll) {
+      if (!x.due) continue;
+      if ((x.due >= mon && x.due <= sun) || (cur && x.due < mon && x.due >= szAdd(T0, -45) && !mDone(x.k))) todo.push(x);
+    }
+    todo.sort((a, b) => a.due.localeCompare(b.due));
+    const ym = (cur ? T0 : mon).slice(0, 7);
+    const all = monthAll.filter((x) => !x.due && x.ym === ym);
+    const opens = SZD.ev.filter((e) => e.od && ((e.od >= mon && e.od <= sun) || (cur && e.od < mon && e.e >= T0 && !mDone('o:' + e.id))))
+      .sort((a, b) => a.od.localeCompare(b.od) || byG(a, b));
+    return { mon, sun, cur, w26, todo, all, opens, ym };
+  }
+  function szCounts() {
+    const w = weekWork(szMon(SZD.today));
+    const T0 = SZD.today;
+    const open = w.todo.filter((x) => !mDone(x.k)).length + w.opens.filter((e) => !mDone('o:' + e.id)).length;
+    const lateOpen = SZD.ev.filter((e) => e.od && e.od < T0 && e.e >= T0 && !mDone('o:' + e.id)).length;
+    return { week: open, lateOpen };
+  }
+
+  /* ---------- 공통 줄 ---------- */
+  function ckRow({ k, title, due, tags = '', sub = '', extra = '', nodue = '이번 달' }) {
+    const m = mkOf(k), done = !!(m && m.done);
+    const dd = due ? szDiff(SZD.today, due) : null;
+    const late = !done && dd != null && dd < 0;
+    return `<div class="sz-task${done ? ' done' : ''}${late ? ' late' : ''}" data-mk="${esc(k)}" data-title="${esc(title)}">
+        <label class="sz-chk"><input type="checkbox" data-mdone${done ? ' checked' : ''} aria-label="${esc(title)} 마쳤어요"></label>
+        <div class="sz-due">${due ? `<b>${szMd(due)}</b><span>${done ? '마침' : szDday(dd)}</span>` : `<b>·</b><span>${done ? '마침' : esc(nodue)}</span>`}</div>
+        <div class="sz-body"><div class="sz-tt">${tags}<b>${esc(title)}</b></div>${sub ? `<p>${sub}</p>` : ''}
+          ${m && (m.owner || m.memo) ? `<p class="sz-meta">${m.owner ? `<span>${icon('user', 'sm')}${esc(m.owner)}</span>` : ''}${m.memo ? `<span>${icon('edit', 'sm')}${esc(m.memo)}</span>` : ''}</p>` : ''}</div>
+        <div class="sz-acts">${extra}<button type="button" class="btn btn-ghost btn-sm" data-mnote>담당·메모</button></div></div>`;
+  }
+  const todoRow = (x) => ckRow({ k: x.k, title: x.title, due: x.due, tags: `<span class="tag">${esc(x.tag)}</span>` });
+  const openRow = (e) => ckRow({
+    k: 'o:' + e.id, title: `「${e.sn}」 노출 시작`, due: e.od, nodue: '날짜 미정', tags: gr(e.g),
+    sub: `${esc(e.lb)} 행사${e.od ? ` · ${leadOf(e)}일 앞서 열기` : e.on ? ` · ${esc(e.on)}` : ''}${e.pkg ? ` · 추천 ${esc(e.pkg)}` : ''}`,
+    extra: `<button type="button" class="btn btn-line btn-sm" data-ev="${esc(e.id)}">자세히</button>`,
+  });
+  const evRow = (e) => `<button type="button" class="sz-evr g${e.g}" data-ev="${esc(e.id)}">${gr(e.g)}<span class="sz-evr-b"><b>${esc(e.sn)}</b><span class="sz-when">${esc(e.lb)}${e.chk ? (e.ok ? ' · 확인함' : ' · <em>확인 필요</em>') : ''}</span>${e.pt ? `<span class="sz-evr-p">${esc(e.pt)}</span>` : ''}</span>${e.pkg ? `<span class="tag">${esc(e.pkg)}</span>` : ''}</button>`;
+  const dlRow = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
+  function evDl(e) {
+    const od = e.od ? `${szMdw(e.od)} · 행사 ${leadOf(e)}일 전 · ${mDone('o:' + e.id) ? '열었어요' : szDday(szDiff(SZD.today, e.od))}` : (e.on || '따로 정하지 않았어요');
+    return `<dl class="sz-dl"><dt>기간</dt><dd>${esc(e.lb)}${e.fixed ? ' <span class="badge mute">고침</span>' : ''}</dd>
+      <dt>등급</dt><dd>${gr(e.g, true)} ${esc(e.band)}</dd>${dlRow('구분', e.cat)}${dlRow('타겟', e.who)}${dlRow('홍보 포인트', e.pt)}
+      ${dlRow('홍보 내용', e.ct)}${dlRow('유치 방법', e.how)}${dlRow('추천 패키지', e.pkg)}<dt>노출 시작</dt><dd>${esc(od)}</dd>
+      ${dlRow('비고', e.note)}${dlRow('운영 메모', e.memo)}${dlRow('담당', e.owner)}</dl>`;
+  }
+
+  /* ---------- 이번 주 ---------- */
+  function szWeek() {
+    const T0 = SZD.today;
+    const w = weekWork(SZ.wk || szMon(T0));
+    const { mon, sun, cur, w26 } = w;
+    const n27 = mon >= '2026-12-28' && mon <= '2027-12-27' ? Math.floor(szDiff('2026-12-28', mon) / 7) + 1 : 0;
+    const wl = [w26 ? `2026 하반기 ${w26.i}주차` : '', n27 ? `2027 ${n27}주차` : ''].filter(Boolean).join(' · ');
+    const days = Array.from({ length: 7 }, (_, k) => szAdd(mon, k));
+    const strip = days.map((d) => {
+      const x = dayOf(d);
+      const lab = x ? (x.ev || '').split(', ').filter(Boolean)[0] || '' : '';
+      return `<button type="button" class="sz-day g${x ? x.g : 'N'}${d === T0 ? ' today' : ''}${d < T0 ? ' past' : ''}" data-day="${d}"${x ? '' : ' disabled'}>
+        <span class="w">${szW(d)}</span><b>${+d.slice(8)}</b>${x ? gr(x.g) : '<span class="gr gN">·</span>'}${x && x.hol ? `<span class="h">${esc(x.hol)}</span>` : ''}<em>${esc(lab)}</em></button>`;
+    }).join('');
+    const mo = SZD.data.months.find((m) => m.ym === w.ym);
+    const evs = SZD.ev.filter((e) => inWeek(e, mon, sun)).sort(byG);
+    const lateOpen = w.opens.filter((e) => e.od < T0 && !mDone('o:' + e.id)).length;
+    const left = w.todo.filter((x) => !mDone(x.k)).length;
+    // 운영 체크(전 지점 공통)에서 3주 안 · 지난 마감
+    const ops = cur ? [...SZD.T.values()].filter((t) => !t.done && !t.hidden && t.dday <= 21).sort((a, b) => a.due.localeCompare(b.due)) : [];
+    return `<div class="a-card sz-wk">
+        <div class="sz-wk-hd"><button class="btn btn-soft btn-sm" type="button" data-wk="-7" aria-label="지난 주">${icon('chev-l', 'sm')}</button>
+          <div class="sz-wk-t"><h2>${szMd(mon)}(월) ~ ${szMd(sun)}(일)</h2><span class="small muted">${esc(wl || '기획서 범위 밖의 주')}${cur ? ' · 이번 주' : ''}</span></div>
+          <button class="btn btn-soft btn-sm" type="button" data-wk="7" aria-label="다음 주">${icon('chev-r', 'sm')}</button>
+          ${cur ? '' : '<button class="btn btn-line btn-sm" type="button" data-wk="0">이번 주로</button>'}</div>
+        <div class="sz-days">${strip}</div>
+        <dl class="sz-wk-dl">${w26 ? `${dlRow('이번 주 핵심', w26.key)}${dlRow('요금 구간', w26.band)}${dlRow('주력 타겟', w26.who)}` : ''}
+          ${mo ? `<dt>${+mo.ym.slice(5)}월 테마</dt><dd><b>${esc(mo.theme)}</b> · ${esc(mo.price)}</dd>${w26 ? '' : dlRow('주력 타겟', mo.who)}` : ''}</dl>
+      </div>
+      <div class="sz-two eq">
+        <div class="a-card"><div class="a-card-hd"><h2>이번 주 할 일</h2><span class="small muted">${w.todo.length ? `남은 일 ${left}개` : ''}</span></div>
+          <div class="sz-list">${w.todo.map(todoRow).join('') || `<div class="a-empty">${w26 || mon < '2026-10-05' ? '이번 주 할 일이 없어요.' : '2027년은 주차별 할 일 대신 월별 할 일과 노출 시작으로 챙겨요.'}</div>`}</div>
+          ${w.all.length ? `<h3 class="sz-grp">${+w.ym.slice(5)}월 내내 챙길 것</h3><div class="sz-list">${w.all.map((x) => ckRow({ k: x.k, title: x.title, tags: `<span class="tag">${esc(x.tag)}</span>` })).join('')}</div>` : ''}</div>
+        <div class="a-card"><div class="a-card-hd"><h2>노출 시작 · 예약 오픈</h2>${lateOpen ? `<button type="button" class="btn btn-line btn-sm" data-obulk>지난 노출 정리 ${lateOpen}</button>` : ''}</div>
+          <div class="sz-list">${w.opens.map(openRow).join('') || '<div class="a-empty">이번 주에 새로 열 노출이 없어요.</div>'}</div>
+          <p class="a-note sz-foot">노출 시작일은 기획서의 예약 리드타임 기준이에요. 열었으면 체크해 주세요.</p></div>
+      </div>
+      <div class="a-card"><div class="a-card-hd"><h2>이번 주 일정</h2><span class="small muted">누르면 홍보 포인트·유치 방법이 보여요</span></div>
+        <div class="sz-evs">${evs.map(evRow).join('') || '<div class="a-empty">이번 주에 걸친 일정이 없어요.</div>'}</div></div>
+      ${cur ? `<div class="a-card"><div class="a-card-hd"><h2>운영 체크 · 전 지점 공통</h2><button type="button" class="btn btn-ghost btn-sm" data-tab="ops">전체 보기</button></div>
+        <div class="sz-list">${ops.slice(0, 6).map((t) => opsRow(t, t.season)).join('') || '<div class="a-empty">3주 안에 챙길 운영 일이 없어요.</div>'}</div>
+        ${ops.length > 6 ? `<p class="a-note sz-foot">나머지 ${ops.length - 6}개는 「운영 체크」에 있어요.</p>` : ''}</div>` : ''}`;
+  }
+
+  /* ---------- 달력 ---------- */
+  function szCal() {
+    const T0 = SZD.today;
+    let ym = SZ.ym || T0.slice(0, 7);
+    if (ym < CAL_MIN) ym = CAL_MIN;
+    if (ym > CAL_MAX) ym = CAL_MAX;
+    SZ.ym = ym;
+    const y = +ym.slice(0, 4), mm = +ym.slice(5, 7);
+    const nd = new Date(Date.UTC(y, mm, 0)).getUTCDate();
+    const pad = (new Date(ym + '-01T00:00:00Z').getUTCDay() + 6) % 7;
+    const cnt = { S: 0, A: 0, B: 0, C: 0 };
+    const cells = Array.from({ length: pad }, () => '<span class="sz-cd blank" aria-hidden="true"></span>');
+    for (let i = 1; i <= nd; i++) {
+      const d = `${ym}-${String(i).padStart(2, '0')}`;
+      const x = dayOf(d);
+      if (x) cnt[x.g]++;
+      const labs = x ? (x.ev || '').split(', ').filter(Boolean) : [];
+      const wd = new Date(d + 'T00:00:00Z').getUTCDay();
+      cells.push(`<button type="button" class="sz-cd g${x ? x.g : 'N'}${d === T0 ? ' today' : ''}${wd === 0 || (x && x.hol) ? ' sun' : wd === 6 ? ' sat' : ''}" data-day="${d}"${x ? '' : ' disabled'} aria-label="${mm}월 ${i}일${x ? ` ${x.g}등급` : ''}">
+        <span class="n">${i}</span>${x ? `<span class="l">${x.g}</span>` : ''}${x && x.hol ? `<span class="h">${esc(x.hol)}</span>` : ''}
+        <span class="t">${labs.slice(0, 2).map((l) => `<span>${esc(l)}</span>`).join('')}${labs.length > 2 ? `<span class="more">외 ${labs.length - 2}</span>` : ''}</span>
+        ${x && (x.note || x.moved) ? '<i class="mk" title="고쳤거나 메모가 있는 날"></i>' : ''}</button>`);
+    }
+    const mo = SZD.data.months.find((m) => m.ym === ym);
+    const idx = SZD.mi[mm];
+    const weeks = SZD.data.weeks.filter((w) => w.s.slice(0, 7) === ym || w.e.slice(0, 7) === ym);
+    const mlist = (c, list, nm) => list.map(([t, due], j) => ckRow({ k: `m:${ym}:${c}${j}`, title: t, due, tags: `<span class="tag">${nm}</span>` })).join('');
+    return `<div class="a-card sz-calc">
+        <div class="sz-wk-hd"><button class="btn btn-soft btn-sm" type="button" data-cm="-1" aria-label="지난 달"${ym <= CAL_MIN ? ' disabled' : ''}>${icon('chev-l', 'sm')}</button>
+          <div class="sz-wk-t"><h2>${y}년 ${mm}월</h2><span class="small muted">${y === 2026 ? '2026 하반기 기획서' : '2027 기획서'}</span></div>
+          <button class="btn btn-soft btn-sm" type="button" data-cm="1" aria-label="다음 달"${ym >= CAL_MAX ? ' disabled' : ''}>${icon('chev-r', 'sm')}</button>
+          ${ym === T0.slice(0, 7) ? '' : '<button class="btn btn-line btn-sm" type="button" data-cm="0">이번 달로</button>'}
+          <div class="sz-legend">${['S', 'A', 'B', 'C'].map((g) => `<span>${gr(g)}${cnt[g]}일</span>`).join('')}</div></div>
+        ${mo ? `<dl class="sz-wk-dl"><dt>테마</dt><dd><b>${esc(mo.theme)}</b></dd>${dlRow('핵심 일정', mo.key)}${dlRow('주력 타겟', mo.who)}${dlRow('요금 운용', mo.price)}
+          ${idx != null ? `<dt>계절지수</dt><dd>${idx} <span class="small muted">고객 데이터 이용월 기준, 연평균 100</span></dd>` : ''}</dl>` : ''}
+        <div class="sz-grid" role="grid"><div class="sz-gh">${['월', '화', '수', '목', '금', '토', '일'].map((x) => `<span>${x}</span>`).join('')}</div><div class="sz-gb">${cells.join('')}</div></div>
+        <p class="a-note sz-foot">날짜를 누르면 그날 일정과 추천 상품이 보여요. 빨강 S 최성수기(할증), 주황 A 성수, 흰색 B 기본, 파랑 C 평일·비수기예요.</p>
+      </div>
+      ${mo && (mo.ops.length || mo.prep.length) ? `<div class="sz-two">
+          <div class="a-card"><div class="a-card-hd"><h2>${mm}월 운영 포인트</h2></div><div class="sz-list">${mlist('o', mo.ops, '운영 포인트')}</div></div>
+          <div class="a-card"><div class="a-card-hd"><h2>다음 달 준비</h2><span class="small muted">이번 달 안에 끝내기</span></div><div class="sz-list">${mlist('p', mo.prep, '다음 달 준비')}</div></div></div>` : ''}
+      ${weeks.length ? `<div class="a-card"><div class="a-card-hd"><h2>${mm}월 주차별 할 일</h2></div><div class="sz-wkl">${weeks.map((wk) => {
+        const dn = wk.todo.filter((_, j) => mDone(`w:26-${wk.i}:${j}`)).length;
+        return `<button type="button" class="sz-wkb${wk.s <= T0 && T0 <= wk.e ? ' cur' : ''}" data-gowk="${wk.s}"><b>${wk.i}주차</b><span class="sz-when">${szMd(wk.s)}~${szMd(wk.e)}</span><span class="sz-wkb-k">${esc(wk.key)}</span><em>${dn}/${wk.todo.length}</em></button>`;
+      }).join('')}</div></div>` : ''}`;
+  }
+
+  /* ---------- 노출 일정 ---------- */
+  function szOpen() {
+    const T0 = SZD.today;
+    const all = SZD.ev.filter((e) => e.od || e.on);
+    const left = (e) => !mDone('o:' + e.id) && e.e >= T0;
+    const list = SZ.op === 'all' ? all : all.filter(left);
+    const late = all.filter((e) => left(e) && e.od && e.od < T0);
+    const dated = list.filter((e) => e.od).sort((a, b) => a.od.localeCompare(b.od) || byG(a, b));
+    const undated = list.filter((e) => !e.od).sort((a, b) => a.s.localeCompare(b.s));
+    let html = '', cur = '';
+    for (const e of dated) {
+      const m = e.od.slice(0, 7);
+      if (m !== cur) { if (cur) html += '</div>'; cur = m; html += `<h3 class="sz-grp">${+m.slice(0, 4)}년 ${+m.slice(5)}월</h3><div class="sz-list">`; }
+      html += openRow(e);
+    }
+    if (cur) html += '</div>';
+    if (undated.length) html += `<h3 class="sz-grp">날짜가 정해지면 바로 열 것</h3><div class="sz-list">${undated.map(openRow).join('')}</div>`;
+    return `<div class="a-card"><div class="a-card-hd"><h2>노출 시작 · 예약 오픈 일정</h2><div class="row" style="gap:8px">${late.length ? `<button type="button" class="btn btn-line btn-sm" data-obulk>지난 노출 정리 ${late.length}</button>` : ''}${seg('szOp', [['left', '남은 것'], ['all', '지난 것까지 전체']], SZ.op)}</div></div>
+        <p class="a-note">예약이 들어오기 전에 노출을 먼저 시작해요. 연휴는 3주 전, 할로윈은 5주 전, 송년회·크리스마스는 4~6주 전이 기준이에요. 열었으면 체크해 두면 운영진 모두에게 똑같이 보여요.</p>
+        ${html || '<div class="a-empty">남은 노출 일정이 없어요.</div>'}</div>`;
+  }
+
+  /* ---------- 일정 모음 ---------- */
+  function szEvents() {
+    const months = [...new Set(SZD.ev.map((e) => e.s.slice(0, 7)))].sort();
+    const list = SZD.ev.filter((e) => (!SZ.evP || e.p === SZ.evP) && (!SZ.evM || (e.s.slice(0, 7) <= SZ.evM && e.e.slice(0, 7) >= SZ.evM))
+      && (!SZ.evG || e.g === SZ.evG) && (!SZ.evKey || e.key) && (!SZ.evChk || (e.chk && !e.ok)) && (SZ.evPast || SZ.evM || e.e >= SZD.today)).sort((a, b) => a.s.localeCompare(b.s) || byG(a, b));
+    const card = (e) => `<details class="a-card sz-evc g${e.g}" data-eid="${esc(e.id)}"><summary>${gr(e.g)}<span class="sz-evc-b"><b>${esc(e.n)}</b>
+        <span class="sz-when">${esc(e.lb)} · ${esc(e.cat)}${e.key && e.p === '27' ? ' · 주요' : ''}${e.chk ? (e.ok ? ' · 확인함' : ' · <em>확인 필요</em>') : ''}${e.od ? ` · 노출 ${szMd(e.od)}${mDone('o:' + e.id) ? ' 열었음' : ''}` : ''}</span></span></summary>
+        ${evDl(e)}<div class="row sz-sec-ft"><button type="button" class="btn btn-line btn-sm" data-ev="${esc(e.id)}">${icon('edit', 'sm')}${SZD.canEdit ? '확인·메모·날짜 고치기' : '확인·메모'}</button></div></details>`;
+    return `<div class="a-card sz-filter">
+        <div class="sz-fr">${seg('szEvP', [['', '전체'], ['26', '2026 하반기'], ['27', '2027']], SZ.evP)}
+          <select class="select sz-fm" id="szEvM" aria-label="달"><option value="">모든 달</option>${months.map((m) => `<option value="${m}"${m === SZ.evM ? ' selected' : ''}>${+m.slice(0, 4)}년 ${+m.slice(5)}월</option>`).join('')}</select></div>
+        <div class="sz-fr">${seg('szEvG', [['', '모든 등급'], ['S', 'S'], ['A', 'A'], ['B', 'B'], ['C', 'C']], SZ.evG)}
+          <label class="check"><input type="checkbox" id="szEvKey"${SZ.evKey ? ' checked' : ''}> 주요 일정만</label>
+          <label class="check"><input type="checkbox" id="szEvChk"${SZ.evChk ? ' checked' : ''}> 확인 필요만</label>
+          <label class="check"><input type="checkbox" id="szEvPast"${SZ.evPast || SZ.evM ? ' checked' : ''}${SZ.evM ? ' disabled' : ''}> 지난 일정도</label>
+          <span class="small muted">${list.length}개</span></div></div>
+      ${list.map(card).join('') || '<div class="a-card"><div class="a-empty">조건에 맞는 일정이 없어요.</div></div>'}`;
+  }
+
+  /* ---------- 기준표 ---------- */
+  function szRef() {
+    const pid = SZ.refP || (SZD.today <= '2026-12-31' ? '26' : '27');
+    const p = planOf(pid);
+    const ul = (a) => `<ul class="sz-pts">${a.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    const tbl = (heads, rows) => `<div class="sz-tblw"><table class="a-tbl sz-tbl"><thead><tr>${heads.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    const sec = (title, body, note = '') => `<div class="a-card"><div class="a-card-hd"><h2>${title}</h2>${note ? `<span class="small muted">${note}</span>` : ''}</div>${body}</div>`;
+    const grades = `<div class="sz-gds">${p.grades.map(([g, kind, how, n]) => `<div class="sz-gd g${g}">${gr(g)}<b>${esc(kind)}</b><p>${esc(how)}</p><span class="small muted">${pid === '27' ? `연간 ${esc(n)}일` : `일정 ${esc(n)}개`}</span></div>`).join('')}</div>`;
+    const targets = p.targets.map(([name, when, need, msg, ch, pkg, warn]) => `<details class="sz-tg"><summary><b>${esc(name)}</b><span class="sz-when">${esc(when)}</span></summary>
+        <dl class="sz-dl">${dlRow('니즈', need)}${dlRow('핵심 메시지', msg)}${dlRow('유치 채널', ch)}${dlRow('추천 패키지', pkg)}${dlRow('주의점', warn)}</dl></details>`).join('');
+    const chs = p.channels.map((c, i) => {
+      const k = `c:${pid}-${i}`, m = mkOf(k), last = m && m.val && m.val.last;
+      const ago = last ? szDiff(last, SZD.today) : null;
+      return `<div class="sz-ch" data-mk="${esc(k)}" data-title="${esc(c[0])}"><div class="sz-ch-b"><b>${esc(c[0])}</b><p>${esc(c[1])}</p><p class="small muted">${esc(c[2])} · ${esc(c[3])}</p>
+          ${m && (m.owner || m.memo) ? `<p class="sz-meta">${m.owner ? `<span>${icon('user', 'sm')}${esc(m.owner)}</span>` : ''}${m.memo ? `<span>${icon('edit', 'sm')}${esc(m.memo)}</span>` : ''}</p>` : ''}</div>
+        <div class="sz-ch-s">${last ? `<b>${szMd(last)}</b><span>${ago === 0 ? '오늘 게시' : `${ago}일 전 게시`}</span>` : '<span class="muted">게시 기록 없음</span>'}</div>
+        <div class="sz-acts"><button type="button" class="btn btn-line btn-sm" data-chpost>오늘 올렸어요</button><button type="button" class="btn btn-ghost btn-sm" data-mnote>담당·메모</button></div></div>`;
+    }).join('');
+    const confirms = p.confirms.map(([item, info], i) => ckRow({ k: `q:${pid}-${i}`, title: item, sub: esc(info), nodue: '발표 확인' })).join('');
+    return `<div class="sz-reftop">${seg('szRefP', [['26', '2026 하반기 (10~12월)'], ['27', '2027 (1~12월)']], pid)}<span class="small muted">작성 기준일 ${esc(p.base.replace(/-/g, '.'))} · ${esc(p.file)}</span></div>
+      ${sec('등급 정의', grades, '등급은 요금 운용 방향이에요. 실제 금액은 지점별 요금표를 따라요.')}
+      <div class="sz-two">${sec('운용 원칙', ul(p.principles))}${sec(pid === '27' ? '2027년 달력의 특징' : '2026년 하반기의 요일 특이점', ul(p.features))}</div>
+      ${p.dayRule ? sec('요일 기본 규칙', `<p class="sz-p">${esc(p.dayRule)}</p>`) : ''}
+      ${p.holidays3.length ? sec(`3일 이상 연휴 (${p.holidays3.length}번)`, tbl(['연휴', '기간', '구성'], p.holidays3)) : ''}
+      ${p.rates.length ? sec('요금 운용 구간', tbl(['구간', '적용 날짜', '운영 규칙'], p.rates)) : ''}
+      ${p.openPlan.length ? sec('시즌별 예약 오픈 · 노출 시점', tbl(['시즌', '예약 오픈 · 노출 시작', '예약 집중 기간', '운영 메모'], p.openPlan)) : ''}
+      ${sec('패키지 상품 라인업', ul(p.packages))}
+      ${sec(`타겟 그룹별 전략 (${p.targets.length})`, `<div class="sz-tgs">${targets}</div>`, '누르면 니즈·메시지·채널이 보여요')}
+      ${sec('채널 체크리스트', `<div class="sz-chs">${chs}</div>`, '올린 날을 눌러 두면 마지막 게시일이 남아요')}
+      ${p.order.length ? sec('시즌 콘텐츠 교체 순서', ul(p.order)) : ''}
+      ${sec('운영 유의사항', `<ol class="sz-notes">${p.notes.map(([t, x]) => `<li>${t ? `<b>${esc(t)}</b> ` : ''}${esc(x)}</li>`).join('')}</ol>`)}
+      ${confirms ? sec('발표 후 확인이 필요한 일정', `<div class="sz-list">${confirms}</div>`, '확인했으면 체크하고, 바뀐 날짜는 「일정 모음」에서 고쳐 주세요') : ''}
+      ${p.sources.length ? sec('근거 자료', `<ul class="sz-srcs">${p.sources.map(([a, b]) => `<li>${esc(a)} <span class="muted">· ${esc(b)}</span></li>`).join('')}</ul>`) : ''}
+      ${SZD.canEdit ? sec('기획서 파일', `<div class="sz-opsintro" style="margin:0"><p>${SZD.at ? `${esc(day(SZD.at))}에 올린 파일을 쓰고 있어요. ` : ''}기획서를 고치거나 다음 해 기획서가 나오면 새 데이터 파일로 바꿔 올려요. 체크해 둔 값과 메모는 그대로 남아요.</p>
+        <label class="btn btn-line btn-sm">${icon('upload', 'sm')}새 파일 올리기<input type="file" id="szPlanFile" hidden></label></div>`) : ''}`;
+  }
+
+  /* ---------- 운영 체크 (전 지점 공통 · 고객 데이터 계절지수 기준) ---------- */
+  function opsRow(t, withSeason) {
     const VN = SZ_VIEW();
-    const linkOf = (l) => (!l ? '' : l.view ? `<button type="button" class="sz-go" data-go="${esc(l.view)}">${icon('arrow-r', 'sm')}${esc(VN[l.view] || '열기')}</button>`
-      : `<a class="sz-go" href="${esc(l.href)}" target="_blank" rel="noopener">${icon('ext', 'sm')}화면 보기</a>`);
-    const row = (t, withSeason) => `<div class="sz-task${t.done ? ' done' : ''}${!t.done && t.dday < 0 ? ' late' : ''}${t.hidden ? ' hid' : ''}" data-k="${esc(tid(t))}">
+    const l = t.link;
+    const link = !l ? '' : l.view ? `<button type="button" class="sz-go" data-go="${esc(l.view)}">${icon('arrow-r', 'sm')}${esc(VN[l.view] || '열기')}</button>`
+      : `<a class="sz-go" href="${esc(l.href)}" target="_blank" rel="noopener">${icon('ext', 'sm')}화면 보기</a>`;
+    return `<div class="sz-task${t.done ? ' done' : ''}${!t.done && t.dday < 0 ? ' late' : ''}${t.hidden ? ' hid' : ''}" data-k="${esc(t.skey + '|' + (t.tkey || 'c' + t.id))}">
         <label class="sz-chk"><input type="checkbox" data-done${t.done ? ' checked' : ''}${t.hidden ? ' disabled' : ''} aria-label="${esc(t.title)} 마쳤어요"></label>
         <div class="sz-due"><b>${szMd(t.due)}</b><span>${t.hidden ? '숨김' : t.done ? '마침' : szDday(t.dday)}</span></div>
         <div class="sz-body"><div class="sz-tt">${withSeason ? `<span class="sz-sn">${esc(withSeason)}</span>` : ''}<span class="tag">${esc(t.cat)}</span><b>${esc(t.title)}</b>${t.custom ? '<span class="badge mute">직접 더함</span>' : t.edited ? '<span class="badge mute">고침</span>' : ''}</div>
           ${t.detail ? `<p>${esc(t.detail)}</p>` : ''}
           ${t.owner || t.memo ? `<p class="sz-meta">${t.owner ? `<span>${icon('user', 'sm')}${esc(t.owner)}</span>` : ''}${t.memo ? `<span>${icon('edit', 'sm')}${esc(t.memo)}</span>` : ''}</p>` : ''}</div>
-        <div class="sz-acts">${linkOf(t.link)}<button type="button" class="btn btn-ghost btn-sm" data-edit-t>고치기</button></div></div>`;
-    // 지금 챙길 일: 지난 마감 + 3주 안
-    const soon = [...T.values()].filter((t) => !t.done && !t.hidden && t.dday <= 21).sort((a, b) => a.due.localeCompare(b.due));
+        <div class="sz-acts">${link}<button type="button" class="btn btn-ghost btn-sm" data-edit-t>고치기</button></div></div>`;
+  }
+  function szOps() {
+    const d = SZD.ops;
+    const soon = [...SZD.T.values()].filter((t) => !t.done && !t.hidden && t.dday <= 21).sort((a, b) => a.due.localeCompare(b.due));
     const late = soon.filter((t) => t.dday < 0).length;
     const upcoming = d.seasons.filter((i) => i.end >= d.today).slice(0, 5);
     const maxIdx = Math.max(...d.months.map((m) => m.idx || 0), 1);
-    const LV = { peak: '최대 성수기', high: '성수기', mid: '보통', low: '비수기' };
+    const LVN = { peak: '최대 성수기', high: '성수기', mid: '보통', low: '비수기' };
     const months = d.months.map((m, k) => `<button type="button" class="sz-m lv-${m.level || 'na'}${k === 0 ? ' cur' : ''}" data-ym="${m.ym}">
         <span class="sz-m-y">${k === 0 || m.m === 1 ? m.y : ''}</span><b class="sz-m-n">${m.m}월</b>
         <span class="sz-m-bar"><i style="height:${m.idx ? Math.max(8, Math.round((m.idx / maxIdx) * 100)) : 0}%"></i></span>
-        <span class="sz-m-i">${m.idx ?? '–'}</span><span class="sz-m-l">${m.level ? LV[m.level] : '자료 없음'}</span>
+        <span class="sz-m-i">${m.idx ?? '–'}</span><span class="sz-m-l">${m.level ? LVN[m.level] : '자료 없음'}</span>
         <span class="sz-m-k">${m.keys.slice(0, 3).map(([dd, n]) => `<span>${szMd(dd)} ${esc(n)}</span>`).join('')}</span></button>`).join('');
     const maxW = Math.max(1, ...d.signals.map((w) => Math.max(w.clicks, w.booked + w.blocked)));
     const sig = d.signals.map((w) => `<div class="sz-w"><span>${szMd(w.start)}~</span><i><b class="c" style="width:${Math.round((w.clicks / maxW) * 100)}%"></b></i><em>${w.clicks}</em><i><b class="o" style="width:${Math.round(((w.booked + w.blocked) / maxW) * 100)}%"></b></i><em>${w.booked + w.blocked}</em></div>`).join('');
@@ -215,19 +497,19 @@
               ${i.links.length ? `<div><span class="sz-lab">함께 볼 화면</span><div class="sz-links">${i.links.map(([h, n]) => `<a href="${esc(h)}" target="_blank" rel="noopener">${icon('ext', 'sm')}${esc(n)}</a>`).join('')}</div></div>` : ''}
               ${i.idx.some(([, v]) => v != null) ? `<div><span class="sz-lab">계절지수</span><div class="sz-chips">${i.idx.map(([mm, v]) => `<span class="tag">${mm}월 ${v ?? '–'}</span>`).join('')}</div></div>` : ''}</div>
           </div>
-          <div class="sz-list">${list.map((t) => row(t)).join('') || `<div class="a-empty">${SZ.show === 'all' ? '할 일이 없어요.' : '남은 일이 없어요. 모두 마쳤어요.'}</div>`}</div>
+          <div class="sz-list">${list.map((t) => opsRow(t)).join('') || `<div class="a-empty">${SZ.show === 'all' ? '할 일이 없어요.' : '남은 일이 없어요. 모두 마쳤어요.'}</div>`}</div>
           <div class="row sz-sec-ft"><button type="button" class="btn btn-line btn-sm" data-add="${esc(i.key)}">${icon('plus', 'sm')}이 시즌에 할 일 더하기</button>${d.canEditDates ? `<button type="button" class="btn btn-ghost btn-sm" data-dates="${esc(i.key)}">${icon('calendar', 'sm')}날짜 바꾸기</button>` : ''}</div>
         </div></details>`;
     };
-    main.innerHTML = hd('시즌 준비', '공간대여 시즌마다 미리 챙길 일을 마감일 순서로 모았어요. 체크하면 운영진 모두에게 똑같이 보여요.',
-      `<button class="btn btn-ghost btn-sm" type="button" data-print>${icon('download', 'sm')}인쇄 · PDF</button><button class="btn btn-red btn-sm" type="button" data-add="">${icon('plus', 'sm')}할 일 더하기</button>`)
+    return `<div class="a-card sz-opsintro"><p>전 지점에 공통으로 해당하는 운영 일(요금·예약 운영·시설·청소 인력·호스트 안내·홈페이지)이에요. 고객 데이터의 이용월 계절지수를 기준으로 짰고, 위 기획서의 마케팅 일정과 함께 챙기면 돼요.</p>
+        <button class="btn btn-red btn-sm" type="button" data-add="">${icon('plus', 'sm')}할 일 더하기</button></div>`
       + (d.missing.length ? `<div class="callout warn" style="margin-bottom:14px">${icon('alert')}<div>${d.missing.map((x) => `<b>${x.y}년 ${esc(x.name)}</b>`).join(', ')} 날짜가 아직 없어요. ${d.canEditDates ? `<button type="button" class="btn btn-line btn-sm" data-dates="${esc(d.missing[0].key)}">날짜 넣기</button>` : '대표 관리자가 날짜를 넣어 주세요.'}</div></div>` : '')
       + `<div class="a-card sz-cal"><div class="a-card-hd"><h2>앞으로 12달</h2><span class="small muted">막대는 계절지수(연평균 100). 달을 누르면 그 시즌으로 가요.</span></div>
           <div class="sz-months">${months}</div>
           <p class="a-note sz-src">${esc(d.indexSrc)}. 설·추석·공휴일은 정부 발표에 따라 바뀔 수 있어요.</p></div>`
       + `<div class="sz-two">
           <div class="a-card"><div class="a-card-hd"><h2>지금 챙길 일</h2><div class="row" style="gap:8px"><span class="small muted">${late ? `<b class="red">지난 마감 ${late}</b> · ` : ''}3주 안 ${soon.length - late}개</span>${late ? '<button type="button" class="btn btn-line btn-sm" data-bulk>지난 마감 정리</button>' : ''}</div></div>
-            <div class="sz-list">${soon.slice(0, 14).map((t) => row(t, t.season)).join('') || '<div class="a-empty">3주 안에 챙길 일이 없어요.</div>'}</div>
+            <div class="sz-list">${soon.slice(0, 14).map((t) => opsRow(t, t.season)).join('') || '<div class="a-empty">3주 안에 챙길 일이 없어요.</div>'}</div>
             ${soon.length > 14 ? `<p class="a-note" style="margin-top:8px">나머지 ${soon.length - 14}개는 아래 시즌별 목록에 있어요.</p>` : ''}</div>
           <div class="a-card"><div class="a-card-hd"><h2>다가오는 시즌</h2></div>
             <div class="sz-next">${upcoming.map((i) => `<button type="button" class="sz-nx lv-${i.level}" data-jump="${esc(i.key)}"><span class="sz-lv">${esc(i.levelName)}</span><b>${esc(i.name)}</b><span class="sz-when">${szMd(i.start)} ~ ${szMd(i.end)} · ${i.state === 'now' ? '진행 중' : szDday(i.dday)}</span><span class="sz-prog"><i><b style="width:${i.total ? Math.round((i.done / i.total) * 100) : 0}%"></b></i><span>${i.done}/${i.total}</span></span></button>`).join('')}</div></div>
@@ -236,90 +518,289 @@
           ${sigEmpty ? '<p class="a-note">아직 쌓인 데이터가 없어요. 손님이 지점 화면에서 날짜를 골라 예약 버튼을 누르거나, 예약 데이터가 연결되면 주별로 보여요.</p>' : `<div class="sz-ws">${sig}</div>`}</div>`
       + `<div class="sz-tools"><h2 class="h3">시즌별 할 일</h2>${seg('szShow', [['open', '남은 일'], ['all', '전체 (마친 일·숨긴 일 포함)']], SZ.show)}</div>`
       + d.seasons.map(inst).join('');
+  }
 
-    const editTask = (t) => {
-      const m = SP.modal({
-        title: t.custom ? '할 일 고치기' : '시즌 할 일 고치기',
-        body: `${t.detail ? `<p class="a-note">${esc(t.detail)}</p>` : ''}<div class="form-grid" style="margin-top:12px">
-          <div class="field full"><label class="label" for="stTitle">할 일</label><input class="input" id="stTitle" maxlength="60" value="${esc(t.title)}"></div>
-          <div class="field"><label class="label" for="stCat">분류</label><select class="select" id="stCat">${d.cats.map((c) => `<option${c === t.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
-          <div class="field"><label class="label" for="stDue">마감일</label><input class="input" id="stDue" type="date" value="${esc(t.due)}"></div>
-          <div class="field"><label class="label" for="stOwner">담당 <span class="opt">선택</span></label><input class="input" id="stOwner" maxlength="20" value="${esc(t.owner)}" placeholder="예) 최시준, 예약팀"></div>
-          <div class="field full"><label class="label" for="stMemo">메모 <span class="opt">선택 · 운영진만 봐요</span></label><textarea class="textarea" id="stMemo" maxlength="300" style="min-height:80px">${esc(t.memo)}</textarea></div></div>
-          <div class="form-err" id="stErr" hidden></div>`,
-        foot: `${t.custom ? '<button class="btn btn-ghost btn-sm" type="button" id="stDel" style="margin-right:auto">지우기</button>' : `<button class="btn btn-ghost btn-sm" type="button" id="stHide" style="margin-right:auto">${t.hidden ? '다시 보이기' : '이 할 일 숨기기'}</button>`}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="stSave">저장</button>`,
-      });
-      const key = t.custom ? { id: t.id } : { skey: t.skey, tkey: t.tkey };
-      m.$('#stSave').onclick = async () => {
-        try {
-          await SP.put('/api/admin/seasons/task', { ...key, title: m.$('#stTitle').value.trim(), cat: m.$('#stCat').value, due: m.$('#stDue').value, owner: m.$('#stOwner').value.trim(), memo: m.$('#stMemo').value.trim() });
-          m.close(); SP.toast('저장했어요.'); season();
-        } catch (e) { const er = m.$('#stErr'); er.textContent = e.message; er.hidden = false; }
-      };
-      const hide = m.$('#stHide');
-      if (hide) hide.onclick = async () => { try { await SP.put('/api/admin/seasons/task', { ...key, hidden: !t.hidden }); m.close(); SP.toast(t.hidden ? '다시 보이게 했어요.' : '숨겼어요. 「전체」에서 다시 볼 수 있어요.'); season(); } catch (e) { SP.fail(e); } };
-      const del = m.$('#stDel');
-      if (del) del.onclick = async () => { if (!(await SP.confirm('이 할 일을 지울까요?', { ok: '지우기', danger: true }))) return; try { await SP.del('/api/admin/seasons/task/' + t.id); m.close(); SP.toast('지웠어요.'); season(); } catch (e) { SP.fail(e); } };
+  /* ---------- 화면 그리기 ---------- */
+  function szRender() {
+    const has = !!SZD.data;
+    const p = has ? SZD.data.plans[SZD.data.plans.length - 1] : null;
+    const scope = p ? p.scope.map((s) => s.replace(/ (게임)?파티룸$/, '')).join(' · ') : '';
+    const c = has ? szCounts() : { week: 0, lateOpen: 0 };
+    const badge = { week: c.week ? `<span class="cnt">${c.week}</span>` : '', open: c.lateOpen ? `<span class="cnt red">${c.lateOpen}</span>` : '' };
+    const body = SZ.tab === 'ops' ? szOps : !has ? szSetup : { week: szWeek, cal: szCal, open: szOpen, ev: szEvents, ref: szRef }[SZ.tab] || szWeek;
+    const y = window.scrollY;
+    main.innerHTML = hd('시즌 준비', '시즌 마케팅 기획서(2026 하반기 · 2027)의 날짜별 등급, 노출 일정, 주·월별 할 일을 옮겨 왔어요. 체크하면 운영진 모두에게 똑같이 보여요.',
+      `<button class="btn btn-ghost btn-sm" type="button" data-print>${icon('download', 'sm')}인쇄 · PDF</button>`)
+      + (p ? `<p class="sz-scope">기획 대상 ${p.scope.length}곳: ${esc(scope)}</p>` : '')
+      + `<div class="sz-tabs" role="tablist" aria-label="시즌 준비 보기">${SZ_TABS.map(([v, l]) => `<button type="button" role="tab" data-tab="${v}" aria-selected="${SZ.tab === v}" class="${SZ.tab === v ? 'on' : ''}">${l}${badge[v] || ''}</button>`).join('')}</div>`
+      + `<div class="sz-pane">${body()}</div>`;
+    window.scrollTo(0, y);
+  }
+
+  async function season() {
+    const [ops, pl] = await Promise.all([SP.get('/api/admin/seasons'), SP.get('/api/admin/seasons/plan' + (SZD.ver ? '?have=' + SZD.ver : ''))]);
+    if (pl.empty) { SZD.data = null; SZD.ver = null; } else if (pl.data) { SZD.data = pl.data; SZD.ver = pl.ver; }
+    SZD.at = pl.at || null;
+    SZD.marks = new Map(pl.marks.map((m) => [m.k, m]));
+    SZD.today = pl.today; SZD.canEdit = !!pl.canEdit; SZD.mi = pl.monthIndex || {}; SZD.miSrc = pl.indexSrc || '';
+    SZD.ops = ops;
+    SZD.T = new Map();
+    ops.seasons.forEach((i) => i.tasks.forEach((t) => SZD.T.set(t.skey + '|' + (t.tkey || 'c' + t.id), { ...t, season: i.name })));
+    if (SZD.data) szIndex();
+    szRender();
+    bindSeason();
+  }
+
+  /** 기획서 데이터 파일 올리기 — 기획서는 공개 저장소에 두지 않고 관리자 DB에만 넣는다 */
+  function szSetup() {
+    return `<div class="a-card sz-setup"><span class="sz-setup-ic">${icon('upload')}</span>
+      <h2>시즌 기획서 파일을 한 번 올려 주세요</h2>
+      <p>2026 하반기 · 2027 시즌 마케팅 기획서는 내부 운영 자료라서 공개 저장소에 두지 않고, 관리자 데이터베이스에만 넣어요. 받은 파일 「쏘플_시즌기획서_데이터_2026하반기-2027.json」을 고르면 바로 보여요.</p>
+      ${SZD.canEdit ? `<label class="btn btn-red">${icon('upload', 'sm')}파일 고르기<input type="file" id="szPlanFile" hidden></label>` : '<p class="a-note">대표 관리자가 파일을 올리면 운영진 화면에도 보여요.</p>'}
+      <p class="a-note">「운영 체크」의 전 지점 공통 시즌 할 일은 파일 없이도 쓸 수 있어요.</p></div>`;
+  }
+  async function szUpload(input) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    let file;
+    try { file = JSON.parse(await f.text()); } catch { SP.toast('기획서 데이터 파일(.json)이 아니에요. 받은 파일을 그대로 골라 주세요.', true); input.value = ''; return; }
+    try {
+      const r = await SP.post('/api/admin/seasons/plan', { file });
+      SP.toast(`${r.plans.join(' · ')} 기획서를 넣었어요. 일정 ${r.events}개 · 날짜 ${r.days}일`);
+      SZD.ver = null;
+      await refreshCounts();
+      await season();
+    } catch (e) { SP.fail(e); input.value = ''; }
+  }
+
+  async function szSave(items, msg) {
+    const r = await SP.post('/api/admin/seasons/marks', { items });
+    r.marks.forEach((m) => SZD.marks.set(m.k, m));
+    szIndex();
+    szRender();
+    if (msg) SP.toast(msg);
+    refreshCounts();
+  }
+
+  /* ---------- 창 ---------- */
+  function noteModal(k, title) {
+    const m0 = mkOf(k) || {};
+    const m = SP.modal({
+      title: '담당 · 메모',
+      body: `<p class="a-note">${esc(title)}</p><div class="form-grid" style="margin-top:12px">
+        <div class="field full"><label class="label" for="snOwner">담당 <span class="opt">선택</span></label><input class="input" id="snOwner" maxlength="20" value="${esc(m0.owner || '')}" placeholder="예) 최시준, 마케팅"></div>
+        <div class="field full"><label class="label" for="snMemo">메모 <span class="opt">선택 · 운영진만 봐요</span></label><textarea class="textarea" id="snMemo" maxlength="300" style="min-height:90px">${esc(m0.memo || '')}</textarea></div></div><div class="form-err" id="snErr" hidden></div>`,
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="snGo">저장</button>',
+    });
+    m.$('#snGo').onclick = async () => {
+      try { await szSave([{ k, owner: m.$('#snOwner').value.trim(), memo: m.$('#snMemo').value.trim() }], '저장했어요.'); m.close(); }
+      catch (e) { const er = m.$('#snErr'); er.textContent = e.message; er.hidden = false; }
     };
-    const addTask = (skey) => {
-      const opts = d.seasons.filter((i) => i.end >= d.today || i.key === skey);
-      const first = opts.find((i) => i.key === skey) || opts[0];
-      const m = SP.modal({
-        title: '할 일 더하기',
-        body: `<div class="form-grid"><div class="field full"><label class="label" for="saSeason">시즌</label><select class="select" id="saSeason">${opts.map((i) => `<option value="${esc(i.key)}"${first && i.key === first.key ? ' selected' : ''}>${esc(i.name)} (${i.y}.${szMd(i.start)}~)</option>`).join('')}</select></div>
-          <div class="field full"><label class="label" for="saTitle">할 일</label><input class="input" id="saTitle" maxlength="60" placeholder="예) 신촌 지점 크리스마스 트리 설치"></div>
-          <div class="field"><label class="label" for="saCat">분류</label><select class="select" id="saCat">${d.cats.map((c) => `<option>${esc(c)}</option>`).join('')}</select></div>
-          <div class="field"><label class="label" for="saDue">마감일</label><input class="input" id="saDue" type="date" value="${first ? (first.start < d.today ? d.today : first.start) : d.today}"></div>
-          <div class="field"><label class="label" for="saOwner">담당 <span class="opt">선택</span></label><input class="input" id="saOwner" maxlength="20"></div>
-          <div class="field full"><label class="label" for="saMemo">메모 <span class="opt">선택</span></label><textarea class="textarea" id="saMemo" maxlength="300" style="min-height:70px"></textarea></div></div><div class="form-err" id="saErr" hidden></div>`,
-        foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="saGo">더하기</button>',
-      });
-      m.$('#saGo').onclick = async () => {
-        try {
-          await SP.post('/api/admin/seasons/task', { skey: m.$('#saSeason').value, title: m.$('#saTitle').value.trim(), cat: m.$('#saCat').value, due: m.$('#saDue').value, owner: m.$('#saOwner').value.trim(), memo: m.$('#saMemo').value.trim() });
-          m.close(); SP.toast('할 일을 더했어요.'); season();
-        } catch (e) { const er = m.$('#saErr'); er.textContent = e.message; er.hidden = false; }
-      };
+  }
+  function evModal(id) {
+    const e = SZD.evById.get(id);
+    if (!e) return;
+    const base = SZD.data.events.find((x) => x.id === id);
+    const m0 = mkOf('e:' + id) || {};
+    const hasOpen = !!(e.od || e.on);
+    const openDone = mDone('o:' + id);
+    const m = SP.modal({
+      title: e.n,
+      body: `${evDl(e)}<div class="form-grid" style="margin-top:14px">
+        ${e.chk ? `<div class="field full"><label class="check"><input type="checkbox" id="seOk"${m0.done ? ' checked' : ''}> 발표된 일정·시간을 확인했어요</label></div>` : ''}
+        <div class="field"><label class="label" for="seOwner">담당 <span class="opt">선택</span></label><input class="input" id="seOwner" maxlength="20" value="${esc(m0.owner || '')}"></div>
+        <div class="field full"><label class="label" for="seMemo">운영 메모 <span class="opt">선택 · 운영진만 봐요</span></label><textarea class="textarea" id="seMemo" maxlength="300" style="min-height:70px" placeholder="예) 킥오프 1/15 23:30 확정, 플레이션 2호점 단체 문의 2건">${esc(m0.memo || '')}</textarea></div>
+        ${SZD.canEdit ? `<div class="field full sz-fix"><span class="label">날짜 · 등급 고치기 <span class="opt">대진·학사일정이 확정되면</span></span>
+          <div class="sz-fix-r"><label>시작<input class="input" type="date" id="seS" value="${e.s}"></label><label>끝<input class="input" type="date" id="seE" value="${e.e}"></label>
+          <label>등급<select class="select" id="seG">${['S', 'A', 'B', 'C'].map((g) => `<option value="${g}"${g === e.g ? ' selected' : ''}>${g} ${GRN[g]}</option>`).join('')}</select></label>
+          <label>노출 시작<input class="input" type="date" id="seOd" value="${e.od || ''}"></label></div>
+          <label class="check" style="margin-top:8px"><input type="checkbox" id="seDays"> 달력에서 이 기간 날짜들의 등급도 같이 바꾸기</label>
+          <p class="a-note" style="margin-top:4px">기획서 원래 값: ${esc(base.lb)} · ${base.g}${base.od ? ` · 노출 ${szMd(base.od)}` : ''}</p></div>` : ''}
+      </div><div class="form-err" id="seErr" hidden></div>`,
+      foot: `${hasOpen ? `<button class="btn btn-ghost btn-sm" type="button" id="seOpen" style="margin-right:auto">${openDone ? '노출 체크 풀기' : '노출 시작했어요'}</button>` : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="seGo">저장</button>`,
+    });
+    const op = m.$('#seOpen');
+    if (op) op.onclick = async () => { try { await szSave([{ k: 'o:' + id, done: !openDone }], openDone ? '다시 남은 노출로 돌렸어요.' : '노출 시작으로 표시했어요.'); m.close(); } catch (er) { SP.fail(er); } };
+    m.$('#seGo').onclick = async () => {
+      const it = { k: 'e:' + id, owner: m.$('#seOwner').value.trim(), memo: m.$('#seMemo').value.trim() };
+      if (e.chk) it.done = m.$('#seOk').checked;
+      const items = [it];
+      try {
+        if (SZD.canEdit) {
+          const s = m.$('#seS').value, en = m.$('#seE').value, g = m.$('#seG').value, od = m.$('#seOd').value;
+          if (!s || !en) throw new Error('시작일과 끝나는 날을 골라 주세요.');
+          if (en < s) throw new Error('끝나는 날이 시작일보다 빨라요.');
+          const v = {};
+          if (s !== base.s) v.s = s;
+          if (en !== base.e) v.e = en;
+          if (g !== base.g) v.g = g;
+          if (od && od !== base.od) v.od = od;
+          it.val = Object.keys(v).length ? v : null;
+          if (m.$('#seDays').checked) {
+            let d = s, n = 0;
+            while (d <= en && n < 100) { if (SZD.data.days[d]) items.push({ k: 'd:' + d, val: SZD.data.days[d][0] === g ? null : { g } }); d = szAdd(d, 1); n++; }
+          }
+        }
+        await szSave(items, '저장했어요.');
+        m.close();
+      } catch (er) { const x = m.$('#seErr'); x.textContent = er.message; x.hidden = false; }
     };
-    const editDates = (skey) => {
-      const i = d.seasons.find((x) => x.key === skey);
-      const miss = d.missing.find((x) => x.key === skey);
-      const name = i ? i.name : miss ? miss.name : skey;
-      const m = SP.modal({
-        title: `${skey.slice(0, 4)}년 ${name} 날짜`,
-        body: `<p class="a-note">설·추석처럼 해마다 바뀌는 날이나, 올해 사정에 맞게 시즌 기간을 바꿀 때 써요. 할 일 마감일도 새 날짜에 맞춰 다시 계산돼요.</p>
-          <div class="form-grid" style="margin-top:12px"><div class="field"><label class="label" for="sdS">시작일</label><input class="input" id="sdS" type="date" value="${i ? i.start : ''}"></div>
-          <div class="field"><label class="label" for="sdE">끝나는 날</label><input class="input" id="sdE" type="date" value="${i ? i.end : ''}"></div></div><div class="form-err" id="sdErr" hidden></div>`,
-        foot: `${i && i.customDates ? '<button class="btn btn-ghost btn-sm" type="button" id="sdClr" style="margin-right:auto">원래 날짜로</button>' : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="sdGo">저장</button>`,
-      });
-      m.$('#sdGo').onclick = async () => {
-        try { await SP.put('/api/admin/seasons/dates', { skey, start: m.$('#sdS').value, end: m.$('#sdE').value }); m.close(); SP.toast('날짜를 바꿨어요.'); season(); }
-        catch (e) { const er = m.$('#sdErr'); er.textContent = e.message; er.hidden = false; }
-      };
-      const clr = m.$('#sdClr');
-      if (clr) clr.onclick = async () => { try { await SP.put('/api/admin/seasons/dates', { skey, clear: true }); m.close(); SP.toast('원래 날짜로 돌렸어요.'); season(); } catch (e) { SP.fail(e); } };
+  }
+  function dayModal(d) {
+    const x = dayOf(d);
+    if (!x) return;
+    const evs = evsOn(d);
+    const m = SP.modal({
+      title: `${+d.slice(5, 7)}월 ${+d.slice(8, 10)}일 (${szW(d)})`,
+      body: `<div class="sz-dayhd">${gr(x.g, true)}${x.moved ? `<span class="badge mute">기획서 ${x.g0} → ${x.g}</span>` : ''}${x.hol ? `<span class="badge red">${esc(x.hol)}</span>` : ''}${x.base ? `<span class="small muted">요일 기준 ${x.base}</span>` : ''}</div>
+        ${x.memo ? `<p class="a-note" style="margin-top:8px">${esc(x.memo)}</p>` : ''}
+        ${x.pr ? `<p class="sz-p" style="margin-top:8px"><b>추천 상품</b> ${esc(x.pr)}</p>` : ''}
+        <div class="sz-evs" style="margin-top:12px">${evs.map(evRow).join('') || '<div class="a-empty">이 날에 걸린 일정이 없어요.</div>'}</div>
+        <div class="form-grid" style="margin-top:14px">
+          ${SZD.canEdit ? `<div class="field"><label class="label" for="sdG">이 날 등급</label><select class="select" id="sdG">${['S', 'A', 'B', 'C'].map((g) => `<option value="${g}"${g === x.g ? ' selected' : ''}>${g} ${GRN[g]}${g === x.g0 ? ' (기획서)' : ''}</option>`).join('')}</select></div>` : ''}
+          <div class="field full"><label class="label" for="sdNote">메모 <span class="opt">선택 · 운영진만 봐요</span></label><textarea class="textarea" id="sdNote" maxlength="300" style="min-height:70px" placeholder="예) 어반홀리 단체 대관 확정, 레스텔 오후 점검">${esc(x.note)}</textarea></div></div>
+        <div class="form-err" id="sdErr" hidden></div>`,
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="sdGo">저장</button>',
+    });
+    m.$$('[data-ev]').forEach((b) => { b.onclick = () => { m.close(); evModal(b.dataset.ev); }; });
+    m.$('#sdGo').onclick = async () => {
+      const it = { k: 'd:' + d, memo: m.$('#sdNote').value.trim() };
+      if (SZD.canEdit) { const g = m.$('#sdG').value; it.val = g === x.g0 ? null : { g }; }
+      try { await szSave([it], '저장했어요.'); m.close(); }
+      catch (er) { const e2 = m.$('#sdErr'); e2.textContent = er.message; e2.hidden = false; }
     };
-    const bulk = () => {
-      const m = SP.modal({
-        title: `지난 마감 ${late}개 정리`,
-        body: `<p class="a-note">시즌 준비를 처음 쓰기 시작했거나 밀린 일이 쌓였을 때, 마감이 지난 일을 한 번에 정리해요. 이미 해 둔 일이면 <b>마친 것으로</b>, 이번엔 건너뛸 일이면 <b>숨기기</b>를 골라 주세요. 숨긴 일은 「전체」에서 다시 볼 수 있어요.</p>
-          <ul class="sz-ov-list" style="margin-top:12px">${soon.filter((x) => x.dday < 0).slice(0, 8).map((x) => `<li class="late"><b>${szMd(x.due)}</b><span>${esc(x.title)}</span><em>${esc(x.season)}</em></li>`).join('')}</ul>${late > 8 ? `<p class="a-note" style="margin-top:6px">외 ${late - 8}개</p>` : ''}`,
-        foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-line" type="button" data-b="hide">모두 숨기기</button><button class="btn btn-red" type="button" data-b="done">모두 마친 것으로</button>',
-      });
-      m.$$('[data-b]').forEach((btn) => { btn.onclick = async () => {
-        SP.busy(btn, true, '정리하는 중…');
-        try { const r = await SP.post('/api/admin/seasons/bulk', { action: btn.dataset.b }); m.close(); SP.toast(`${r.n}개를 정리했어요.`); await refreshCounts(); season(); }
-        catch (e) { SP.busy(btn, false); SP.fail(e); }
-      }; });
+  }
+  function openBulk() {
+    const T0 = SZD.today;
+    const late = SZD.ev.filter((e) => e.od && e.od < T0 && e.e >= T0 && !mDone('o:' + e.id)).sort((a, b) => a.od.localeCompare(b.od));
+    if (!late.length) return;
+    const m = SP.modal({
+      title: `지난 노출 ${late.length}건 정리`,
+      body: `<p class="a-note">노출 시작일이 지났는데 아직 체크하지 않은 일정이에요. 이미 열어 둔 것이면 한 번에 「열었어요」로 표시해요. 아직 안 연 것은 목록에서 하나씩 체크해 주세요.</p>
+        <ul class="sz-ov-list" style="margin-top:12px">${late.slice(0, 12).map((e) => `<li class="late"><b>${szMd(e.od)}</b><span>「${esc(e.sn)}」 노출 시작</span><em>${esc(e.lb)}</em></li>`).join('')}</ul>${late.length > 12 ? `<p class="a-note" style="margin-top:6px">외 ${late.length - 12}건</p>` : ''}`,
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="obGo">모두 열었어요</button>',
+    });
+    m.$('#obGo').onclick = async () => {
+      const b = m.$('#obGo');
+      SP.busy(b, true, '정리하는 중…');
+      try { await szSave(late.map((e) => ({ k: 'o:' + e.id, done: true })), `${late.length}건을 열었어요로 표시했어요.`); m.close(); }
+      catch (er) { SP.busy(b, false); SP.fail(er); }
     };
+  }
+
+  /* ---------- 운영 체크 창 (기존 시즌 할 일) ---------- */
+  function editTask(t) {
+    const d = SZD.ops;
+    const m = SP.modal({
+      title: t.custom ? '할 일 고치기' : '시즌 할 일 고치기',
+      body: `${t.detail ? `<p class="a-note">${esc(t.detail)}</p>` : ''}<div class="form-grid" style="margin-top:12px">
+        <div class="field full"><label class="label" for="stTitle">할 일</label><input class="input" id="stTitle" maxlength="60" value="${esc(t.title)}"></div>
+        <div class="field"><label class="label" for="stCat">분류</label><select class="select" id="stCat">${d.cats.map((c) => `<option${c === t.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+        <div class="field"><label class="label" for="stDue">마감일</label><input class="input" id="stDue" type="date" value="${esc(t.due)}"></div>
+        <div class="field"><label class="label" for="stOwner">담당 <span class="opt">선택</span></label><input class="input" id="stOwner" maxlength="20" value="${esc(t.owner)}" placeholder="예) 최시준, 예약팀"></div>
+        <div class="field full"><label class="label" for="stMemo">메모 <span class="opt">선택 · 운영진만 봐요</span></label><textarea class="textarea" id="stMemo" maxlength="300" style="min-height:80px">${esc(t.memo)}</textarea></div></div>
+        <div class="form-err" id="stErr" hidden></div>`,
+      foot: `${t.custom ? '<button class="btn btn-ghost btn-sm" type="button" id="stDel" style="margin-right:auto">지우기</button>' : `<button class="btn btn-ghost btn-sm" type="button" id="stHide" style="margin-right:auto">${t.hidden ? '다시 보이기' : '이 할 일 숨기기'}</button>`}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="stSave">저장</button>`,
+    });
+    const key = t.custom ? { id: t.id } : { skey: t.skey, tkey: t.tkey };
+    m.$('#stSave').onclick = async () => {
+      try {
+        await SP.put('/api/admin/seasons/task', { ...key, title: m.$('#stTitle').value.trim(), cat: m.$('#stCat').value, due: m.$('#stDue').value, owner: m.$('#stOwner').value.trim(), memo: m.$('#stMemo').value.trim() });
+        m.close(); SP.toast('저장했어요.'); season();
+      } catch (e) { const er = m.$('#stErr'); er.textContent = e.message; er.hidden = false; }
+    };
+    const hide = m.$('#stHide');
+    if (hide) hide.onclick = async () => { try { await SP.put('/api/admin/seasons/task', { ...key, hidden: !t.hidden }); m.close(); SP.toast(t.hidden ? '다시 보이게 했어요.' : '숨겼어요. 「전체」에서 다시 볼 수 있어요.'); season(); } catch (e) { SP.fail(e); } };
+    const del = m.$('#stDel');
+    if (del) del.onclick = async () => { if (!(await SP.confirm('이 할 일을 지울까요?', { ok: '지우기', danger: true }))) return; try { await SP.del('/api/admin/seasons/task/' + t.id); m.close(); SP.toast('지웠어요.'); season(); } catch (e) { SP.fail(e); } };
+  }
+  function addTask(skey) {
+    const d = SZD.ops;
+    const opts = d.seasons.filter((i) => i.end >= d.today || i.key === skey);
+    const first = opts.find((i) => i.key === skey) || opts[0];
+    const m = SP.modal({
+      title: '할 일 더하기',
+      body: `<div class="form-grid"><div class="field full"><label class="label" for="saSeason">시즌</label><select class="select" id="saSeason">${opts.map((i) => `<option value="${esc(i.key)}"${first && i.key === first.key ? ' selected' : ''}>${esc(i.name)} (${i.y}.${szMd(i.start)}~)</option>`).join('')}</select></div>
+        <div class="field full"><label class="label" for="saTitle">할 일</label><input class="input" id="saTitle" maxlength="60" placeholder="예) 신촌 지점 크리스마스 트리 설치"></div>
+        <div class="field"><label class="label" for="saCat">분류</label><select class="select" id="saCat">${d.cats.map((c) => `<option>${esc(c)}</option>`).join('')}</select></div>
+        <div class="field"><label class="label" for="saDue">마감일</label><input class="input" id="saDue" type="date" value="${first ? (first.start < d.today ? d.today : first.start) : d.today}"></div>
+        <div class="field"><label class="label" for="saOwner">담당 <span class="opt">선택</span></label><input class="input" id="saOwner" maxlength="20"></div>
+        <div class="field full"><label class="label" for="saMemo">메모 <span class="opt">선택</span></label><textarea class="textarea" id="saMemo" maxlength="300" style="min-height:70px"></textarea></div></div><div class="form-err" id="saErr" hidden></div>`,
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="saGo">더하기</button>',
+    });
+    m.$('#saGo').onclick = async () => {
+      try {
+        await SP.post('/api/admin/seasons/task', { skey: m.$('#saSeason').value, title: m.$('#saTitle').value.trim(), cat: m.$('#saCat').value, due: m.$('#saDue').value, owner: m.$('#saOwner').value.trim(), memo: m.$('#saMemo').value.trim() });
+        m.close(); SP.toast('할 일을 더했어요.'); season();
+      } catch (e) { const er = m.$('#saErr'); er.textContent = e.message; er.hidden = false; }
+    };
+  }
+  function editDates(skey) {
+    const d = SZD.ops;
+    const i = d.seasons.find((x) => x.key === skey);
+    const miss = d.missing.find((x) => x.key === skey);
+    const name = i ? i.name : miss ? miss.name : skey;
+    const m = SP.modal({
+      title: `${skey.slice(0, 4)}년 ${name} 날짜`,
+      body: `<p class="a-note">설·추석처럼 해마다 바뀌는 날이나, 올해 사정에 맞게 시즌 기간을 바꿀 때 써요. 할 일 마감일도 새 날짜에 맞춰 다시 계산돼요.</p>
+        <div class="form-grid" style="margin-top:12px"><div class="field"><label class="label" for="sdS">시작일</label><input class="input" id="sdS" type="date" value="${i ? i.start : ''}"></div>
+        <div class="field"><label class="label" for="sdE">끝나는 날</label><input class="input" id="sdE" type="date" value="${i ? i.end : ''}"></div></div><div class="form-err" id="sdErr" hidden></div>`,
+      foot: `${i && i.customDates ? '<button class="btn btn-ghost btn-sm" type="button" id="sdClr" style="margin-right:auto">원래 날짜로</button>' : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="sdGo">저장</button>`,
+    });
+    m.$('#sdGo').onclick = async () => {
+      try { await SP.put('/api/admin/seasons/dates', { skey, start: m.$('#sdS').value, end: m.$('#sdE').value }); m.close(); SP.toast('날짜를 바꿨어요.'); season(); }
+      catch (e) { const er = m.$('#sdErr'); er.textContent = e.message; er.hidden = false; }
+    };
+    const clr = m.$('#sdClr');
+    if (clr) clr.onclick = async () => { try { await SP.put('/api/admin/seasons/dates', { skey, clear: true }); m.close(); SP.toast('원래 날짜로 돌렸어요.'); season(); } catch (e) { SP.fail(e); } };
+  }
+  function opsBulk() {
+    const soon = [...SZD.T.values()].filter((t) => !t.done && !t.hidden && t.dday < 0).sort((a, b) => a.due.localeCompare(b.due));
+    const late = soon.length;
+    const m = SP.modal({
+      title: `지난 마감 ${late}개 정리`,
+      body: `<p class="a-note">밀린 일이 쌓였을 때 마감이 지난 일을 한 번에 정리해요. 이미 해 둔 일이면 <b>마친 것으로</b>, 이번엔 건너뛸 일이면 <b>숨기기</b>를 골라 주세요. 숨긴 일은 「전체」에서 다시 볼 수 있어요.</p>
+        <ul class="sz-ov-list" style="margin-top:12px">${soon.slice(0, 8).map((x) => `<li class="late"><b>${szMd(x.due)}</b><span>${esc(x.title)}</span><em>${esc(x.season)}</em></li>`).join('')}</ul>${late > 8 ? `<p class="a-note" style="margin-top:6px">외 ${late - 8}개</p>` : ''}`,
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-line" type="button" data-b="hide">모두 숨기기</button><button class="btn btn-red" type="button" data-b="done">모두 마친 것으로</button>',
+    });
+    m.$$('[data-b]').forEach((btn) => { btn.onclick = async () => {
+      SP.busy(btn, true, '정리하는 중…');
+      try { const r = await SP.post('/api/admin/seasons/bulk', { action: btn.dataset.b }); m.close(); SP.toast(`${r.n}개를 정리했어요.`); await refreshCounts(); season(); }
+      catch (e) { SP.busy(btn, false); SP.fail(e); }
+    }; });
+  }
+
+  /* ---------- 누르기 ---------- */
+  function bindSeason() {
+    const setTab = (v) => { SZ.tab = v; try { localStorage.setItem('sp.adm.szTab', v); } catch { /* 무시 */ } szRender(); window.scrollTo(0, 0); };
     const jump = (el) => { if (!el) return; el.open = true; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     main.onclick = async (e) => {
       const g = e.target.closest('[data-go]'); if (g) { go(g.dataset.go); return; }
+      const tb = e.target.closest('[data-tab]'); if (tb) { setTab(tb.dataset.tab); return; }
       if (e.target.closest('[data-print]')) {
-        const closed = $$('.sz-sec:not([open])', main); closed.forEach((x) => { x.open = true; });
+        const closed = $$('details:not([open])', main); closed.forEach((x) => { x.open = true; });
         window.print(); closed.forEach((x) => { x.open = false; }); return;
       }
-      if (e.target.closest('[data-bulk]')) { bulk(); return; }
+      const wk = e.target.closest('[data-wk]');
+      if (wk) { const n = +wk.dataset.wk; SZ.wk = n === 0 ? '' : szAdd(SZ.wk || szMon(SZD.today), n); szRender(); return; }
+      const gw = e.target.closest('[data-gowk]'); if (gw) { SZ.wk = gw.dataset.gowk === szMon(SZD.today) ? '' : gw.dataset.gowk; setTab('week'); return; }
+      const cm = e.target.closest('[data-cm]');
+      if (cm) { const n = +cm.dataset.cm; SZ.ym = n === 0 ? SZD.today.slice(0, 7) : szYm(SZ.ym || SZD.today.slice(0, 7), n); szRender(); return; }
+      const dy = e.target.closest('[data-day]'); if (dy) { dayModal(dy.dataset.day); return; }
+      const ev = e.target.closest('[data-ev]'); if (ev) { evModal(ev.dataset.ev); return; }
+      if (e.target.closest('[data-obulk]')) { openBulk(); return; }
+      const nt = e.target.closest('[data-mnote]');
+      if (nt) { const r = nt.closest('[data-mk]'); noteModal(r.dataset.mk, r.dataset.title || ''); return; }
+      const cp = e.target.closest('[data-chpost]');
+      if (cp) { const r = cp.closest('[data-mk]'); try { await szSave([{ k: r.dataset.mk, val: { last: SZD.today } }], '오늘 게시한 것으로 남겼어요.'); } catch (er) { SP.fail(er); } return; }
+      const sg = e.target.closest('.seg [data-v]');
+      if (sg) {
+        const id = sg.closest('.seg').id, v = sg.dataset.v;
+        if (id === 'szOp') SZ.op = v; else if (id === 'szEvP') SZ.evP = v; else if (id === 'szEvG') SZ.evG = v; else if (id === 'szRefP') SZ.refP = v; else if (id === 'szShow') SZ.show = v; else return;
+        szRender(); return;
+      }
+      // 운영 체크
+      if (e.target.closest('[data-bulk]')) { opsBulk(); return; }
       const a = e.target.closest('[data-add]'); if (a) { addTask(a.dataset.add); return; }
       const dt = e.target.closest('[data-dates]'); if (dt) { editDates(dt.dataset.dates); return; }
       const j = e.target.closest('[data-jump]'); if (j) { jump($('#sz-' + j.dataset.jump.replace(':', '-'))); return; }
@@ -331,12 +812,24 @@
         return;
       }
       const ed = e.target.closest('[data-edit-t]');
-      if (ed) { const t = T.get(ed.closest('[data-k]').dataset.k); if (t) editTask(t); return; }
-      const sg = e.target.closest('#szShow [data-v]'); if (sg) { SZ.show = sg.dataset.v; season(); }
+      if (ed) { const t = SZD.T.get(ed.closest('[data-k]').dataset.k); if (t) editTask(t); }
     };
     main.onchange = async (e) => {
+      if (e.target.id === 'szPlanFile') { szUpload(e.target); return; }
+      if (e.target.id === 'szEvM') { SZ.evM = e.target.value; szRender(); return; }
+      if (e.target.id === 'szEvKey') { SZ.evKey = e.target.checked; szRender(); return; }
+      if (e.target.id === 'szEvChk') { SZ.evChk = e.target.checked; szRender(); return; }
+      if (e.target.id === 'szEvPast') { SZ.evPast = e.target.checked; szRender(); return; }
+      const mc = e.target.closest('[data-mdone]');
+      if (mc) {
+        const k = mc.closest('[data-mk]').dataset.mk;
+        mc.disabled = true;
+        try { await szSave([{ k, done: mc.checked }], mc.checked ? '마쳤어요.' : '다시 남은 일로 돌렸어요.'); }
+        catch (er) { mc.checked = !mc.checked; mc.disabled = false; SP.fail(er); }
+        return;
+      }
       const cb = e.target.closest('[data-done]'); if (!cb) return;
-      const t = T.get(cb.closest('[data-k]').dataset.k); if (!t) return;
+      const t = SZD.T.get(cb.closest('[data-k]').dataset.k); if (!t) return;
       cb.disabled = true;
       try {
         await SP.put('/api/admin/seasons/task', t.custom ? { id: t.id, done: cb.checked } : { skey: t.skey, tkey: t.tkey, done: cb.checked });
