@@ -1,0 +1,7 @@
+# 설치 파일·로컬 테스트 파일은 저장소에 올리지 않아요
+node_modules/
+.wrangler/
+.dev.vars
+.env
+*.log
+.DS_Store

@@ -15,6 +15,7 @@ import * as admin from './admin.js';
 import * as imwebPhotos from './imweb-photos.js';
 import * as seasons from './seasons.js';
 import * as seasonPlan from './season-plan.js';
+import * as live from './live.js';
 
 const ROUTES = [];
 function route(method, path, fn) {
@@ -42,6 +43,8 @@ admin.register(route);
 imwebPhotos.register(route);
 seasons.register(route);
 seasonPlan.register(route);
+live.register(route);
+live.registerAdmin(route);
 
 // sendBeacon(클릭 기록)과 토큰 인증(수신 API)은 사용자 지정 헤더를 붙일 수 없어 예외
 const NO_CSRF = new Set(['/api/click', '/api/sync/push', '/api/sync/run']);

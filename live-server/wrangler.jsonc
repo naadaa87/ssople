@@ -1,0 +1,24 @@
+// 쏘플 온라인 파티룸 배포 설정
+// - name: Cloudflare에 만들어질 Worker 이름입니다. 대시보드에서 연결할 때 이 이름과 같아야 합니다.
+// - 비밀번호·API 키는 이 파일에 쓰지 말고, Cloudflare 대시보드의 Settings > Variables and Secrets에 넣으세요.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ssople-live",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "keep_vars": true,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOM", "class_name": "Room" },
+      { "name": "HUB", "class_name": "Hub" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Room", "Hub"] }
+  ],
+  "observability": { "enabled": true }
+}

@@ -24,6 +24,7 @@
     ['events', '행사', 'ticket'],
     ['community', '커뮤니티 · 신고', 'chat'],
     ['groups', '모임 · 파티팀', 'users'],
+    ['live', '온라인 파티룸', 'game'],
     ['g', '고객'],
     ['users', '회원', 'user'],
     ['visits', '방문 인증', 'badge'],
@@ -61,7 +62,7 @@
 
   /* ---------------- 들어가기 · 메뉴 ---------------- */
   function drawNav() {
-    const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue };
+    const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue, live: COUNTS.liveRequests };
     const cur = (location.hash.slice(1) || 'overview');
     $('#admNav').innerHTML = NAV.map((n) => (n[0] === 'g' ? `<div class="grp">${n[1]}</div>`
       : `<button type="button" data-v="${n[0]}" class="${n[0] === cur ? 'on' : ''}">${icon(n[2])}<span>${n[1]}</span>${cnt[n[0]] ? `<span class="cnt">${cnt[n[0]] > 99 ? '99+' : cnt[n[0]]}</span>` : ''}</button>`)).join('');
@@ -128,6 +129,7 @@
       ['events', '승인 기다리는 행사', c.eventsPending, '회원이 제안한 행사'],
       ['visits', '확인할 방문 인증', c.visitsPending, '예약번호 대조가 필요해요'],
     ];
+    if (c.liveRequests) todo.push(['live', '새 개선 요청', c.liveRequests, '온라인 파티룸 게시판']);
     const tile = ([v, k, n, s]) => `<button type="button" class="tile ${n ? 'todo' : 'zero'}" data-go="${v}"><div class="k">${k}</div><div class="v">${n}</div><div class="s">${s}</div></button>`;
     const s = d.sync;
     let sync;
@@ -1809,6 +1811,88 @@ async function run(env) {
     };
   }
 
+  /* ================= 온라인 파티룸 ================= */
+  const LQ = { status: '', hidden: false };
+  async function live() {
+    const [d, r] = await Promise.all([SP.get('/api/admin/live'), SP.get('/api/admin/live/requests?status=' + LQ.status + (LQ.hidden ? '&hidden=1' : ''))]);
+    const st = d.settings; const c = d.counts;
+    const STB = { new: 'red', review: 'ink', planned: 'warn', doing: 'warn', done: 'ok', hold: 'mute' };
+    const server = st['live.server'];
+    main.innerHTML = hd('온라인 파티룸', '실시간 서버 연결, 로비 공지, 개선 요청 게시판을 관리해요. 코인은 게임 안에서만 쓰는 포인트라 여기서 지급하거나 고치지 않아요.',
+      `<a class="btn btn-line btn-sm" href="/live" target="_blank" rel="noopener">${icon('ext', 'sm')}소개 화면</a><a class="btn btn-line btn-sm" href="/live/requests" target="_blank" rel="noopener">${icon('ext', 'sm')}게시판</a>${server ? `<a class="btn btn-ink btn-sm" href="${esc(server)}/admin" target="_blank" rel="noopener">${icon('ext', 'sm')}실시간 서버 관리 (방·신고)</a>` : ''}`)
+      + `<div class="a-grid c4">
+          <div class="tile"><div class="k">내 정보가 있는 회원</div><div class="v">${SP.fmt(c.profiles)}</div><div class="s">로그인해서 한 번이라도 들어온 회원</div></div>
+          <div class="tile"><div class="k">오늘 들어온 회원</div><div class="v">${SP.fmt(c.activeToday)}</div><div class="s">출석·미션·꾸미기 기준</div></div>
+          <div class="tile"><div class="k">오늘 미니게임 기록</div><div class="v">${SP.fmt(c.playsToday)}</div><div class="s">회원·게임별 하루 최고 점수 수</div></div>
+          <button type="button" class="tile ${c.newRequests ? 'todo' : 'zero'}" data-lst="new"><div class="k">새 개선 요청</div><div class="v">${c.newRequests}</div><div class="s">눌러서 접수 건만 보기</div></button></div>`
+      + `<div class="a-grid c2" style="margin-top:14px">
+          <div class="a-card"><div class="a-card-hd"><h2>연결 · 공지</h2>${server ? B('ok', '실시간 서버 연결됨') : B('warn', '실시간 서버 주소 없음')}</div>
+            <div class="form-grid">
+              <div class="field full"><label class="label" for="lvSrv">실시간 서버 주소</label><input class="input" id="lvSrv" value="${esc(server)}" placeholder="https://ssople-live.계정이름.workers.dev"><p class="help">Workers에 올린 ssople-live 주소예요. 비워 두면 혼자 하는 기능(내 집·펫·오락실·체험 방)만 열리고, 친구 초대·공개 파티룸은 닫혀요.</p></div>
+              <div class="field full"><label class="label" for="lvNotice">로비 공지</label><input class="input" id="lvNotice" maxlength="120" value="${esc(st['live.notice'])}" placeholder="예) 토요일 밤 9시, 쏘플 스퀘어에서 공개 파티가 열려요!"><p class="help">온라인 파티룸 로비 맨 위에 보여요. 비우면 숨겨요.</p></div>
+              <div class="field full"><label class="label" for="lvBoard">개선 요청 게시판 머리말</label><textarea class="textarea" id="lvBoard" maxlength="400" style="min-height:70px" placeholder="예) 11월 업데이트에 반영할 요청을 받고 있어요.">${esc(st['live.board_notice'])}</textarea></div>
+            </div>
+            <div class="row" style="gap:8px;margin-top:10px"><button class="btn btn-ink btn-sm" type="button" data-lsave>저장</button><button class="btn btn-line btn-sm" type="button" data-ltest>서버 연결 확인</button><span class="small muted" id="lvTest"></span></div>
+          </div>
+          <div class="a-card"><div class="a-card-hd"><h2>레벨 높은 회원</h2><span class="small muted">경험치 순 10명</span></div>
+            ${d.top.length ? `<table class="a-tbl"><thead><tr><th>닉네임</th><th class="r">레벨</th><th class="r">코인</th><th>최근</th></tr></thead><tbody>${d.top.map((u) => `<tr><td>${esc(u.nick || '-')}</td><td class="r">${u.lv}</td><td class="r">${SP.fmt(u.coins)}</td><td class="small muted">${day(u.updated_at)}</td></tr>`).join('')}</tbody></table>` : '<div class="a-empty">아직 회원 기록이 없어요.</div>'}
+            <div class="row" style="gap:8px;margin-top:12px"><input class="input input-sm" id="lvNick" placeholder="회원 닉네임으로 찾기" style="max-width:220px"><button class="btn btn-line btn-sm" type="button" data-lfind>찾기</button></div><div id="lvFound" class="small" style="margin-top:8px"></div>
+          </div></div>`
+      + `<div class="a-card" style="margin-top:14px"><div class="a-card-hd"><h2>개선 요청</h2><span class="small muted">상태를 바꾸거나 답변을 달면 로그인한 작성자에게 알림이 가요</span></div>
+          <div class="a-tools">${seg('lvSt', [['', '전체'], ...Object.entries(d.statuses).map(([k, l]) => [k, `${l} ${d.byStatus[k] || 0}`])], LQ.status)}<label class="small"><input type="checkbox" id="lvHid" ${LQ.hidden ? 'checked' : ''}> 숨긴 글만</label></div>
+          ${r.items.map((q) => `<div class="rp"><div><div class="row wrap-ok" style="gap:6px">${B(STB[q.status] || 'mute', q.statusLabel)}${B('ink', q.catLabel)}${q.pinned ? B('red', '고정') : ''}${q.hidden ? B('mute', q.hidden === 2 ? '작성자 삭제' : '숨김') : ''}<span class="small muted">${when(q.at)} · ${esc(q.nick)}${q.member ? ' (회원)' : ''} · 공감 ${q.votes} · 댓글 ${q.cmts}</span></div>
+            <div style="margin-top:6px"><b>${esc(q.title)}</b></div><div class="q">${esc(q.body)}</div>${q.reply ? `<p class="small" style="margin-top:6px"><b>답변</b> ${esc(q.reply)}</p>` : ''}</div>
+            <div class="a-acts"><button class="btn btn-line btn-sm" type="button" data-lq="${q.id}">처리</button></div></div>`).join('') || '<div class="a-empty">요청이 없어요.</div>'}</div>`;
+    onSeg(main, 'lvSt', (v) => { LQ.status = v; live(); });
+    main.onchange = (e) => { if (e.target.id === 'lvHid') { LQ.hidden = e.target.checked; live(); } };
+    main.onclick = async (e) => {
+      if (e.target.closest('[data-lst]')) { LQ.status = 'new'; LQ.hidden = false; live(); return; }
+      if (e.target.closest('[data-lsave]')) {
+        const btn = e.target.closest('[data-lsave]'); SP.busy(btn, true, '저장 중…');
+        try { await SP.put('/api/admin/settings', { 'live.server': $('#lvSrv').value.trim(), 'live.notice': $('#lvNotice').value.trim(), 'live.board_notice': $('#lvBoard').value.trim() }); SP.toast('저장했어요. 1분 안에 반영돼요.'); } catch (er) { SP.fail(er); }
+        SP.busy(btn, false); return;
+      }
+      if (e.target.closest('[data-ltest]')) {
+        const u = $('#lvSrv').value.trim().replace(/\/+$/, ''); const out = $('#lvTest');
+        if (!u) { out.textContent = '주소를 먼저 넣어 주세요.'; return; }
+        out.textContent = '확인하는 중…';
+        try { const res = await fetch(u + '/api/config', { cache: 'no-store' }); const j = await res.json(); out.textContent = j && j.ok ? `연결됐어요 · 서버 ${j.version || ''} · 스퀘어 ${j.squareCount || 0}명` : '응답이 이상해요. 주소를 확인해 주세요.'; } catch { out.textContent = '연결하지 못했어요. 주소와 ALLOWED_ORIGINS 설정을 확인해 주세요.'; }
+        return;
+      }
+      if (e.target.closest('[data-lfind]')) {
+        const nick = $('#lvNick').value.trim(); const box = $('#lvFound');
+        if (!nick) return;
+        try { const f = await SP.get('/api/admin/live/profile?nick=' + encodeURIComponent(nick)); box.innerHTML = f.found ? `<b>${esc(f.nick)}</b> · 레벨 ${f.lv} · 코인 ${SP.fmt(f.coins)} (모은 코인 ${SP.fmt(f.earned)}) · 펫 ${f.pets.map((x) => esc(x.name) + ' Lv.' + x.lv).join(', ') || '없음'} · 업적 ${f.badges}개 · 집 소품 ${f.homeItems}개 · 출석 ${f.att.total || 0}일 · 최근 ${day(f.updated)}` : '그 닉네임의 기록이 없어요.'; } catch (er) { box.textContent = er.message; }
+        return;
+      }
+      const b = e.target.closest('[data-lq]'); if (!b) return;
+      const q = r.items.find((x) => String(x.id) === b.dataset.lq);
+      let cm = [];
+      try { cm = (await SP.get(`/api/admin/live/requests/${q.id}/comments`)).items; } catch { cm = []; }
+      const m = SP.modal({
+        title: q.title, wide: true,
+        body: `<div class="q" style="background:var(--fog);border-radius:10px;padding:12px;white-space:pre-wrap">${esc(q.body)}</div>
+          <div class="field" style="margin-top:14px"><span class="label">상태</span>${seg('lqS', Object.entries(d.statuses), q.status)}</div>
+          <div class="field"><label class="label" for="lqR">운영팀 답변 <span class="opt">게시판 목록과 글에 보여요</span></label><textarea class="textarea" id="lqR" maxlength="1500" style="min-height:90px" placeholder="예) 좋은 의견 고마워요! 12월 업데이트에 넣을 예정이에요.">${esc(q.reply || '')}</textarea></div>
+          <div class="row" style="gap:14px"><label class="small"><input type="checkbox" id="lqP" ${q.pinned ? 'checked' : ''}> 맨 위에 고정</label><label class="small"><input type="checkbox" id="lqH" ${q.hidden === 1 ? 'checked' : ''}> 게시판에서 숨기기</label></div>
+          <h3 class="h4" style="margin-top:16px">댓글 ${cm.length}</h3>
+          <div>${cm.map((x) => `<div class="rp"><div class="small"><b>${esc(x.nick)}</b>${x.admin ? ' (운영팀)' : ''} ${esc(x.body)} <span class="muted">${when(x.created_at)}</span>${x.hidden ? ' ' + B('mute', '숨김') : ''}</div>${x.hidden ? '' : `<div class="a-acts"><button class="btn btn-soft btn-sm" type="button" data-hc="${x.id}">숨기기</button></div>`}</div>`).join('') || '<p class="small muted">댓글이 없어요.</p>'}</div>
+          <div class="row" style="gap:8px;margin-top:10px"><input class="input input-sm" id="lqC" maxlength="800" placeholder="운영팀 이름으로 댓글 달기"><button class="btn btn-line btn-sm" type="button" data-ac>달기</button></div>`,
+        foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-ink" type="button" id="lqGo">저장</button>',
+      });
+      let stt = q.status;
+      onSeg(m.el, 'lqS', (v) => { stt = v; });
+      m.el.addEventListener('click', async (ev) => {
+        const hc = ev.target.closest('[data-hc]');
+        if (hc) { try { await SP.post(`/api/admin/live/comments/${hc.dataset.hc}/hide`); hc.closest('.rp').remove(); } catch (er) { SP.fail(er); } }
+        if (ev.target.closest('[data-ac]')) { const v = m.$('#lqC').value.trim(); if (!v) return; try { await SP.post(`/api/admin/live/requests/${q.id}/comment`, { body: v }); SP.toast('댓글을 달았어요.'); m.close(); live(); } catch (er) { SP.fail(er); } }
+      });
+      m.$('#lqGo').onclick = async () => {
+        try { await SP.post('/api/admin/live/requests/' + q.id, { status: stt, reply: m.$('#lqR').value.trim(), pinned: m.$('#lqP').checked, hidden: m.$('#lqH').checked }); m.close(); refreshCounts(); live(); } catch (er) { SP.fail(er); }
+      };
+    };
+  }
+
   /* ================= 제휴 ================= */
   async function partners() {
     const [d] = await Promise.all([SP.get('/api/admin/partners'), spaces()]);
@@ -1866,7 +1950,7 @@ async function run(env) {
       + sec('첫 화면', I('hero.title', '큰 제목', '파티룸은 쏘플, 우리 쏘플에서 만나요!', '비워 두면 기본 문구가 나와요. 쉼표 뒤에서 줄이 바뀌어요.', 'text', true) + I('hero.sub', '작은 설명', '', '', 'text', true)
         + `<div class="field full"><span class="label">추천 지점 <span class="opt">누른 순서대로 첫 화면에 보여요 · 비우면 많이 찾는 지점</span></span><div class="feat-pick" id="featPick">${SPACES.filter((x) => x.visible).map((x) => `<button type="button" class="chip${featured.includes(x.code) ? ' on' : ''}" data-fc="${x.code}">${esc(x.name)}</button>`).join('')}</div><input type="hidden" data-key="home.featured" id="st_home.featured" value="${esc(featured.join(','))}"></div>`)
       + sec('고객센터 · 연결', I('cs.phone', '대표 번호', '1544-3523') + I('cs.hours', '상담 시간', '월~목 10:00~19:00 · 금~일 10:00~22:00') + I('kakao.url', '카카오톡 상담 주소', 'https://pf.kakao.com/...') + I('link.chatbot', '챗봇 주소', '', '비워 두면 안 보여요.')
-        + I('link.host', '호스트 센터 주소', 'https://host.jssystems.kr', '비워 두면 바닥글에서 숨겨요. 지금은 호스트 센터를 쓰지 않으니 비워 두세요.') + I('link.play', '쏘플 파티게임(폰 연결 버전) 주소', '', '배포한 ssople-play 주소(https://…)를 넣으면 파티게임 화면에 \'객실 TV로 방 열기\' 버튼과 놀이터 연결 카드가 보여요. 아직 없으면 비워 두세요.') + I('link.live', '온라인 파티룸 주소', '', '놀이터에 연결 카드로 보여요.'))
+        + I('link.host', '호스트 센터 주소', 'https://host.jssystems.kr', '비워 두면 바닥글에서 숨겨요. 지금은 호스트 센터를 쓰지 않으니 비워 두세요.') + I('link.play', '쏘플 파티게임(폰 연결 버전) 주소', '', '배포한 ssople-play 주소(https://…)를 넣으면 파티게임 화면에 \'객실 TV로 방 열기\' 버튼과 놀이터 연결 카드가 보여요. 아직 없으면 비워 두세요.') + I('link.live', '온라인 파티룸 주소', '/live', '비워 두면 홈페이지 안의 온라인 파티룸(/live)으로 연결돼요. 실시간 서버 주소는 「온라인 파티룸」 메뉴에서 넣어요.'))
       + sec('SNS', I('sns.instagram', '인스타그램', 'https://instagram.com/...') + I('sns.blog', '블로그', 'https://blog.naver.com/...') + I('sns.youtube', '유튜브', 'https://youtube.com/...'), '적어 두면 검색엔진에 공식 채널로 같이 알려져요.')
       + sec('호스트 프로그램', I('host.plus_price', '플러스존 월 요금 (원)', '30000', '', 'number') + I('host.premium_price', '프리미엄존 월 요금 (원)', '50000', '', 'number') + I('host.discount6', '6개월 결제 할인 (%)', '10', '', 'number') + I('host.discount12', '12개월 결제 할인 (%)', '20', '', 'number') + I('host.managed_fee', '위탁운영 수수료 (매출의 %)', '20', '결제 수수료를 포함한 비율이에요.', 'number'), '호스트 센터 화면의 요금 표에 그대로 보여요. 숫자만 바꾸면 돼요.')
       + sec('검색 등록 (소유 확인)', I('seo.canonical_host', '대표 주소 (도메인)', '비워 두세요 — 자동으로 ssople.com', '비워 두면 돼요. ssople.com 을 Cloudflare Pages(ssople)의 사용자 지정 도메인으로 연결하면, ssople.com 으로 처음 들어온 순간부터 자동으로 대표 주소가 ssople.com 이 돼요. 그때부터 ssople.pages.dev·www.ssople.com 접속은 ssople.com 으로 넘어가고, 정식 주소·사이트맵·RSS도 ssople.com 기준이 돼요. 연결에 문제가 생겨 되돌려야 하면 여기에 ssople.pages.dev 를 적고 저장하세요.', 'text', true) + I('seo.naver_verify', '네이버 서치어드바이저 확인 코드', '비워 두세요 — 기본 코드가 이미 들어가 있어요', 'https://ssople.com 의 네이버 확인 코드(2b4906…)는 홈페이지에 이미 넣어 뒀어요. 확인 파일(naverbbbed…html)도 함께 준비돼 있어요. 네이버에서 다른 코드를 새로 받았을 때만 "HTML 태그"의 content 값을 붙여 넣으세요.') + I('seo.google_verify', '구글 서치 콘솔 확인 코드', '예) AbCdEf...', 'search.google.com/search-console → 속성 추가(URL 접두어) → "HTML 태그" 방식의 content 값만.') + I('seo.bing_verify', '빙 웹마스터 확인 코드 (선택)', '', '안 쓰면 비워 두세요.'), '저장하면 홈페이지 머리 부분에 확인용 태그가 들어가요. 그다음 각 서비스에서 "소유 확인"을 누르면 돼요. 사이트맵 주소는 /sitemap.xml, RSS 주소는 /rss.xml 이에요.')
@@ -1903,6 +1987,6 @@ async function run(env) {
     };
   }
 
-  const VIEWS = { overview, season, avail, data, spaces: spacesView, events, community, groups, users, visits, inquiries, partners, settings };
+  const VIEWS = { overview, season, avail, data, spaces: spacesView, events, community, groups, live, users, visits, inquiries, partners, settings };
   boot();
 })();

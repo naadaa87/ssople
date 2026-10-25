@@ -88,7 +88,10 @@
     "/shop_view/*",
     "/brand",
     "/company",
-    "/history"
+    "/history",
+    "/live",
+    "/live/requests",
+    "/live/r/*"
   ],
   "exclude": []
 }

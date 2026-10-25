@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>쏘플 온라인 파티룸</title>
+<meta name="description" content="링크 하나로 모여 아바타로 걷고, 이야기하고, 게임하는 쏘플 온라인 파티룸. 내 집을 꾸미고 펫과 함께 다니며 미니게임과 미션으로 코인을 모아요.">
+<meta name="robots" content="noindex,follow">
+<meta name="theme-color" content="#FFFFFF">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="쏘플파티룸">
+<meta property="og:title" content="쏘플 온라인 파티룸 — 멀리 있어도 오늘은 같은 방에서">
+<meta property="og:description" content="초대 링크를 누르면 이름만 정하고 바로 들어와요. 게임 8가지, 케이크 촛불, 단체 사진까지.">
+<meta property="og:image" content="https://ssople.com/assets/img/og/live.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://ssople.com/live">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+<link rel="manifest" href="/live/manifest.webmanifest">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="/live/css/live.css?v=20261025">
+</head>
+<body>
+<div id="app">
+
+<!-- 로비 -->
+<section id="v-hub" class="view hubv" hidden>
+  <header class="app-head">
+    <a class="brand" href="/live"><span class="logo" aria-hidden="true">S</span><span class="brand-text"><span class="bt-s">쏘플 </span><b>온라인 파티룸</b></span></a>
+    <span class="spacer"></span>
+    <span class="pill coin hd-coin" title="코인"></span>
+    <span id="hd-user"></span>
+    <a class="icon-btn" href="/" title="쏘플파티룸 홈" aria-label="쏘플파티룸 홈">⌂</a>
+  </header>
+  <main id="hub-root" class="hub"></main>
+  <footer class="app-foot">
+    <p><a href="/live">온라인 파티룸 소개</a> · <a href="/live/requests">개선 요청 게시판</a> · <a href="/rooms">오프라인 파티룸 예약</a></p>
+    <p>쏘플파티룸 고객센터 1544-3523 · 만 14세 이상 이용할 수 있어요 · 코인은 게임 안에서만 쓰는 포인트예요</p>
+    <p><a href="/terms">이용약관</a> · <a href="/privacy"><b>개인정보처리방침</b></a></p>
+  </footer>
+</section>
+
+<!-- 들어가기 전: 이름과 아바타 -->
+<section id="v-join" class="view join" hidden>
+  <div class="join-wrap">
+    <button class="link back" data-act="hub">← 로비로</button>
+    <div class="room-card">
+      <span class="rc-theme"></span>
+      <h2 class="rc-name">파티룸</h2>
+      <p class="rc-meta"></p>
+    </div>
+    <div class="profile">
+      <div class="av-preview">
+        <canvas id="av-cv" aria-label="내 아바타"></canvas>
+        <button class="btn sm ghost" data-act="random" type="button">🎲 랜덤</button>
+      </div>
+      <div class="profile-side">
+        <label class="field"><span>이름</span><input id="nick" maxlength="10" autocomplete="nickname" placeholder="친구들이 알아볼 이름"></label>
+        <div class="av-tabs" role="tablist"></div>
+        <div class="av-opts"></div>
+      </div>
+    </div>
+    <p class="join-pet hint"></p>
+    <button class="btn primary lg block" data-act="enter">들어가기</button>
+    <p class="fine">만 14세 이상만 이용할 수 있어요. 들어가면 <a href="/terms" target="_blank">이용약관</a>과 <a href="/privacy" target="_blank">개인정보처리방침</a>에 동의한 것으로 봐요.</p>
+  </div>
+</section>
+
+<!-- 파티룸 -->
+<section id="v-room" class="view room" hidden>
+  <canvas id="world"></canvas>
+  <div id="hud"></div>
+</section>
+
+</div>
+<noscript><p style="padding:24px;font-family:sans-serif">자바스크립트를 켜야 온라인 파티룸에 들어갈 수 있어요.</p></noscript>
+<script type="module" src="/live/js/app.js?v=20261025"></script>
+</body>
+</html>

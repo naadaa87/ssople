@@ -15,3 +15,12 @@
 
 /favicon.ico
   Cache-Control: public, max-age=604800
+
+/live/js/*
+  Cache-Control: public, max-age=300
+
+/live/shared/*
+  Cache-Control: public, max-age=300
+
+/live/css/*
+  Cache-Control: public, max-age=300

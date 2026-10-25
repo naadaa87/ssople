@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -42,6 +42,17 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS season_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, skey TEXT NOT NULL, tkey TEXT, title TEXT, cat TEXT, due TEXT, owner TEXT, memo TEXT, done INTEGER NOT NULL DEFAULT 0, done_at TEXT, hidden INTEGER NOT NULL DEFAULT 0, custom INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT, UNIQUE (skey, tkey))`,
   // v5: 시즌 마케팅 기획서 — 주차·월별 할 일, 노출 시작, 일정 확인, 날짜별 등급, 채널 게시 기록 (k = 종류:아이디)
   `CREATE TABLE IF NOT EXISTS season_marks (k TEXT PRIMARY KEY, done INTEGER NOT NULL DEFAULT 0, done_at TEXT, owner TEXT, memo TEXT, val TEXT, updated_at TEXT)`,
+  // v6: 온라인 파티룸 — 회원별 내 정보(코인·미션·펫·집, JSON), 미니게임 하루 최고 점수, 개선 요청 게시판
+  `CREATE TABLE IF NOT EXISTS live_profiles (uid INTEGER PRIMARY KEY, nick TEXT, data TEXT NOT NULL, rev INTEGER NOT NULL DEFAULT 0, coins INTEGER NOT NULL DEFAULT 0, xp INTEGER NOT NULL DEFAULT 0, lv INTEGER NOT NULL DEFAULT 1, created_at TEXT, updated_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_live_prof_xp ON live_profiles(xp)`,
+  `CREATE TABLE IF NOT EXISTS live_scores (uid INTEGER NOT NULL, game TEXT NOT NULL, d TEXT NOT NULL, w TEXT NOT NULL, score INTEGER NOT NULL, at TEXT, PRIMARY KEY (uid, game, d))`,
+  `CREATE INDEX IF NOT EXISTS idx_live_scores_d ON live_scores(game, d, score)`,
+  `CREATE INDEX IF NOT EXISTS idx_live_scores_w ON live_scores(game, w, score)`,
+  `CREATE TABLE IF NOT EXISTS live_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER, nick TEXT, ih TEXT, cat TEXT, title TEXT NOT NULL, body TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new', votes INTEGER NOT NULL DEFAULT 0, cmts INTEGER NOT NULL DEFAULT 0, reply TEXT, reply_at TEXT, hidden INTEGER NOT NULL DEFAULT 0, pinned INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_live_req ON live_requests(hidden, status, id)`,
+  `CREATE TABLE IF NOT EXISTS live_req_votes (req_id INTEGER NOT NULL, vk TEXT NOT NULL, created_at TEXT, PRIMARY KEY (req_id, vk))`,
+  `CREATE TABLE IF NOT EXISTS live_req_cmts (id INTEGER PRIMARY KEY AUTOINCREMENT, req_id INTEGER NOT NULL, uid INTEGER, nick TEXT, ih TEXT, body TEXT NOT NULL, admin INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, created_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_live_cmts ON live_req_cmts(req_id, id)`,
 ];
 
 let ready = null;
@@ -274,6 +285,10 @@ export const DEFAULTS = {
   'sns.youtube': '',
   'link.play': '',
   'link.live': '',
+  // 온라인 파티룸 — 실시간 서버(Workers) 주소, 로비 공지, 개선 요청 게시판 머리말
+  'live.server': '',
+  'live.notice': '',
+  'live.board_notice': '',
   'link.chatbot': '',
   'link.host': '',
   // 사업자 정보 — 바닥글·회사 정보·이용약관·개인정보처리방침에 들어간다 (2026.10.22 기존 홈페이지 기준)
@@ -366,6 +381,7 @@ export async function housekeep(db) {
     db.prepare('DELETE FROM invites WHERE COALESCE(d, substr(created_at, 1, 10)) < ?').bind(y1),
     db.prepare('DELETE FROM notis WHERE created_at < ?').bind(ago(365)),
     db.prepare('DELETE FROM sync_log WHERE at < ?').bind(ago(90)),
+    db.prepare('DELETE FROM live_scores WHERE d < ?').bind(ago(60).slice(0, 10)),
   ]);
   return true;
 }

@@ -1,0 +1,50 @@
+/* 운영 관리 화면 */
+body.admin { background: var(--bg2); min-height: 100vh; }
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; background: linear-gradient(180deg, #FFF6F2, #FFFFFF 50%); }
+.login-box { width: 100%; max-width: 380px; background: #fff; border-radius: 24px; padding: 28px; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; gap: 12px; }
+.login-box p { margin: 0; color: var(--ink2); font-size: 14px; }
+.login-box .err { color: var(--red); min-height: 20px; }
+.a-head { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 16px; padding: 12px clamp(14px, 3vw, 32px); background: #fff; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.a-tabs { display: flex; gap: 4px; flex: 1; overflow-x: auto; }
+.a-tabs button { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; font-weight: 700; font-size: 14px; color: var(--ink2); white-space: nowrap; }
+.a-tabs button.on { background: var(--ink); color: #fff; }
+.a-tabs i { font-style: normal; font-size: 11px; background: var(--red); color: #fff; border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+.a-tabs i:empty { display: none; }
+.a-main { max-width: 1200px; margin: 0 auto; padding: 20px clamp(14px, 3vw, 32px) 60px; }
+.a-main h2 { font-size: 20px; margin: 4px 0 14px; letter-spacing: -.02em; }
+.a-main h3 { font-size: 16px; margin: 22px 0 10px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.stat { background: #fff; border-radius: 16px; padding: 14px 16px; border: 1px solid var(--line); }
+.stat small { color: var(--muted); font-weight: 700; font-size: 12.5px; }
+.stat b { display: block; font-size: 26px; letter-spacing: -.02em; margin-top: 2px; }
+.stat span { font-size: 12px; color: var(--muted); }
+.stat.red b { color: var(--red); }
+.box { background: #fff; border-radius: 18px; border: 1px solid var(--line); padding: 16px; }
+.tbl-wrap { overflow-x: auto; background: #fff; border-radius: 16px; border: 1px solid var(--line); }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tbl th, .tbl td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl th:first-child, .tbl td:first-child { text-align: left; }
+.tbl th { background: var(--bg2); font-weight: 700; color: var(--ink2); font-size: 12.5px; }
+.tbl td.l, .tbl th.l { text-align: left; }
+.chart { width: 100%; height: 160px; display: block; }
+.rep { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; }
+.rep-top { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 14px; }
+.rep-top .when { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+.rep .memo { margin: 8px 0; font-size: 14px; color: var(--ink2); }
+.rep pre { white-space: pre-wrap; background: var(--bg2); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; max-height: 220px; overflow: auto; margin: 6px 0 0; font-family: var(--font); }
+.rep .acts2 { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.pillx { display: inline-block; font-size: 12px; font-weight: 800; padding: 2px 9px; border-radius: 999px; background: var(--bg3); }
+.pillx.red { background: var(--red-l); color: var(--red-d); }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.item { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.item .it-main { font-size: 14.5px; font-weight: 600; }
+.item .it-sub { font-size: 12.5px; color: var(--muted); }
+.item .acts2 { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+.form-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.form-row .field { flex: 1 1 180px; }
+.seg { display: inline-flex; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.seg button { height: 30px; padding: 0 12px; border: 0; background: transparent; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--ink2); }
+.seg button.on { background: var(--red); color: #fff; }
+.empty { padding: 28px; text-align: center; color: var(--muted); background: #fff; border-radius: 16px; border: 1px dashed var(--line); }
+.note { font-size: 13px; color: var(--muted); }
+.flex { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }

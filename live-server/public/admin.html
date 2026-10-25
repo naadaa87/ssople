@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>운영 관리 · 쏘플 온라인 파티룸</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin">
+  <section id="login" class="login" hidden>
+    <form class="login-box" id="login-form">
+      <div class="brand"><span class="logo">S</span><span class="brand-text">운영 관리</span></div>
+      <p>쏘플 온라인 파티룸 관리자 비밀번호를 넣어 주세요.</p>
+      <input class="inp" id="pw" type="password" autocomplete="current-password" placeholder="관리자 비밀번호">
+      <button class="btn primary block">들어가기</button>
+      <p class="err" id="login-err"></p>
+    </form>
+  </section>
+
+  <section id="main" hidden>
+    <header class="a-head">
+      <div class="brand"><span class="logo">S</span><span class="brand-text">쏘플 온라인 파티룸 <b>운영 관리</b></span></div>
+      <nav class="a-tabs" id="tabs">
+        <button data-tab="dash" class="on">한눈에 보기</button>
+        <button data-tab="reports">신고 <i id="badge-rep"></i></button>
+        <button data-tab="content">콘텐츠 <i id="badge-con"></i></button>
+        <button data-tab="notice">공지·행사</button>
+        <button data-tab="rooms">방</button>
+        <button data-tab="bans">차단 목록</button>
+      </nav>
+      <button class="btn sm ghost" id="logout">나가기</button>
+    </header>
+    <main class="a-main" id="view"></main>
+  </section>
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>

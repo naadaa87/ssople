@@ -8,3 +8,15 @@
 /wrangler.toml / 302
 /package.json / 302
 /_routes.json / 302
+/live-server/* / 302
+
+# 온라인 파티룸 앱 화면 — 주소는 그대로 두고 live/app.html 을 보여 준다
+/live/play /live/app 200
+/live/home /live/app 200
+/live/studio /live/app 200
+/live/square /live/app 200
+/live/demo /live/app 200
+/live/arcade /live/app 200
+/live/arcade/* /live/app 200
+/live/r/* /live/app 200
+/live/tv/* /live/app 200

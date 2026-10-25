@@ -1,0 +1,17 @@
+{
+  "name": "ssople-live",
+  "version": "1.0.0",
+  "private": true,
+  "description": "쏘플 온라인 파티룸 — 가상 파티룸과 파티게임",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/engine.test.mjs test/progress.test.mjs",
+    "test:server": "node --test --test-concurrency=1 test/server.test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.136.3",
+    "ws": "^8.18.3"
+  }
+}

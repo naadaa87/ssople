@@ -30,7 +30,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261024c">
+<link rel="stylesheet" href="/assets/app.css?v=20261025a">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "홈", "item": "https://ssople.com/"}, {"@type": "ListItem", "position": 2, "name": "개인정보처리방침", "item": "https://ssople.com/privacy"}]}</script>
 </head>
 <body data-page="privacy" data-nav="">
@@ -162,11 +162,12 @@
         </div>
       </div>
       <div class="gnb-item">
-        <a href="/games" data-nav="games play">파티게임</a>
+        <a href="/games" data-nav="games play live">파티게임</a>
         <div class="gnb-panel">
           <div class="gp-col">
             <a href="/games"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg><span><b>쏘플 파티게임 8종</b><small>TV에 띄워 다 같이 — 퀴즈쇼·라이어 게임</small></span></a>
             <a href="/play"><svg class="ic" aria-hidden="true"><use href="#i-wheel"/></svg><span><b>놀이터 · 파티 도구</b><small>팀 나누기·사다리·룰렛·타이머</small></span></a>
+            <a href="/live"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg><span><b>온라인 파티룸</b><small>멀리 있어도 같은 방에서 — 집 꾸미기·펫·미니게임</small></span></a>
             <a href="/games/demo"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span><b>폰 연결 체험판</b><small>가상 친구와 미리 해 보기</small></span></a>
           </div>
           <div class="gp-col gp-mini">
@@ -239,6 +240,7 @@
       <div class="dr-group"><h4>파티 당일</h4>
         <a href="/games"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg>파티게임 8종</a>
         <a href="/play"><svg class="ic" aria-hidden="true"><use href="#i-wheel"/></svg>놀이터 · 파티 도구</a>
+        <a href="/live"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>온라인 파티룸</a>
       </div>
       <div class="dr-group"><h4>호스트 · 쏘플</h4>
         <a href="/host"><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>공간 등록 · 위탁운영</a>
@@ -273,6 +275,9 @@
       <tr><td>모임·파티팀·행사 참여</td><td>신청 인사말, 신청 인원, 기념일 이름과 날짜(직접 넣은 경우)</td><td>참여 관리, 알림 보내기</td></tr>
       <tr><td>초대장에 답할 때 (회원이 아니어도)</td><td>이름이나 별명, 참석 여부, 인원, 남긴 말</td><td>초대한 사람에게 응답 전달</td></tr>
       <tr><td>제휴·단체 문의</td><td>이름, 소속, 연락처(전화나 이메일), 문의 내용</td><td>문의 답변과 상담</td></tr>
+      <tr><td>온라인 파티룸을 쓸 때 (회원이 아니어도)</td><td>직접 정한 이름과 아바타 모습, 데리고 다니는 펫의 이름과 모습, 브라우저에 저장되는 무작위 기기 식별값, 파티룸 안의 대화, 신고할 때 고른 이유와 메모</td><td>방 안에서 서로 알아보기, 다시 들어올 때 같은 사람으로 이어 주기, 방장 확인, 신고 처리</td></tr>
+      <tr><td>온라인 파티룸 (로그인한 회원)</td><td>코인·경험치·출석·미션 기록, 가진 아이템, 꾸민 집과 파티룸, 펫, 업적, 미니게임 하루 최고 점수</td><td>다른 기기에서도 이어서 놀기, 미니게임 랭킹</td></tr>
+      <tr><td>개선 요청 게시판</td><td>회원은 닉네임, 회원이 아니면 직접 적은 이름, 글·댓글 내용, 공감한 기록</td><td>요청 확인과 답변, 진행 상황 알림(회원)</td></tr>
       <tr><td>홈페이지를 쓰는 동안 자동으로</td><td>로그인 유지용 쿠키, 접속 IP를 알아볼 수 없게 바꾼 값, 예약 버튼을 누른 기록(지점·날짜)</td><td>로그인 유지, 도배·부정 가입 막기, 서비스 개선 통계</td></tr>
     </tbody>
   </table></div>
@@ -292,6 +297,10 @@
       <tr><td>제휴·단체 문의</td><td>접수한 날로부터 1년 뒤 지워요.</td></tr>
       <tr><td>알림</td><td>받은 날로부터 1년 뒤 지워요.</td></tr>
       <tr><td>예약 버튼을 누른 기록</td><td>400일 뒤 지워요.</td></tr>
+      <tr><td>온라인 파티룸의 이름·아바타·대화</td><td>파티룸 안 대화는 최근 것만 남고 오래된 것부터 지워져요. 방은 30일 동안 아무도 쓰지 않으면 대화와 함께 모두 지워요.</td></tr>
+      <tr><td>온라인 파티룸 신고 내용</td><td>신고 당시 최근 대화와 함께 보관하고, 처리한 뒤 180일이 지나면 지워요.</td></tr>
+      <tr><td>온라인 파티룸 게임 기록 (회원)</td><td>탈퇴하면 지워요. 미니게임 하루 점수는 60일 뒤 지워요.</td></tr>
+      <tr><td>개선 요청 게시판 글과 댓글</td><td>작성자가 지우거나 탈퇴할 때까지 보관해요. 회원이 아닌 사람이 쓴 글은 지우고 싶으면 고객센터로 알려 주세요.</td></tr>
       <tr><td>로그인 유지 정보</td><td>로그아웃하거나 30일이 지나면 지워요.</td></tr>
     </tbody>
   </table></div>
@@ -301,12 +310,13 @@
   <p>홈페이지를 운영하기 위해 아래 회사에 서버와 저장 공간 운영을 맡겨요. 이 회사의 서버가 국외에 있어서 개인정보가 국외로 옮겨져 저장돼요.</p>
   <div class="tbl-wrap"><table class="tbl"><tbody>
     <tr><th style="width:30%">맡기는 곳</th><td>Cloudflare, Inc. (연락처 privacyquestions@cloudflare.com)</td></tr>
-    <tr><th>맡기는 일</th><td>홈페이지 운영, 데이터베이스와 사진 저장</td></tr>
+    <tr><th>맡기는 일</th><td>홈페이지 운영, 데이터베이스와 사진 저장, 온라인 파티룸의 실시간 연결과 방 데이터 저장</td></tr>
     <tr><th>옮겨지는 나라</th><td>미국 등 Cloudflare 데이터센터가 있는 나라</td></tr>
     <tr><th>옮겨지는 정보</th><td>1번에 적은 정보 전부</td></tr>
     <tr><th>옮기는 때와 방법</th><td>서비스를 이용할 때마다 암호화된 통신으로 전송</td></tr>
     <tr><th>보관 기간</th><td>3번에 적은 기간과 같아요</td></tr>
   </tbody></table></div>
+  <p>온라인 파티룸의 AI 진행(MC) 기능을 켜 두는 경우에는, 진행 멘트와 게임 문제를 만들기 위해 방 이름, 참가자 이름, 게임 상황, 최근 대화 몇 줄을 Anthropic, PBC(미국)에 보내요. 이 기능을 쓰지 않을 때는 보내지 않고, 정해 둔 기본 멘트로 진행해요. 보낸 정보는 답을 받는 데만 쓰이고 회사 서버에 따로 쌓아 두지 않아요.</p>
   <p>국외 이전을 원하지 않으면 가입하지 않거나 탈퇴할 수 있어요. 이 경우 회원 기능은 쓸 수 없지만, 지점 안내와 요금 확인, 놀이터는 그대로 쓸 수 있어요.</p>
 
   <h2 id="p5">5. 만 14세 미만</h2>
@@ -332,6 +342,7 @@
 
   <h2 id="p8">8. 쿠키</h2>
   <p>로그인 상태를 유지하려고 쿠키를 써요. 광고용 쿠키나 다른 회사의 추적 도구는 쓰지 않아요. 브라우저 설정에서 쿠키를 막을 수 있지만, 그러면 로그인이 필요한 기능은 쓸 수 없어요. 놀이터에 넣은 이름과 점수판, 파티 준비 체크리스트는 이용자 기기 안에만 저장하고 회사로 보내지 않아요.</p>
+  <p>온라인 파티룸은 쿠키 대신 브라우저 저장소에 기기 식별값, 이름, 아바타, 설정, 최근 들어간 방, 손님으로 모은 게임 기록을 저장해요. 브라우저 설정에서 사이트 데이터를 지우면 모두 지워지고, 다음에는 새 사람으로 들어가게 돼요. 단체 사진과 게임 결과 카드는 이용자 기기 안에서 만들어지고 회사 서버에는 저장하지 않아요. 음성과 영상은 받지 않아요.</p>
 
   <h2 id="p9">9. 소식 받기</h2>
   <p>행사·혜택 소식은 받기에 동의한 회원에게만 보내요. 마이 → 계정 설정에서 언제든 끌 수 있어요.</p>
@@ -369,7 +380,7 @@
       </div>
       <div class="ft-col"><h4>지점 찾기</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/area/gyeonggi">경기 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
-      <div class="ft-col"><h4>파티 준비 · 당일</h4><a href="/planner">준비물 · N빵</a><a href="/invite">초대장 만들기</a><a href="/magazine">파티 가이드</a><a href="/games">파티게임</a><a href="/play">놀이터</a><a href="/membership">쏘플 클럽</a></div>
+      <div class="ft-col"><h4>파티 준비 · 당일</h4><a href="/planner">준비물 · N빵</a><a href="/invite">초대장 만들기</a><a href="/magazine">파티 가이드</a><a href="/games">파티게임</a><a href="/play">놀이터</a><a href="/live">온라인 파티룸</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>호스트 · 쏘플</h4><a href="/host">공간 등록 · 위탁운영</a><a href="/startup">파티룸 창업안내</a><a href="/academy">공간 아카데미</a><a href="/partners">제휴·협업</a><a href="/about">브랜드 이야기</a><a href="/ceo">창업자 이야기</a><a href="/about#company">회사 정보</a></div>
     </div>
     <div class="ft-family"><b>함께하는 공간·서비스</b><div class="ft-family-links"><a href="https://megaspot.kr" target="_blank" rel="noopener">메가스팟</a><a href="https://socialfactory.co.kr" target="_blank" rel="noopener">소셜팩토리</a><a href="https://playtion.kr" target="_blank" rel="noopener">플레이션</a><a href="https://hellomingle.kr" target="_blank" rel="noopener">밍글</a><a href="https://coremood.kr" target="_blank" rel="noopener">코어무드</a><a href="https://vacancy.co.kr" target="_blank" rel="noopener">공백 공간백서</a><a href="https://orbis-estate.com" target="_blank" rel="noopener">오르비스 부동산 중개법인</a><a href="https://choisijun.com" target="_blank" rel="noopener">최시준</a><a href="https://yeodeol.kr" target="_blank" rel="noopener">여덟글자</a></div></div>
@@ -387,11 +398,11 @@
 <nav class="tabbar" aria-label="아래 메뉴">
   <a href="/" data-nav="home"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg>홈</a>
   <a href="/rooms" data-nav="rooms room"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>지점 찾기</a>
-  <a href="/games" data-nav="games play"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg>파티게임</a>
+  <a href="/games" data-nav="games play live"><svg class="ic" aria-hidden="true"><use href="#i-game"/></svg>파티게임</a>
   <a href="/event" data-nav="event meetups crew community"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg>같이 놀기</a>
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261024c" defer></script>
+<script src="/assets/app.js?v=20261025a" defer></script>
 </body>
 </html>

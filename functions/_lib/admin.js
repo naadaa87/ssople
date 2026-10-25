@@ -15,7 +15,7 @@ export function register(route) {
     const today = todayKST();
     const wk = addDays(today, -7) + 'T00:00:00';
     const q = (sql, ...b) => c.db.prepare(sql).bind(...b).first();
-    const [users, users7, posts7, reports, inq, evp, vis, crews, meets, clicks7, occ, diag, okAt, cronAt] = await Promise.all([
+    const [users, users7, posts7, reports, inq, evp, vis, crews, meets, clicks7, occ, diag, okAt, cronAt, liveReq] = await Promise.all([
       q('SELECT COUNT(*) AS n FROM users WHERE status = ?', 'active'),
       q('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?', wk),
       q('SELECT COUNT(*) AS n FROM posts WHERE created_at >= ?', wk),
@@ -28,6 +28,7 @@ export function register(route) {
       c.db.prepare(`SELECT code, COUNT(*) AS n FROM clicks WHERE at >= ? GROUP BY code ORDER BY n DESC LIMIT 10`).bind(wk).all(),
       c.db.prepare(`SELECT src, COUNT(*) AS n FROM occ WHERE d >= ? AND d <= ? GROUP BY src`).bind(today, addDays(today, 13)).all(),
       getMeta(c.db, 'host_diag'), getMeta(c.db, 'host_ok_at'), getMeta(c.db, 'cron_at'),
+      q(`SELECT COUNT(*) AS n FROM live_requests WHERE status = 'new' AND hidden = 0`).catch(() => ({ n: 0 })),
     ]);
     const nm = Object.fromEntries((await loadSpaces(c.db, { all: true })).map((s) => [s.code, s.name]));
     const d = parseJSON(diag, null);
@@ -38,7 +39,7 @@ export function register(route) {
     return {
       counts: {
         users: users.n, users7: users7.n, posts7: posts7.n, reports: reports.n, inquiries: inq.n,
-        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n,
+        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0,
         seasonDue: (season ? season.late + season.week : 0) + (seasonPlan ? seasonPlan.late + seasonPlan.week : 0),
       },
       season,
@@ -351,6 +352,10 @@ export function register(route) {
       if (/^(link|sns)\./.test(k) || k === 'kakao.url' || k === 'site.notice_link') {
         s = s.trim();
         if (s && !/^https?:\/\//.test(s) && !s.startsWith('/')) throw new HttpError(400, '링크는 https:// 로 시작해야 해요.');
+      }
+      if (k === 'live.server') {
+        s = s.trim().replace(/\/+$/, '');
+        if (s && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(s) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(s)) throw new HttpError(400, '실시간 서버 주소는 https://로 시작하는 주소만 넣어 주세요. 예) https://ssople-live.계정이름.workers.dev');
       }
       if (k === 'club.benefits') {
         const j = parseJSON(s, null);

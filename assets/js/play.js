@@ -410,7 +410,7 @@
     if (!s) return;
     const links = [];
     if (s['link.play']) links.push(['game', '쏘플 플레이', '점수 겨루는 본격 파티 게임은 쏘플 플레이에서', s['link.play']]);
-    if (s['link.live']) links.push(['users', '온라인 파티룸', '멀리 있는 친구도 화면으로 함께', s['link.live']]);
-    if (links.length) $('#playLinks').innerHTML = `<h2 class="h3" style="margin-bottom:12px">더 놀고 싶다면</h2><div class="grid g2">${links.map(([i, t, d, u]) => `<a class="box" style="display:flex;gap:14px;align-items:center" href="${esc(u)}" target="_blank" rel="noopener"><span class="t-ic" style="width:46px;height:46px;border-radius:14px;background:var(--fog);display:grid;place-items:center">${icon(i)}</span><span><b style="font-size:17px">${t}</b><br><span class="muted small">${d}</span></span></a>`).join('')}</div>`;
+    links.push(['users', '온라인 파티룸', '멀리 있는 친구와 아바타로 모여 파티게임·미니게임', s['link.live'] || '/live']);
+    if (links.length) $('#playLinks').innerHTML = `<h2 class="h3" style="margin-bottom:12px">더 놀고 싶다면</h2><div class="grid g2">${links.map(([i, t, d, u]) => `<a class="box" style="display:flex;gap:14px;align-items:center" href="${esc(u)}"${u.startsWith('/') ? '' : ' target="_blank" rel="noopener"'}><span class="t-ic" style="width:46px;height:46px;border-radius:14px;background:var(--fog);display:grid;place-items:center">${icon(i)}</span><span><b style="font-size:17px">${t}</b><br><span class="muted small">${d}</span></span></a>`).join('')}</div>`;
   });
 })();
