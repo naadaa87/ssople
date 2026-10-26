@@ -8,6 +8,7 @@ import { INQUIRY_KINDS } from './misc.js';
 import { tierOf } from './account.js';
 import { loadPlan, summarize } from './seasons.js';
 import { getPlan, loadMarks, planSummary } from './season-plan.js';
+import { endGuestSessions } from './hostcenter.js';
 
 export function register(route) {
   route('GET', '/api/admin/overview', async (c) => {
@@ -365,9 +366,22 @@ export function register(route) {
         const j = parseJSON(s, null);
         if (!j || typeof j !== 'object') throw new HttpError(400, '클럽 혜택 형식이 올바르지 않아요.');
       }
+      if (k === 'hc.id') {
+        s = s.trim();
+        if (s.length > 40) throw new HttpError(400, '호스트센터 공용 아이디는 40자 안으로 정해 주세요.');
+      }
+      if (k === 'hc.pw' && s.length > 60) throw new HttpError(400, '호스트센터 공용 비밀번호는 60자 안으로 정해 주세요.');
+      if (k === 'hc.open') s = s === '0' ? '0' : '1';
       patch[k] = s;
     }
+    const before = await getSettings(c.db);
+    const next = { ...before, ...patch };
+    if (next['hc.open'] !== '0' && (!String(next['hc.id'] || '').trim() || !String(next['hc.pw'] || ''))) {
+      throw new HttpError(400, '호스트센터 공용 로그인을 켜 두려면 아이디와 비밀번호를 모두 넣어 주세요.');
+    }
     await saveSettings(c.db, patch);
+    // 공용 아이디·비밀번호를 바꾸거나 공용 로그인을 끄면, 예전 비밀번호로 들어와 있던 사람도 다시 로그인해야 한다
+    if (['hc.id', 'hc.pw', 'hc.open'].some((k) => k in patch && String(patch[k]) !== String(before[k] ?? ''))) await endGuestSessions(c.db);
     return { ok: true };
   });
 }

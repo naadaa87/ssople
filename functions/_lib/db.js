@@ -327,8 +327,12 @@ export const DEFAULTS = {
   'host.discount6': '10',
   'host.discount12': '20',
   'host.managed_fee': '20',
+  // 호스트센터(/hostcenter) 공용 로그인 — 아직 쏘플 계정이 없는 호스트·점주에게 안내 화면을 보여 줄 때 쓴다 (안내만 볼 수 있고 지점은 못 고친다)
+  'hc.open': '1',
+  'hc.id': '1234',
+  'hc.pw': '1234',
 };
-const PRIVATE_KEYS = new Set(['community.banned']);
+const PRIVATE_KEYS = new Set(['community.banned', 'hc.id', 'hc.pw']);
 
 let setCache = null;
 let setCacheAt = 0;

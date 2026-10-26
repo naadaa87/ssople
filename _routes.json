@@ -91,7 +91,8 @@
     "/history",
     "/live",
     "/live/requests",
-    "/live/r/*"
+    "/live/r/*",
+    "/hostcenter"
   ],
   "exclude": []
 }
