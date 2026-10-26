@@ -4,15 +4,24 @@ import { loadSpaces, publicSpace, photoUrl } from './spaces.js';
 import { parseJSON, todayKST } from './util.js';
 import { imgUrl } from './community.js';
 import { getSettings } from './db.js';
-import { REGION_SLUGS, AREA_SLUGS, domainLive, canonicalHostOf, verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
+import { REGION_SLUGS, AREA_SLUGS, regionPath, areaPath, domainLive, canonicalHostOf, verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
 import { MAGAZINE } from './magazine-index.js';
 import { GAMES } from './games-index.js';
 import { OG_ROOMS, OG_AREAS, ogImg } from './og.js';
+import { homeBlocks, roomsBlocks, locationsBlocks, areaChipsHtml, roomPriceHtml, roomBookHtml, nearRoomsHtml } from './ssr-lists.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
 const PS = new RegExp(String.fromCharCode(0x2029), 'g');
 const safeJson = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '\\u2028').replace(PS, '\\u2029');
+/** 구글 애널리틱스(GA4) — 관리자 설정 seo.ga4_id(G-로 시작)가 있을 때만 넣는다. 비어 있으면 아무것도 넣지 않는다 */
+const GA_RE = /^G-[A-Z0-9]{4,16}$/;
+export function gaTag(st) {
+  const id = String((st && st['seo.ga4_id']) || '').trim().toUpperCase();
+  if (!GA_RE.test(id)) return '';
+  return `<script async src="https://www.googletagmanager.com/gtag/js?id=${id}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${id}');</script>`;
+}
+
 const won = (n) => (n ? (n % 10000 === 0 ? `${n / 10000}만원` : `${(n / 10000).toFixed(1)}만원`) : '');
 
 export async function renderPage(context, template, metaFn) {
@@ -22,16 +31,18 @@ export async function renderPage(context, template, metaFn) {
   if (!tpl.ok) return tpl;
   let meta = null;
   let base = url.origin;
+  let st = {};
   try {
     if (env.DB) {
       await ensureSchema(env);
-      base = siteBase(url, await getSettings(env.DB).catch(() => ({})), await domainLive(env));
+      st = await getSettings(env.DB).catch(() => ({}));
+      base = siteBase(url, st, await domainLive(env));
       meta = await metaFn(env, context.params, url, base);   // base: 절대 주소(구조화 데이터)용 대표 주소
     }
   } catch (e) { meta = null; }
   const abs = (u) => (!u ? '' : /^https?:\/\//.test(u) ? u : base + u);
   const title = meta?.title ? (meta.fullTitle ? meta.title : `${meta.title} | 쏘플파티룸`) : null;
-  const verify = await verifyTags(env);
+  const verify = (await verifyTags(env)) + gaTag(st);
   const injected = meta?.html || {};
   const rw = new HTMLRewriter()
     .on('title', { element(el) { if (title) el.setInnerContent(title); } })
@@ -39,6 +50,9 @@ export async function renderPage(context, template, metaFn) {
     .on('meta[name="keywords"]', { element(el) { if (meta?.keywords) el.setAttribute('content', meta.keywords); } })
     .on('meta[property="og:title"]', { element(el) { if (title) el.setAttribute('content', title); } })
     .on('meta[property="og:description"]', { element(el) { if (meta?.desc) el.setAttribute('content', meta.desc); } })
+    // 트위터 카드 제목·설명도 og 와 같게 (화면 틀에 적힌 "지점 상세"·"지역별 파티룸" 같은 기본 문구가 남지 않게)
+    .on('meta[name="twitter:title"]', { element(el) { if (title) el.setAttribute('content', title); } })
+    .on('meta[name="twitter:description"]', { element(el) { if (meta?.desc) el.setAttribute('content', meta.desc); } })
     .on('meta[property="og:image"]', { element(el) { el.setAttribute('content', abs(meta?.image || el.getAttribute('content'))); } })
     .on('meta[name="twitter:image"]', { element(el) { el.setAttribute('content', abs(meta?.image || el.getAttribute('content'))); } })
     .on('meta[property="og:image:alt"]', { element(el) { if (title) el.setAttribute('content', title); } })
@@ -87,6 +101,16 @@ export async function renderStatic(context) {
       extra += await verifyTags(context.env);
     }
   } catch { /* DB 연결 전이면 기본 화면만 */ }
+  extra += gaTag(st);
+  // 첫 화면·지점 찾기·지역별 지점 — 지점 목록을 서버가 미리 채워서, 검색 로봇이 스크립트 없이도 지점 이름·주소·요금·링크를 읽게 한다
+  let blocks = null;
+  const page = url.pathname.replace(/\/+$/, '') || '/';
+  try {
+    if (context.env.DB && ['/', '/index', '/rooms', '/locations'].includes(page)) {
+      const spaces = await loadSpaces(context.env.DB);
+      if (spaces.length) blocks = page === '/rooms' ? roomsBlocks(spaces) : page === '/locations' ? locationsBlocks(spaces) : homeBlocks(spaces, st);
+    }
+  } catch { blocks = null; }
   const base = siteBase(url, st, await domainLive(context.env));
   const abs = (u) => (!u ? u : /^https?:\/\//.test(u) ? u : base + (u.startsWith('/') ? u : '/' + u));
   const here = base + (url.pathname === '/index' ? '/' : url.pathname);
@@ -97,13 +121,16 @@ export async function renderStatic(context) {
     const h = new Headers(res.headers); h.delete('content-length'); h.delete('etag');
     res = new Response(body, { status: res.status, headers: h });
   }
-  return new HTMLRewriter()
+  const rw = new HTMLRewriter()
     .on('meta[property="og:image"]', { element(el) { el.setAttribute('content', abs(el.getAttribute('content'))); } })
     .on('meta[name="twitter:image"]', { element(el) { el.setAttribute('content', abs(el.getAttribute('content'))); } })
     .on('meta[property="og:url"]', { element(el) { if (!el.getAttribute('content')) el.setAttribute('content', here); } })
     .on('link[rel="canonical"]', { element(el) { if (!el.getAttribute('href')) el.setAttribute('href', here); } })
-    .on('head', { element(el) { if (extra) el.append(extra, { html: true }); } })
-    .transform(res);
+    .on('head', { element(el) { if (extra) el.append(extra, { html: true }); } });
+  for (const [sel, htmlStr] of Object.entries(blocks || {})) rw.on(sel, { element(el) { el.setInnerContent(htmlStr, { html: true }); } });
+  // 개인정보처리방침 — GA4를 켰으면 서버에서부터 GA 사용 안내를 보이게 (스크립트를 안 읽는 로봇·화면에도 맞는 문구가 나가게)
+  if (gaTag(st)) rw.on('[data-noga]', { element(el) { el.setAttribute('hidden', ''); } }).on('[data-ga]', { element(el) { el.removeAttribute('hidden'); } });
+  return rw.transform(res);
 }
 
 /* ---------------- 화면별 정보 ---------------- */
@@ -160,18 +187,24 @@ export async function roomMeta(env, params, url, base = "") {
   try { st = await getSettings(env.DB); } catch { st = {}; }
   const origin = base || '';
   const all = featList(s);
-  const summary = `<nav class="crumb" aria-label="현재 위치" style="padding-top:22px"><a href="/">홈</a><span>›</span><a href="/locations">지역별 지점</a><span>›</span><a href="/area/${esc(encodeURIComponent(s.area))}">${esc(s.region)} ${esc(s.area)}</a><span>›</span><b>${esc(s.name)}</b></nav>
+  const near = nearRoomsHtml(s, (await loadSpaces(env.DB)).filter((x) => x.visible));
+  const rp = regionPath(s.region), ap = areaPath(s.area);
+  const sameName = s.area === s.region;
+  const summary = `<nav class="crumb" aria-label="현재 위치" style="padding-top:22px"><a href="/">홈</a><span>›</span><a href="/locations">지역별 지점</a><span>›</span><a href="${esc(rp)}">${esc(s.region)}</a>${sameName ? '' : `<span>›</span><a href="${esc(ap)}">${esc(s.area)}</a>`}<span>›</span><b>${esc(s.name)}</b></nav>
 <h1 class="h1" style="margin-top:10px">${esc(s.name)} <span class="muted" style="font-size:.55em;font-weight:600">${esc(s.region)} ${esc(s.area)} 파티룸</span></h1>
 <p class="lead">${esc(s.addr || '')}${s.base && s.max ? ` · 기준 ${esc(s.base)}명, 최대 ${esc(s.max)}명` : ''}${s.info?.size ? ` · ${esc(s.info.size)}` : ''}${from ? ` · ${esc(won(from))}부터` : ''}</p>
 ${all.length ? `<p class="muted">${all.map((f) => esc(f)).join(' · ')}</p>` : ''}
 ${s.intro ? String(s.intro).split(/\n\s*\n/).map((pg) => `<p style="margin-top:12px">${esc(pg.trim())}</p>`).join('') : ''}
+<section class="room-sec"><h2>예약하기</h2>${roomBookHtml(s)}</section>
+<section class="room-sec"><h2>패키지와 요금</h2>${roomPriceHtml(s)}</section>
 ${detailSsr(s)}
+${s.info?.route || s.info?.parking ? `<section class="room-sec"><h2>찾아오는 길</h2>${s.info.route ? `<p>${esc(s.info.route)}</p>` : ''}${s.info.parking ? `<p>${esc(s.info.parking)}</p>` : ''}</section>` : ''}
 ${roomGuideLinks(s)}
-<div class="skel" style="height:360px;margin-top:22px;border-radius:22px"></div>`;
+${near ? `<p class="muted small" style="margin-top:10px">근처 다른 지점: ${near} · <a class="link" href="${esc(sameName ? rp : ap)}">${esc(s.area)} 파티룸 전체</a></p>` : ''}`;
   return {
     title: `${s.name} 파티룸 — ${s.region} ${s.area}`, desc, image: OG_ROOMS.has(s.code) ? ogImg(`room/${s.code}`) : (s.photos || [])[0] ? photoUrl(s.photos[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
     keywords: [...new Set([`${s.area} 파티룸`, `${s.region} 파티룸`, `${s.area} 파티룸 대여`, `${s.name}`, '쏘플파티룸', ...all.slice(0, 4).map((f) => `${f} 파티룸`), ...(s.kw || []).slice(0, 8)])].join(', '),
-    jsonld: [roomJsonLd(origin, s, st), breadcrumbJsonLd(origin, [['홈', '/'], ['지역별 지점', '/locations'], [`${s.region} ${s.area}`, `/area/${encodeURIComponent(s.area)}`], [s.name, `/room/${s.code}`]])],
+    jsonld: [roomJsonLd(origin, s, st), breadcrumbJsonLd(origin, [['홈', '/'], ['지역별 지점', '/locations'], [s.region, rp], ...(sameName ? [] : [[s.area, ap]]), [s.name, `/room/${s.code}`]])],
     html: { '#roomRoot': summary },
   };
 }
@@ -195,8 +228,8 @@ export async function areaMeta(env, params, url, base = "") {
     keywords: [`${a.name} 파티룸`, `${a.name} 파티룸 대여`, `${a.name} 파티룸 추천`, `${a.name} 생일파티 장소`, `${a.name} 모임 장소`, a.kind === 'area' ? `${a.region} 파티룸` : '', '쏘플파티룸'].filter(Boolean).join(', '),
     image: areaOg(a),
     data: { area: { kind: a.kind, name: a.name, region: a.region, codes: a.list.map((s) => s.code) } },
-    jsonld: [areaJsonLd(origin, a), breadcrumbJsonLd(origin, a.kind === 'area' ? [['홈', '/'], ['지역별 지점', '/locations'], [a.region, `/area/${encodeURIComponent(a.region)}`], [a.name, `/area/${encodeURIComponent(a.name)}`]] : [['홈', '/'], ['지역별 지점', '/locations'], [a.name, `/area/${encodeURIComponent(a.name)}`]]), areaGuideFaq(a)].filter(Boolean),
-    html: { '#areaRoot': areaHtml(origin, a) },
+    jsonld: [areaJsonLd(origin, a), breadcrumbJsonLd(origin, a.kind === 'area' ? [['홈', '/'], ['지역별 지점', '/locations'], [a.region, regionPath(a.region)], [a.name, areaPath(a.name)]] : [['홈', '/'], ['지역별 지점', '/locations'], [a.name, regionPath(a.name)]]), areaGuideFaq(a)].filter(Boolean),
+    html: { '#areaRoot': areaHtml(origin, a), '#areaChips': areaChipsHtml(spaces, a) },
   };
 }
 
@@ -268,7 +301,9 @@ export async function sitemap(context) {
     if (env.DB) {
       await ensureSchema(env);
       const spaces = await loadSpaces(env.DB);
-      for (const a of areaPaths(spaces)) urls.push({ loc: origin + a.path });
+      // 지역·동네 화면의 갱신일 = 그 안 지점 정보가 마지막으로 바뀐 날
+      const lastOf = (list) => list.map((s) => String(s.updated_at || '').slice(0, 10)).filter(Boolean).sort().pop() || '';
+      for (const a of areaPaths(spaces)) urls.push({ loc: origin + a.path, lastmod: lastOf(spaces.filter((s) => (a.kind === 'region' ? s.region : s.area) === a.name)) });
       for (const s of spaces) urls.push({ loc: `${origin}/room/${s.code}`, lastmod: (s.updated_at || '').slice(0, 10) });
       const ev = (await env.DB.prepare(`SELECT id, updated_at FROM events WHERE status IN ('open','closed') AND COALESCE(d2, d) >= ?`).bind(todayKST()).all()).results || [];
       for (const e of ev) urls.push({ loc: `${origin}/e/${e.id}`, lastmod: (e.updated_at || '').slice(0, 10) });

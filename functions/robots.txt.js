@@ -10,6 +10,8 @@ export const onRequestGet = async ({ request, env }) => {
   const origin = siteBase(url, st, await domainLive(env));
   const body = [
     'User-agent: *',
+    // 지점·후기 사진은 /api/img/ 로 나간다 — 사진은 이미지 검색·검색 결과 썸네일에 쓰이도록 열어 두고, 나머지 /api/ 는 막는다
+    'Allow: /api/img/',
     'Allow: /',
     'Disallow: /admin',
     'Disallow: /api/',

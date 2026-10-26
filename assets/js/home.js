@@ -9,7 +9,8 @@
     const s = site.settings || {};
     if (s['hero.title']) $('#heroTitle').innerHTML = esc(s['hero.title']).replace(/,\s*/, ',<br>').replace('쏘플', '<em>쏘플</em>');
     if (s['hero.sub']) $('#heroSub').textContent = s['hero.sub'];
-    if (spaces.length) $('#stRegions').textContent = new Set(spaces.map((x) => x.region)).size;
+    const stR = $('#stRegions');
+    if (stR && spaces.length) stR.textContent = new Set(spaces.map((x) => x.region)).size;
     popular(spaces, av);
     regions(spaces);
     passes(s);
@@ -47,18 +48,22 @@
   const REGION_PHOTO = { 서울: 'neon-night', 경기: 'orange-room', 인천: 'terrace-night', 대전: 'moroccan', 부산: 'rooftop', 전주: 'welcome' };
   function regions(spaces) {
     const by = {};
-    spaces.forEach((s) => { (by[s.region] = by[s.region] || {}); by[s.region][s.area] = (by[s.region][s.area] || 0) + 1; });
+    // 지역·동네 정식 주소(/area/seoul) — 서버가 지점 정보에 실어 보낸 값, 없으면 한글 주소
+    const rp = {}, ap = {};
+    spaces.forEach((s) => { (by[s.region] = by[s.region] || {}); by[s.region][s.area] = (by[s.region][s.area] || 0) + 1; rp[s.region] = s.rp || rp[s.region]; ap[s.area] = s.ap || ap[s.area]; });
+    const rHref = (r) => rp[r] || '/area/' + encodeURIComponent(r);
+    const aHref = (a) => ap[a] || '/area/' + encodeURIComponent(a);
     const order = ['서울', '경기', '인천', '대전', '부산', '전주'];
     const regs = Object.keys(by).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
-    $('#regionSub').textContent = `${regs.length}개 권역 ${spaces.length}곳. 권역을 누르면 그 지역 지점을 모아 보여 드려요.`;
+    $('#regionSub').textContent = `${regs.join('·')}. 권역을 누르면 그 지역 지점을 모아 보여 드려요.`;
     $('#regionTiles').innerHTML = regs.map((r) => {
       const n = Object.values(by[r]).reduce((a, b) => a + b, 0);
       const ph = REGION_PHOTO[r] || 'entrance';
-      return `<a class="region" href="/area/${encodeURIComponent(r)}" style="--pp:url('/assets/img/photo/${ph}-s.webp')"><b>${esc(r)}</b><span>${n}개 지점</span></a>`;
-    }).join('') + `<a class="region all" href="/locations"><b>전체 지점 안내</b><span>전국 ${spaces.length}곳 주소·지도</span></a>`;
+      return `<a class="region" href="${esc(rHref(r))}" style="--pp:url('/assets/img/photo/${ph}-s.webp')"><b>${esc(r)}</b><span>${n}개 지점</span></a>`;
+    }).join('') + '<a class="region all" href="/locations"><b>전체 지점 안내</b><span>전국 지점 주소·지도</span></a>';
     const areas = [];
     for (const r of regs) for (const [a, n] of Object.entries(by[r]).sort((x, y) => y[1] - x[1])) if (a !== r || regs.length === 1) areas.push([a, n]);
-    $('#areaList').innerHTML = `<span class="area-chips-lb">동네별</span>` + areas.map(([a, n]) => `<a class="chip" href="/area/${encodeURIComponent(a)}">${esc(a)} <span class="n">${n}</span></a>`).join('');
+    $('#areaList').innerHTML = `<span class="area-chips-lb">동네별</span>` + areas.map(([a, n]) => `<a class="chip" href="${esc(aHref(a))}">${esc(a)} <span class="n">${n}</span></a>`).join('');
   }
 
   /* ---------- 클럽 패스 ---------- */

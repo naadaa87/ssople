@@ -1,6 +1,7 @@
 // 지점 — 목록·상세, 관리자 수정
 import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones } from './util.js';
 import { seedOf } from './db.js';
+import { regionPath, areaPath } from './slugs.js';
 
 let cache = null;
 let cacheAt = 0;
@@ -31,6 +32,9 @@ export function photoUrl(p) {
 export function publicSpace(s) {
   const { aliases, visible, sort, edited, photoSrc, ...rest } = s;
   rest.photos = (s.photos || []).map(photoUrl).filter(Boolean);
+  // 지역·동네 화면 주소 — 화면 스크립트가 한글 주소(/area/건대) 대신 정식 주소(/area/gundae)로 연결하게
+  rest.rp = regionPath(s.region);
+  rest.ap = areaPath(s.area);
   return rest;
 }
 

@@ -26,7 +26,7 @@
     const minP = SP.minPrice(s);
     $('#roomRoot').innerHTML = `
       <div style="padding-top:22px">
-        <nav class="crumb" aria-label="위치"><a href="/rooms">지점 찾기</a>${icon('chev-r', 'sm')}<a href="/rooms?region=${encodeURIComponent(s.region)}">${esc(s.region)}</a>${icon('chev-r', 'sm')}<a href="/rooms?region=${encodeURIComponent(s.region)}&area=${encodeURIComponent(s.area)}">${esc(s.area)}</a></nav>
+        <nav class="crumb" aria-label="위치"><a href="/locations">지역별 지점</a>${icon('chev-r', 'sm')}<a href="${esc(s.rp || '/rooms?region=' + encodeURIComponent(s.region))}">${esc(s.region)}</a>${s.area !== s.region ? `${icon('chev-r', 'sm')}<a href="${esc(s.ap || '/rooms?region=' + encodeURIComponent(s.region) + '&area=' + encodeURIComponent(s.area))}">${esc(s.area)}</a>` : ''}</nav>
         <div class="room-head">
           <div>
             <h1 class="h1">${esc(s.name)}</h1>
@@ -500,7 +500,8 @@
         space = d.space; near = d.near || []; reviewStat = d.reviews || reviewStat;
       }
     } catch (e) { notFound(e.status === 404 ? '' : e.message); return; }
-    document.title = `${space.name} 파티룸 | 쏘플파티룸`;
+    // 서버가 정한 제목(지점명 파티룸 — 지역 동네 | 쏘플파티룸)과 같은 모양으로
+    document.title = `${space.name} 파티룸 — ${space.region} ${space.area} | 쏘플파티룸`;
     render();
     av = await SP.avail(today, DAYS, [code], true);
     drawCal();

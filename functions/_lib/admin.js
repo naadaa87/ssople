@@ -357,6 +357,10 @@ export function register(route) {
         s = s.trim().replace(/\/+$/, '');
         if (s && !/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(s) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(s)) throw new HttpError(400, '실시간 서버 주소는 https://로 시작하는 주소만 넣어 주세요. 예) https://ssople-live.계정이름.workers.dev');
       }
+      if (k === 'seo.ga4_id') {
+        s = s.trim().toUpperCase();
+        if (s && !/^G-[A-Z0-9]{4,16}$/.test(s)) throw new HttpError(400, 'GA4 측정 ID는 G-로 시작하는 값이에요. 예) G-AB12CD34EF');
+      }
       if (k === 'club.benefits') {
         const j = parseJSON(s, null);
         if (!j || typeof j !== 'object') throw new HttpError(400, '클럽 혜택 형식이 올바르지 않아요.');

@@ -293,6 +293,7 @@ export const DEFAULTS = {
   'link.host': '',
   // 사업자 정보 — 바닥글·회사 정보·이용약관·개인정보처리방침에 들어간다 (2026.10.22 기존 홈페이지 기준)
   'biz.name': '브이픽서(주)',
+  'biz.role': '쏘플파티룸 브랜드 플랫폼',          // 바닥글·회사 정보에 상호 옆에 붙는 한 줄 설명
   'biz.ceo': '김동준',
   'biz.no': '895-88-03679',
   'biz.mailorder': '',
@@ -301,6 +302,7 @@ export const DEFAULTS = {
   'biz.privacy_officer': '최시준',
   // 함께 표시하는 회사 (이름을 비우면 숨김)
   'biz2.name': '제이에스시스템즈(주)',
+  'biz2.role': '고객관리 및 예약시스템 운영전문기업',
   'biz2.ceo': '임동은',
   'biz2.no': '716-86-04411',
   'biz2.addr': '경기도 화성시 병점구 효행로 1069, 601호-H201',
@@ -318,6 +320,7 @@ export const DEFAULTS = {
   'seo.naver_verify': '',
   'seo.google_verify': '',
   'seo.bing_verify': '',
+  'seo.ga4_id': '',              // 구글 애널리틱스(GA4) 측정 ID (G-로 시작). 비우면 GA를 넣지 않는다
   'seo.canonical_host': '',      // 비우면 자동 — ssople.com 이 이 홈페이지에 연결되면 그 주소가 대표 주소. 값을 적으면 그 값이 우선 (되돌리기: ssople.pages.dev)
   'host.premium_price': '50000',
   'host.plus_price': '30000',

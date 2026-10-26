@@ -20,3 +20,13 @@
 /live/arcade/* /live/app 200
 /live/r/* /live/app 200
 /live/tv/* /live/app 200
+
+# 아임웹 시절 옛 주소 — 2026.10 검색 결과에 남아 있던 것 (서버 기능을 거치지 않는 주소라 여기서 옮긴다)
+# 서버 기능을 거치는 옛 주소 표는 functions/_lib/legacy.js 에 있다
+/140 /area/bundang 301
+/corp /corporate 301
+/ansan /area/uiwang 301
+/94 /area/gyeonggi 301
+/126 /locations 301
+/99 /locations 301
+/video /about 301

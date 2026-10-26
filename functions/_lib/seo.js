@@ -3,24 +3,15 @@ import { getSettings, getMeta, setMeta } from './db.js';
 import { photoUrl } from './spaces.js';
 import { AREA_GUIDES } from './area-guides.js';
 import { MAGAZINE } from './magazine-index.js';
+import { REGION_SLUGS, AREA_SLUGS, regionPath, areaPath } from './slugs.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
 const PS = new RegExp(String.fromCharCode(0x2029), 'g');
 export const jsonText = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(LS, '\\u2028').replace(PS, '\\u2029');
 
-/* ---------- 지역·동네 주소 ---------- */
-export const REGION_SLUGS = { 서울: 'seoul', 경기: 'gyeonggi', 인천: 'incheon', 대전: 'daejeon', 부산: 'busan', 전주: 'jeonju', 대구: 'daegu', 광주: 'gwangju', 울산: 'ulsan', 제주: 'jeju', 강원: 'gangwon', 충청: 'chungcheong', 경남: 'gyeongnam', 경북: 'gyeongbuk', 전남: 'jeonnam', 전북: 'jeonbuk', 세종: 'sejong' };
-export const AREA_SLUGS = {
-  건대: 'gundae', 구로: 'guro', 까치산: 'kkachisan', 선유도: 'seonyudo', 신도림: 'sindorim', 신촌: 'sinchon', 천호: 'cheonho', 혜화: 'hyehwa', 홍대: 'hongdae',
-  강남: 'gangnam', 잠실: 'jamsil', 이태원: 'itaewon', 성수: 'seongsu', 합정: 'hapjeong', 왕십리: 'wangsimni', 노원: 'nowon', 신림: 'sillim', 사당: 'sadang', 영등포: 'yeongdeungpo', 종로: 'jongno', 연남: 'yeonnam', 망원: 'mangwon', 서울대입구: 'seoultaeipgu', 수유: 'suyu', 목동: 'mokdong', 강북: 'gangbuk', 마포: 'mapo', 용산: 'yongsan',
-  남양주: 'namyangju', 동탄: 'dongtan', 미사: 'misa', 분당: 'bundang', 수원: 'suwon', 의왕: 'uiwang', 일산: 'ilsan', 안양: 'anyang', 평택: 'pyeongtaek', 용인: 'yongin', 성남: 'seongnam', 부천: 'bucheon', 화성: 'hwaseong', 광명: 'gwangmyeong', 김포: 'gimpo', 하남: 'hanam', 구리: 'guri', 의정부: 'uijeongbu', 안산: 'ansan', 시흥: 'siheung', 파주: 'paju', 양주: 'yangju',
-  부평: 'bupyeong', 월미도: 'wolmido', 송도: 'songdo', 구월동: 'guwol', 주안: 'juan',
-  대전: 'daejeon', 부산: 'busan', 전주: 'jeonju', 서면: 'seomyeon', 해운대: 'haeundae', 광안리: 'gwangalli', 둔산: 'dunsan', 유성: 'yuseong', 대구: 'daegu', 동성로: 'dongseongno', 광주: 'gwangju', 울산: 'ulsan', 제주: 'jeju', 천안: 'cheonan', 청주: 'cheongju', 춘천: 'chuncheon', 강릉: 'gangneung', 창원: 'changwon', 포항: 'pohang', 여수: 'yeosu', 순천: 'suncheon', 목포: 'mokpo', 전북: 'jeonbuk',
-};
-const slugOf = (name, table) => table[name] || encodeURIComponent(String(name || '').trim());
-export const regionPath = (name) => '/area/' + slugOf(name, REGION_SLUGS);
-export const areaPath = (name) => '/area/' + slugOf(name, AREA_SLUGS);
+/* ---------- 지역·동네 주소 (slugs.js) ---------- */
+export { REGION_SLUGS, AREA_SLUGS, regionPath, areaPath };
 
 /** /area/<slug> → 어느 지역·동네인지 (slug 또는 한글 이름 둘 다 받아요) */
 export function findArea(raw, spaces) {
@@ -79,20 +70,60 @@ export const SITE_DESC = '즐거움이 가득한 쏘플 파티룸! 국내 No.1. 
 /** 네이버 서치어드바이저 소유 확인 (https://ssople.com) — 화면 머리 부분에 고정으로 들어가 있다 */
 export const NAVER_VERIFY = '2b49069616c8ffe8d562333d7fa408da4fbbe2d3';
 
+/** 상담 시간 글("월~목 10:00~19:00 · 금~일 10:00~22:00") → OpeningHoursSpecification 목록. 못 읽으면 undefined */
+const DAY_KO = ['월', '화', '수', '목', '금', '토', '일'];
+const DAY_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+export function hoursSpec(text) {
+  const src = String(text || '').trim();
+  if (!src) return undefined;
+  const out = [];
+  const hm = (t) => { const [h, m] = t.split(':'); return `${String(Number(h)).padStart(2, '0')}:${m}`; };
+  for (const part of src.split(/[·,/|]|\s{2,}/)) {
+    const p = part.trim();
+    if (!p) continue;
+    const time = p.match(/(\d{1,2}:\d{2})\s*[~\-–]\s*(\d{1,2}:\d{2})/);
+    if (!time) continue;
+    let days = [];
+    if (/매일|연중무휴|전체/.test(p)) days = [0, 1, 2, 3, 4, 5, 6];
+    else if (/평일/.test(p)) days = [0, 1, 2, 3, 4];
+    else if (/주말/.test(p)) days = [5, 6];
+    else {
+      const r = p.match(/([월화수목금토일])\s*(?:[~\-–]\s*([월화수목금토일]))?/);
+      if (!r) continue;
+      const a = DAY_KO.indexOf(r[1]);
+      const b = r[2] ? DAY_KO.indexOf(r[2]) : a;
+      for (let i = a; ; i = (i + 1) % 7) { days.push(i); if (i === b || days.length > 7) break; }
+    }
+    if (!days.length) continue;
+    out.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: days.map((i) => 'https://schema.org/' + DAY_EN[i]), opens: hm(time[1]), closes: hm(time[2]) });
+  }
+  return out.length ? out : undefined;
+}
+
+/** 쏘플파티룸과 창업자 소개 — 검색엔진·AI 답변이 인용하는 기본 사실 (홈 본문·브랜드 이야기·창업자 이야기와 같은 내용) */
+export const BRAND_FACTS = {
+  foundingYear: '2015',
+  founderDesc: '2015년 홍대 소셜팩토리에서 파티룸이라는 공간 개념과 운영 방식을 만들기 시작해, 지금의 파티룸 시장과 산업의 초기 개념과 시장 구조를 만든 사람 중 한 명. 10년 넘게 340여 개 공간을 직접 기획·운영한 쏘플파티룸 창업자',
+};
+
 export function orgJsonLd(origin, st = {}) {
   const same = ['sns.instagram', 'sns.blog', 'sns.youtube', 'kakao.url'].map((k) => st[k]).filter(Boolean);
+  const tel = st['cs.phone'] ? '+82-' + String(st['cs.phone']).replace(/^0/, '').replace(/[^\d-]/g, '') : undefined;
   return {
     '@context': 'https://schema.org', '@type': 'Organization', '@id': origin + '/#org',
     name: '쏘플파티룸', alternateName: ['쏘플 파티룸', 'SSOPLE', 'SSOPLE Party Room', '쏘플'], url: origin + '/',
+    legalName: st['biz.name'] || undefined,
     logo: { '@type': 'ImageObject', url: origin + '/assets/img/logo.png', width: 551, height: 211 },
     image: origin + '/assets/img/og.jpg',
     description: SITE_DESC,
-    telephone: st['cs.phone'] ? '+82-' + String(st['cs.phone']).replace(/^0/, '').replace(/[^\d-]/g, '') : undefined,
+    telephone: tel,
     email: st['biz.email'] || undefined,
-    foundingDate: '2016', areaServed: 'KR',
+    address: st['biz.addr'] ? { '@type': 'PostalAddress', streetAddress: st['biz.addr'], addressCountry: 'KR' } : undefined,
+    foundingDate: BRAND_FACTS.foundingYear, areaServed: 'KR',
     slogan: '사람들의 시간과 즐거움을 기억하는 공간',
-    founder: { '@type': 'Person', name: '최시준', url: origin + '/ceo', sameAs: ['https://choisijun.com'] },
-    contactPoint: [{ '@type': 'ContactPoint', contactType: 'customer service', telephone: st['cs.phone'] ? '+82-' + String(st['cs.phone']).replace(/^0/, '').replace(/[^\d-]/g, '') : undefined, availableLanguage: 'Korean', hoursAvailable: st['cs.hours'] || undefined }],
+    knowsAbout: ['파티룸', '공간대여', '파티룸 창업', '공실 활용', '무인 공간 운영'],
+    founder: { '@type': 'Person', name: '최시준', jobTitle: '쏘플파티룸 창업자·대표', description: BRAND_FACTS.founderDesc, url: origin + '/ceo', sameAs: ['https://choisijun.com'] },
+    contactPoint: [{ '@type': 'ContactPoint', contactType: 'customer service', telephone: tel, availableLanguage: 'Korean', hoursAvailable: hoursSpec(st['cs.hours']) }],
     sameAs: same.length ? same : undefined,
   };
 }

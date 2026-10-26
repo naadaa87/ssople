@@ -246,7 +246,11 @@
       return u.toString();
     } catch { return url; }
   };
+  /* 구글 애널리틱스(GA4) — 관리자 설정에 측정 ID를 넣었을 때만 gtag가 있다. 없으면 아무 일도 안 한다 */
+  const GA_EVENT = { book: 'click_naver_booking', place: 'click_naver_map', kakao: 'click_kakao', call: 'click_call' };
+  SP.ga = (name, params) => { try { if (typeof window.gtag === 'function') window.gtag('event', name, { ...params, transport_type: 'beacon' }); } catch { /* 무시 */ } };
   SP.track = (code, kind, pkg, d) => {
+    SP.ga(GA_EVENT[kind] || 'click_' + kind, { room_code: code || undefined, package: pkg || undefined, use_date: d || undefined, page_path: location.pathname });
     const body = JSON.stringify({ code, kind, pkg: pkg || null, d: d || null });
     try { if (navigator.sendBeacon && navigator.sendBeacon('/api/click', new Blob([body], { type: 'text/plain' }))) return; } catch { /* 무시 */ }
     fetch('/api/click', { method: 'POST', body, keepalive: true }).catch(() => {});
@@ -256,6 +260,15 @@
     if (!a) return;
     const [code, kind, pkg, d] = a.dataset.track.split('|');
     SP.track(code, kind, pkg, d);
+  });
+  // data-track 이 없는 전화·카카오톡·네이버 예약 링크도 GA4 이벤트로 (GA를 켰을 때만)
+  document.addEventListener('click', (e) => {
+    if (typeof window.gtag !== 'function') return;
+    const a = e.target.closest('a[href]');
+    if (!a || a.hasAttribute('data-track')) return;
+    const h = a.getAttribute('href') || '';
+    const ev = /^tel:/.test(h) ? 'click_call' : /pf\.kakao\.com|open\.kakao\.com/.test(h) ? 'click_kakao' : /booking\.naver\.com/.test(h) ? 'click_naver_booking' : /naver\.me|map\.naver\.com/.test(h) ? 'click_naver_map' : '';
+    if (ev) SP.ga(ev, { link_url: h, page_path: location.pathname });
   });
 
   /* ---------------- 낮/밤 표시 ---------------- */
@@ -469,6 +482,10 @@
         if (el.dataset.hideEmpty !== undefined) { const row = el.closest('.co-row') || el; row.hidden = !v; }
       });
       SP.$$('[data-co2]').forEach((el) => { el.hidden = !s['biz2.name']; });
+      // 개인정보처리방침 — GA4를 켰으면 GA 사용 안내를, 아니면 '추적 도구를 쓰지 않아요' 안내를 보여 준다
+      const ga = /^G-[A-Z0-9]{4,16}$/i.test(String(s['seo.ga4_id'] || '').trim());
+      SP.$$('[data-ga]').forEach((el) => { el.hidden = !ga; });
+      SP.$$('[data-noga]').forEach((el) => { el.hidden = ga; });
       SP.$$('[data-set-href]').forEach((el) => { const v = s[el.dataset.setHref]; if (v) { el.href = (el.dataset.setHref === 'cs.phone' ? 'tel:' : '') + v; if (el.dataset.hideEmpty !== undefined) el.hidden = false; } else if (el.dataset.hideEmpty !== undefined) el.hidden = true; });
       const bar = SP.$('.notice-bar');
       if (bar && s['site.notice']) {
@@ -478,7 +495,7 @@
       const biz = SP.$('[data-biz]');
       if (biz) {
         // 바닥글 사업자 정보 — 운영 회사, 함께 표시하는 회사 순서로 한 줄씩
-        const line = (p) => [s[p + '.name'], s[p + '.ceo'] && '대표 ' + s[p + '.ceo'], s[p + '.no'] && '사업자등록번호 ' + s[p + '.no'], s[p + '.mailorder'] && '통신판매업 ' + s[p + '.mailorder'], s[p + '.addr'], s[p + '.email']].filter(Boolean).join(' | ');
+        const line = (p) => [s[p + '.name'] + (s[p + '.role'] ? ' · ' + s[p + '.role'] : ''), s[p + '.ceo'] && '대표 ' + s[p + '.ceo'], s[p + '.no'] && '사업자등록번호 ' + s[p + '.no'], s[p + '.mailorder'] && '통신판매업 ' + s[p + '.mailorder'], s[p + '.addr'], s[p + '.email']].filter(Boolean).join(' | ');
         const lines = [line('biz'), s['biz2.name'] ? line('biz2') : ''].filter(Boolean);
         if (lines.length) biz.innerHTML = lines.map((l) => `<div>${SP.esc(l)}</div>`).join('');
       }

@@ -6,7 +6,9 @@
     let spaces = [];
     try { spaces = await SP.spaces(); } catch (e) { $('#locList').innerHTML = `<div class="empty"><h3>지점을 불러오지 못했어요</h3><p>${esc(e.message)}</p></div>`; return; }
     const by = {};
-    spaces.forEach((s) => { ((by[s.region] = by[s.region] || {})[s.area] = by[s.region][s.area] || []).push(s); });
+    const rp = {}, ap = {};
+    spaces.forEach((s) => { ((by[s.region] = by[s.region] || {})[s.area] = by[s.region][s.area] || []).push(s); rp[s.region] = s.rp || rp[s.region]; ap[s.area] = s.ap || ap[s.area]; });
+    const aHref = (a) => ap[a] || rp[a] || '/area/' + encodeURIComponent(a);
     const regs = Object.keys(by).sort((a, b) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
     $('#locLead').textContent = `${regs.join(', ')}에 있어요. 지점 이름을 누르면 요금과 네이버 예약 버튼이 나와요.`;
     const areasN = new Set(spaces.map((s) => s.area)).size;
@@ -29,7 +31,7 @@
             <div class="loc-acts">${s.place ? `<a class="btn btn-line btn-sm" href="${esc(s.place)}" target="_blank" rel="noopener" data-track="${s.code}|place">${icon('map', 'sm')}지도</a>` : '<span></span>'}<a class="btn btn-naver btn-sm" href="/room/${s.code}">${icon('calendar', 'sm')}요금·예약</a></div>
           </div></div>`;
       };
-      $('#locList').innerHTML = show.map((r) => `<section style="margin-top:34px"><div class="sec-hd" style="margin-bottom:14px"><div><h2 class="h2">${esc(r)} <span class="area-count">${Object.values(by[r]).reduce((a, l) => a + l.length, 0)}곳</span></h2><p>${Object.keys(by[r]).map((a) => `<a class="link" href="/area/${encodeURIComponent(a)}">${esc(a)}</a>`).join(' · ')}</p></div><a class="sec-more" href="/area/${encodeURIComponent(r)}">${esc(r)} 파티룸 모아 보기${icon('chev-r', 'sm')}</a></div>
+      $('#locList').innerHTML = show.map((r) => `<section style="margin-top:34px"><div class="sec-hd" style="margin-bottom:14px"><div><h2 class="h2">${esc(r)} <span class="area-count">${Object.values(by[r]).reduce((a, l) => a + l.length, 0)}곳</span></h2><p>${Object.keys(by[r]).map((a) => `<a class="link" href="${esc(aHref(a))}">${esc(a)}</a>`).join(' · ')}</p></div><a class="sec-more" href="${esc(rp[r] || '/area/' + encodeURIComponent(r))}">${esc(r)} 파티룸 모아 보기${icon('chev-r', 'sm')}</a></div>
         <div class="loc-grid">${Object.values(by[r]).flat().map(card).join('')}</div></section>`).join('');
     };
     draw();
