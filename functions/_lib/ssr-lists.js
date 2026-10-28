@@ -1,9 +1,11 @@
 // 검색 로봇이 바로 읽는 지점 목록 — 첫 화면·지점 찾기·지역별 지점·지역 화면에 서버가 미리 채워 넣는다.
 // 손님 화면은 각 화면 스크립트(home.js·rooms.js·locations.js·area.js)가 같은 자리를 최신 정보로 다시 그린다.
 // 그래서 여기 모양은 화면 스크립트의 카드(SP.roomCard 등)와 같은 class 를 쓰고, 날짜별 빈 방·후기 수처럼 그때그때 바뀌는 값은 넣지 않는다.
+// 지점 순서는 요청마다 랜덤. 화면 스크립트(SP.rnd)가 여기서 정한 순서를 이어 받아서, 다시 그려도 카드 자리가 그대로예요.
 import { photoUrl, zoneOf } from './spaces.js';
 import { regionPath, areaPath } from './slugs.js';
 import { minPrice, featList } from './seo.js';
+import { shuffle } from './util.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const ic = (n, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -76,21 +78,14 @@ export function groupByRegion(spaces) {
   return [...by.entries()].sort((a, b) => regionRank(a[0]) - regionRank(b[0]));
 }
 
-/** 기본 정렬 — 노출 존(프리미엄 → 플러스) → 관리자 순서 */
-const zoneRank = (s) => { const z = zoneOf(s, todayKst()); return z === 'premium' ? 0 : z === 'plus' ? 1 : 2; };
-export const byDefault = (a, b) => zoneRank(a) - zoneRank(b) || (a.sort ?? 0) - (b.sort ?? 0) || String(a.code).localeCompare(String(b.code));
 
 /* ---------------- 첫 화면 ---------------- */
 const REGION_PHOTO = { 서울: 'neon-night', 경기: 'orange-room', 인천: 'terrace-night', 대전: 'moroccan', 부산: 'rooftop', 전주: 'welcome' };
 export function homeBlocks(spaces, st = {}) {
+  // 지금 가장 사랑받는 지점 — 랜덤 8곳 (관리자가 고른 첫 화면 지점이 있으면 그 지점들을 먼저, 순서는 랜덤)
   const featured = String(st['home.featured'] || '').split(',').map((x) => x.trim()).filter(Boolean);
-  const pop = spaces.slice().sort((a, b) => {
-    const za = zoneRank(a), zb = zoneRank(b);
-    if (za !== zb) return za - zb;
-    const fa = featured.indexOf(a.code), fb = featured.indexOf(b.code);
-    if (fa !== fb) return (fa < 0 ? 99 : fa) - (fb < 0 ? 99 : fb);
-    return (b.max || 0) - (a.max || 0) || (a.sort ?? 0) - (b.sort ?? 0);
-  }).slice(0, 8);
+  const mix = shuffle(spaces);
+  const pop = mix.filter((s) => featured.includes(s.code)).concat(mix.filter((s) => !featured.includes(s.code))).slice(0, 8);
   const groups = groupByRegion(spaces);
   const tiles = groups.map(([r, areas]) => {
     const n = [...areas.values()].reduce((x, l) => x + l.length, 0);
@@ -104,7 +99,7 @@ export function homeBlocks(spaces, st = {}) {
     }
   }
   return {
-    '#popRooms': pop.map((s, i) => roomCardHtml(s, { rank: i + 1, eager: i < 4 })).join(''),
+    '#popRooms': pop.map((s, i) => roomCardHtml(s, { eager: i < 4 })).join(''),
     '#regionTiles': tiles,
     '#areaList': `<span class="area-chips-lb">동네별</span>${chips.join('')}`,
   };
@@ -112,7 +107,7 @@ export function homeBlocks(spaces, st = {}) {
 
 /* ---------------- 지점 찾기 ---------------- */
 export function roomsBlocks(spaces) {
-  const list = spaces.slice().sort(byDefault);
+  const list = shuffle(spaces);
   return {
     '#rList': list.map((s, i) => roomCardHtml(s, { eager: i < 6 })).join(''),
     '#rCount': '전체 지점',
@@ -138,7 +133,7 @@ export function locationsBlocks(spaces) {
     const n = [...areas.values()].reduce((x, l) => x + l.length, 0);
     const links = [...areas.keys()].map((a) => `<a class="link" href="${esc(a === r ? regionPath(r) : areaPath(a))}">${esc(a)} 파티룸</a>`).join(' · ');
     return `<section style="margin-top:34px"><div class="sec-hd" style="margin-bottom:14px"><div><h2 class="h2"><a href="${esc(regionPath(r))}">${esc(r)} 파티룸</a> <span class="area-count">${n}곳</span></h2><p>${links}</p></div></div>
-        <div class="loc-grid">${[...areas.values()].flat().sort(byDefault).map(card).join('')}</div></section>`;
+        <div class="loc-grid">${shuffle([...areas.values()].flat()).map(card).join('')}</div></section>`;
   }).join('');
   return {
     '#locLead': `${groups.map(([r]) => r).join(', ')}에 있어요. 지점 이름을 누르면 요금과 네이버 예약 버튼이 나와요.`,
@@ -188,11 +183,12 @@ export function roomBookHtml(s) {
   return `<ul class="checks">${rows.join('')}</ul><p class="small muted">예약·결제·취소는 네이버 예약에서 진행돼요.</p>`;
 }
 export function nearRoomsHtml(s, spaces) {
-  const near = spaces
+  // 같은 동네 → 같은 권역 순, 같은 묶음 안에서는 랜덤
+  const near = shuffle(spaces)
     .filter((x) => x.code !== s.code)
     .map((x) => ({ x, w: x.area === s.area ? 0 : x.region === s.region ? 1 : 2 }))
     .filter((o) => o.w < 2)
-    .sort((a, b) => a.w - b.w || (a.x.sort ?? 0) - (b.x.sort ?? 0))
+    .sort((a, b) => a.w - b.w)
     .slice(0, 4)
     .map((o) => o.x);
   if (!near.length) return '';

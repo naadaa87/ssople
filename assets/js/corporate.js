@@ -3,7 +3,8 @@
   const { $ } = SP;
   (async function () {
     const spaces = await SP.spaces().catch(() => []);
-    const big = spaces.filter((s) => (s.max || 0) >= 20).sort((a, b) => b.max - a.max).slice(0, 6);
+    // 20명 넘게 쓰는 지점 중에서 들어올 때마다 랜덤 6곳
+    const big = SP.shuffle(spaces.filter((s) => (s.max || 0) >= 20)).slice(0, 6);
     const av = await SP.avail(SP.today(), 7, big.map((s) => s.code));
     $('#bigRooms').innerHTML = big.map((s) => SP.roomCard(s, { avail: av.spaces && av.spaces[s.code], from: SP.today(), live: !!av.live })).join('');
   })();

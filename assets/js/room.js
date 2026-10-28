@@ -386,7 +386,7 @@
     const all = await SP.spaces();
     const sp = space;
     const cands = all.filter((x) => x.code !== sp.code).map((x) => ({ x, w: x.area === sp.area ? 0 : x.region === sp.region ? 1 : 2 }))
-      .filter((o) => o.w < 2).sort((a, b) => a.w - b.w).slice(0, 12).map((o) => o.x);
+      .filter((o) => o.w < 2).sort((a, b) => a.w - b.w || SP.rnd(a.x.code) - SP.rnd(b.x.code)).slice(0, 12).map((o) => o.x);
     const a = await SP.avail(sel, 1, cands.map((x) => x.code));
     const open = cands.filter((x) => { const c = a.spaces && a.spaces[x.code]; return c && (c[0] === 'o' || c[1] === 'o'); }).slice(0, 5);
     const el = $('#altList');

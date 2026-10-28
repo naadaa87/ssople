@@ -27,20 +27,15 @@
     });
   }
 
-  /* ---------- 인기 지점 (프리미엄존 → 추천 지점 → 후기 많은 순) ---------- */
+  /* ---------- 지금 가장 사랑받는 지점 — 들어올 때마다 랜덤 8곳 (관리자가 고른 첫 화면 지점이 있으면 그 지점들을 먼저, 순서는 랜덤) ---------- */
   function popular(spaces, av) {
     const featured = (SP.settings && SP.settings['home.featured'] || '').split(',').map((x) => x.trim()).filter(Boolean);
-    const list = spaces.slice().sort((a, b) => {
-      const za = SP.zoneRank(a), zb = SP.zoneRank(b);
-      if (za !== zb) return za - zb;
-      const fa = featured.indexOf(a.code), fb = featured.indexOf(b.code);
-      if (fa !== fb) return (fa < 0 ? 99 : fa) - (fb < 0 ? 99 : fb);
-      return (b.reviews?.n || 0) - (a.reviews?.n || 0) || (b.max || 0) - (a.max || 0) || a.sort - b.sort;
-    }).slice(0, 8);
+    const mix = SP.shuffle(spaces);
+    const list = mix.filter((s) => featured.includes(s.code)).concat(mix.filter((s) => !featured.includes(s.code))).slice(0, 8);
     const live = !!(av && av.live);
-    $('#popRooms').innerHTML = list.map((sp, i) => {
+    $('#popRooms').innerHTML = list.map((sp) => {
       const c = av && av.spaces && av.spaces[sp.code];
-      return SP.roomCard(sp, { avail: c, from: today, live, rank: i + 1 });
+      return SP.roomCard(sp, { avail: c, from: today, live });
     }).join('');
   }
 

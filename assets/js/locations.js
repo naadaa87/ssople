@@ -32,7 +32,7 @@
           </div></div>`;
       };
       $('#locList').innerHTML = show.map((r) => `<section style="margin-top:34px"><div class="sec-hd" style="margin-bottom:14px"><div><h2 class="h2">${esc(r)} <span class="area-count">${Object.values(by[r]).reduce((a, l) => a + l.length, 0)}곳</span></h2><p>${Object.keys(by[r]).map((a) => `<a class="link" href="${esc(aHref(a))}">${esc(a)}</a>`).join(' · ')}</p></div><a class="sec-more" href="${esc(rp[r] || '/area/' + encodeURIComponent(r))}">${esc(r)} 파티룸 모아 보기${icon('chev-r', 'sm')}</a></div>
-        <div class="loc-grid">${Object.values(by[r]).flat().map(card).join('')}</div></section>`).join('');
+        <div class="loc-grid">${SP.shuffle(Object.values(by[r]).flat()).map(card).join('')}</div></section>`).join('');
     };
     draw();
     $('#locTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (b) { cur = b.dataset.r; SP.setQs({ region: cur }); draw(); } });

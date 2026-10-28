@@ -18,7 +18,7 @@
     }
     $('#areaChips').innerHTML = chips.join('');
     if (!ssr) return;
-    const mine = spaces.filter((s) => ssr.codes.includes(s.code));
+    const mine = SP.shuffle(spaces.filter((s) => ssr.codes.includes(s.code)));
     if (!mine.length) return;
     const today = SP.today();
     const av = await SP.avail(today, 7, mine.map((s) => s.code));

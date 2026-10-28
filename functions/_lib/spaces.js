@@ -1,5 +1,5 @@
 // 지점 — 목록·상세, 관리자 수정
-import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones } from './util.js';
+import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones, shuffle } from './util.js';
 import { seedOf } from './db.js';
 import { regionPath, areaPath } from './slugs.js';
 
@@ -95,10 +95,11 @@ export function register(route) {
     const rv = await c.db.prepare(
       `SELECT COUNT(*) AS n, ROUND(AVG(rating), 1) AS avg FROM posts WHERE board = 'review' AND hidden = 0 AND code = ?`,
     ).bind(s.code).first();
-    const near = list
+    // 근처 지점 — 같은 동네 → 같은 권역 순, 같은 묶음 안에서는 랜덤
+    const near = shuffle(list)
       .filter((x) => x.code !== s.code)
       .map((x) => ({ x, w: (x.area === s.area ? 0 : x.region === s.region ? 1 : 2) }))
-      .sort((a, b) => a.w - b.w || a.x.sort - b.x.sort)
+      .sort((a, b) => a.w - b.w)
       .slice(0, 6)
       .map((o) => o.x.code);
     return { space: publicSpace(s), reviews: { n: rv?.n || 0, avg: rv?.avg ?? null }, near };

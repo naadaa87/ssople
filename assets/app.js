@@ -40,6 +40,23 @@
   /** 노출 존(프리미엄/플러스) — 노출 끝 날짜가 지났으면 빈 값 */
   SP.zoneOf = (s) => { const l = (s && s.listing) || {}; if (!l.zone) return ''; if (l.until && l.until < SP.today()) return ''; return l.zone === 'premium' || l.zone === 'plus' ? l.zone : ''; };
   SP.zoneRank = (s) => { const z = SP.zoneOf(s); return z === 'premium' ? 0 : z === 'plus' ? 1 : 2; };
+  /* 지점 노출 순서 — 들어올 때마다 랜덤.
+     서버가 미리 그려 둔 목록(첫 화면·지점 찾기·지역 화면)이 있으면 그 순서를 그대로 이어 받아서,
+     스크립트가 목록을 다시 그려도 카드 자리가 갑자기 바뀌지 않게 해요. 목록에 없던 지점은 그 뒤에 랜덤으로 붙어요. */
+  let RND = null;
+  SP.rnd = (code) => {
+    if (!RND) {
+      RND = new Map();
+      document.querySelectorAll('main a[href^="/room/"]').forEach((a) => {
+        const c = a.getAttribute('href').slice(6).split(/[?#/]/)[0];
+        if (c && !RND.has(c)) RND.set(c, RND.size);
+      });
+    }
+    if (!RND.has(code)) RND.set(code, 1e6 + Math.random());
+    return RND.get(code);
+  };
+  /** 지점 목록을 이번 방문의 랜덤 순서로 (원래 배열은 그대로 두고 새 배열을 돌려줘요) */
+  SP.shuffle = (list) => list.slice().sort((a, b) => SP.rnd(a.code) - SP.rnd(b.code));
   SP.addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   SP.dayDiff = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 864e5);
   SP.wdi = (ymd) => new Date(ymd + 'T00:00:00Z').getUTCDay();

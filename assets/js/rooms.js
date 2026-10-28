@@ -58,14 +58,16 @@
       }
       return true;
     });
+    // 기본은 랜덤순(들어올 때마다 바뀌고, 조건을 바꿔도 이번 방문 안에서는 같은 순서). 가격·넓이·후기순도 같은 값끼리는 랜덤
     const price = (s) => (st.date ? SP.priceOn(s, st.date) : SP.minPrice(s)) || 9e9;
-    if (st.sort === 'price') list.sort((a, b) => price(a) - price(b));
-    else if (st.sort === 'big') list.sort((a, b) => (b.max || 0) - (a.max || 0));
-    else if (st.sort === 'review') list.sort((a, b) => (b.reviews?.n || 0) - (a.reviews?.n || 0));
+    const rnd = (a, b) => SP.rnd(a.code) - SP.rnd(b.code);
+    if (st.sort === 'price') list.sort((a, b) => price(a) - price(b) || rnd(a, b));
+    else if (st.sort === 'big') list.sort((a, b) => (b.max || 0) - (a.max || 0) || rnd(a, b));
+    else if (st.sort === 'review') list.sort((a, b) => (b.reviews?.n || 0) - (a.reviews?.n || 0) || rnd(a, b));
     else if (st.date && live && av.spaces) {
       const score = (s) => { const c = av.spaces[s.code] || '--'; return (c[0] === 'o' ? 1 : 0) + (c[1] === 'o' ? 1 : 0); };
-      list.sort((a, b) => score(b) - score(a) || SP.zoneRank(a) - SP.zoneRank(b) || a.sort - b.sort);
-    } else list.sort((a, b) => SP.zoneRank(a) - SP.zoneRank(b) || a.sort - b.sort);
+      list.sort((a, b) => score(b) - score(a) || rnd(a, b));
+    } else list.sort(rnd);
     return { list, from, live };
   }
 

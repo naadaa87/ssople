@@ -46,7 +46,7 @@
     return { s, sc, why: [...new Set(why)].slice(0, 3) };
   }
   function runQuiz() {
-    const res = spaces.map(score).filter(Boolean).sort((a, b) => b.sc - a.sc).slice(0, 3);
+    const res = spaces.map(score).filter(Boolean).sort((a, b) => b.sc - a.sc || SP.rnd(a.s.code) - SP.rnd(b.s.code)).slice(0, 3);
     $('#qzOut').innerHTML = res.length
       ? `<h3 class="h4" style="margin-bottom:12px">이 세 곳을 먼저 보세요</h3><div class="rooms">${res.map((r) => `<div>${SP.roomCard(r.s, {})}${r.why.length ? `<p class="small" style="margin-top:8px;color:var(--red-deep)">${icon('check', 'sm')} ${r.why.map(esc).join(', ')}</p>` : ''}</div>`).join('')}</div>`
       : `<div class="empty">${icon('search')}<h3>조건을 다 맞는 곳이 없어요</h3><p>꼭 있었으면 하는 것을 하나 빼거나 인원을 줄여 보세요.</p></div>`;

@@ -1,7 +1,7 @@
 // 공유 미리보기(카카오톡·검색)용 — 정적 화면에 제목·설명·대표 이미지를 채워 보낸다
 import { ensureSchema } from './db.js';
 import { loadSpaces, publicSpace, photoUrl } from './spaces.js';
-import { parseJSON, todayKST } from './util.js';
+import { parseJSON, todayKST, shuffle } from './util.js';
 import { imgUrl } from './community.js';
 import { getSettings } from './db.js';
 import { REGION_SLUGS, AREA_SLUGS, regionPath, areaPath, domainLive, canonicalHostOf, verifyTags, orgJsonLd, websiteJsonLd, roomJsonLd, breadcrumbJsonLd, areaJsonLd, areaHtml, areaPaths, findArea, jsonLdTag, minPrice, featList, areaGuideFaq, areaGuideDesc } from './seo.js';
@@ -222,14 +222,16 @@ export async function areaMeta(env, params, url, base = "") {
   const origin = base || '';
   const names = a.list.map((s) => s.name).slice(0, 6).join(', ');
   const feats = [...new Set(a.list.flatMap((s) => featList(s)))].slice(0, 5);
+  // 화면에 보이는 지점 카드는 랜덤 순서 (검색 설명·구조화 데이터는 늘 같은 순서로 둬요)
+  const mixed = { ...a, list: shuffle(a.list) };
   return {
     title: `${a.name} 파티룸 ${a.list.length}곳 — 쏘플파티룸`, fullTitle: true,
     desc: (areaGuideDesc(a) ? areaGuideDesc(a).slice(0, 150) + ' ' : '') + `${names}${a.list.length > 6 ? ' 등' : ''} ${a.list.length}곳의 요금·인원·시설을 비교하고 네이버 예약으로 바로 잡으세요.`,
     keywords: [`${a.name} 파티룸`, `${a.name} 파티룸 대여`, `${a.name} 파티룸 추천`, `${a.name} 생일파티 장소`, `${a.name} 모임 장소`, a.kind === 'area' ? `${a.region} 파티룸` : '', '쏘플파티룸'].filter(Boolean).join(', '),
     image: areaOg(a),
-    data: { area: { kind: a.kind, name: a.name, region: a.region, codes: a.list.map((s) => s.code) } },
+    data: { area: { kind: a.kind, name: a.name, region: a.region, codes: mixed.list.map((s) => s.code) } },
     jsonld: [areaJsonLd(origin, a), breadcrumbJsonLd(origin, a.kind === 'area' ? [['홈', '/'], ['지역별 지점', '/locations'], [a.region, regionPath(a.region)], [a.name, areaPath(a.name)]] : [['홈', '/'], ['지역별 지점', '/locations'], [a.name, regionPath(a.name)]]), areaGuideFaq(a)].filter(Boolean),
-    html: { '#areaRoot': areaHtml(origin, a), '#areaChips': areaChipsHtml(spaces, a) },
+    html: { '#areaRoot': areaHtml(origin, mixed), '#areaChips': areaChipsHtml(spaces, a) },
   };
 }
 

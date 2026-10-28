@@ -45,6 +45,12 @@ export function b64url(buf) {
   for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+/** 배열을 랜덤 순서로 섞은 새 배열 (원래 배열은 그대로) — 손님 화면의 지점 노출 순서에 쓴다 */
+export function shuffle(list) {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 export function randToken(bytes = 24) { const a = new Uint8Array(bytes); crypto.getRandomValues(a); return b64url(a); }
 const AL = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function slug(n = 8) {
