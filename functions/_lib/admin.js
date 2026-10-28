@@ -372,6 +372,10 @@ export function register(route) {
       }
       if (k === 'hc.pw' && s.length > 60) throw new HttpError(400, '호스트센터 공용 비밀번호는 60자 안으로 정해 주세요.');
       if (k === 'hc.open') s = s === '0' ? '0' : '1';
+      if (/^host\.price(1|3|6|12)$/.test(k)) {
+        s = s.replace(/[,\s원]/g, '');
+        if (!/^\d{4,8}$/.test(s) || Number(s) < 1000) throw new HttpError(400, '공간 등록 요금은 월 요금을 원 단위 숫자로 넣어 주세요. 예) 150000');
+      }
       patch[k] = s;
     }
     const before = await getSettings(c.db);

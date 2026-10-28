@@ -14,23 +14,7 @@
   $('#hKinds').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) setKind(b.dataset.k); });
   setKind(kind);
 
-  /* 요금 표 — 관리자 설정 값이 있으면 그 숫자로 바꿔 보여 줘요 */
-  SP.site().then(({ settings }) => {
-    const st = settings || {};
-    const d6 = Number(st['host.discount6']), d12 = Number(st['host.discount12']);
-    const w = (n) => SP.fmt(n) + '원';
-    const man = (n) => (n % 10000 === 0 ? `월 ${n / 10000}만원` : `월 ${w(n)}`);
-    $$('.zone[data-zone]').forEach((z) => {
-      const base = Number(st[z.dataset.zone === 'premium' ? 'host.premium_price' : 'host.plus_price']);
-      if (!(base > 0)) return;
-      const set = (k, v) => { const el = z.querySelector(`[data-zp="${k}"]`); if (el) el.textContent = v; };
-      const r6 = Number.isFinite(d6) ? d6 : 10, r12 = Number.isFinite(d12) ? d12 : 20;
-      const p6 = Math.round(base * 6 * (100 - r6) / 100), p12 = Math.round(base * 12 * (100 - r12) / 100);
-      set('m', man(base)); set('p1', w(base));
-      set('d6', `${r6}% 할인`); set('p6', w(p6)); set('m6', `월 ${w(Math.round(p6 / 6))}`);
-      set('d12', `${r12}% 할인`); set('p12', w(p12)); set('m12', `월 ${w(Math.round(p12 / 12))}`);
-    });
-  }).catch(() => {});
+  /* 공간 등록 요금표는 data-set="host.day1" 같은 칸이라, 관리자 설정 값이 있으면 app.js 가 그 숫자로 바꿔 보여 줘요 */
   if (location.hash === '#apply') setTimeout(() => $('#apply').scrollIntoView({ block: 'start' }), 200);
 
   $('#hForm').addEventListener('submit', async (e) => {
@@ -45,7 +29,7 @@
     const lines = [`[신청 종류] ${L[kind]}`, f.space ? `[공간 이름] ${f.space}` : '', f.addr ? `[주소·지역] ${f.addr}` : ''];
     if (kind !== 'startup') {
       lines.push(`[운영 상태] ${f.state}`);
-      if (kind === 'host_listing') lines.push(`[희망 노출 상품] ${f.zone}`);
+      if (kind === 'host_listing') lines.push(`[희망 이용 기간] ${f.plan}`);
       if (f.naver) lines.push(`[네이버 예약 주소] ${f.naver}`);
       if (f.size) lines.push(`[크기·인원] ${f.size}`);
       if (f.feat) lines.push(`[주요 시설] ${f.feat}`);

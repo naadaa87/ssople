@@ -322,10 +322,11 @@ export const DEFAULTS = {
   'seo.bing_verify': '',
   'seo.ga4_id': '',              // 구글 애널리틱스(GA4) 측정 ID (G-로 시작). 비우면 GA를 넣지 않는다
   'seo.canonical_host': '',      // 비우면 자동 — ssople.com 이 이 홈페이지에 연결되면 그 주소가 대표 주소. 값을 적으면 그 값이 우선 (되돌리기: ssople.pages.dev)
-  'host.premium_price': '50000',
-  'host.plus_price': '30000',
-  'host.discount6': '10',
-  'host.discount12': '20',
+  // 공간 등록 요금 — 이용 기간별 월 요금(원). 하루 요금은 월 요금 ÷ 30을 100원 단위로 내려 보여 준다 (월 10만원 → 하루 3,300원)
+  'host.price1': '150000',
+  'host.price3': '135000',
+  'host.price6': '120000',
+  'host.price12': '100000',
   'host.managed_fee': '20',
   // 호스트센터(/hostcenter) 공용 로그인 — 아직 쏘플 계정이 없는 호스트·점주에게 안내 화면을 보여 줄 때 쓴다 (안내만 볼 수 있고 지점은 못 고친다)
   'hc.open': '1',
@@ -348,6 +349,34 @@ export function publicSettings(s) {
   const out = {};
   for (const k of Object.keys(s)) if (!PRIVATE_KEYS.has(k)) out[k] = s[k];
   out['club.benefits'] = parseJSON(s['club.benefits'], CLUB_BENEFITS);
+  Object.assign(out, hostPriceTexts(s));
+  return out;
+}
+
+/* ---------------- 공간 등록 요금 — 화면에 그대로 넣는 문구 (data-set="host.day1" 처럼 쓴다) ---------------- */
+export const HOST_TERMS = [1, 3, 6, 12];
+const comma = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const manNum = (n) => { const m = n / 10000; return Number.isInteger(m) ? String(m) : String(Math.round(m * 10) / 10); };
+export const hostDayPrice = (month) => Math.floor(month / 30 / 100) * 100;
+export function hostPrices(s) {
+  return HOST_TERMS.map((t) => {
+    const v = Number(s['host.price' + t]);
+    const month = Number.isFinite(v) && v > 0 ? v : Number(DEFAULTS['host.price' + t]);
+    return { t, month, day: hostDayPrice(month) };
+  });
+}
+export function hostPriceTexts(s) {
+  const ps = hostPrices(s);
+  const out = {};
+  for (const p of ps) {
+    out['host.day' + p.t] = comma(p.day) + '원';
+    out['host.mon' + p.t] = '월 ' + manNum(p.month) + '만원';
+    out['host.opt' + p.t] = `${p.t}개월 (하루 ${comma(p.day)}원 · 월 ${manNum(p.month)}만원)`;
+  }
+  const days = ps.map((p) => p.day), months = ps.map((p) => p.month);
+  out['host.from'] = '하루 ' + comma(Math.min(...days)) + '원';
+  out['host.range'] = `월 ${manNum(Math.min(...months))}만~${manNum(Math.max(...months))}만원`;
+  out['host.dayrange'] = `하루 ${comma(Math.min(...days))}~${comma(Math.max(...days))}원`;
   return out;
 }
 export async function saveSettings(db, patch) {

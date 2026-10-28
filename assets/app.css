@@ -1849,3 +1849,25 @@ a.hs-stat:hover { border-color: var(--ink); }
 .live-fig { position: relative; display: block; border-radius: 24px; overflow: hidden; background: #F7F1EA; box-shadow: var(--sh-md); }
 .live-fig img { display: block; width: 100%; height: auto; }
 .live-tag { position: absolute; left: 14px; bottom: 14px; background: rgba(255,255,255,.94); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 700; }
+
+/* ---------------- 공간 등록 요금 (호스트 모집) ---------------- */
+.plans { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.plan { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px 22px; background: #fff; border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--sh-sm); text-align: center; }
+.plan-term { font-weight: 800; font-size: 15.5px; color: var(--graphite); }
+.plan-day { font-family: var(--display); font-weight: 800; font-size: 27px; line-height: 1.2; letter-spacing: -0.02em; color: var(--ink); white-space: nowrap; }
+.plan-day small { font-size: 15px; font-weight: 700; color: var(--graphite); margin-right: 5px; letter-spacing: 0; }
+.plan-month { font-size: 14.5px; font-weight: 700; color: var(--red-deep); background: var(--red-tint); padding: 4px 12px; border-radius: 999px; }
+.plan-incl { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 14px; }
+.plan-incl .checks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; margin-top: 12px; }
+.plan-incl .checks li { font-size: 14.5px; }
+.plan-incl .btn { flex: none; }
+@media (max-width: 960px) {
+  .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plan-incl { flex-direction: column; align-items: stretch; }
+}
+@media (max-width: 720px) {
+  .plan { padding: 20px 10px 18px; }
+  .plan-day { font-size: 23px; }
+  .plan-day small { display: block; margin: 0 0 2px; font-size: 13.5px; }
+  .plan-incl .checks { grid-template-columns: 1fr; }
+}
