@@ -16,7 +16,7 @@ export function register(route) {
     const today = todayKST();
     const wk = addDays(today, -7) + 'T00:00:00';
     const q = (sql, ...b) => c.db.prepare(sql).bind(...b).first();
-    const [users, users7, posts7, reports, inq, evp, vis, crews, meets, clicks7, occ, diag, okAt, cronAt, liveReq] = await Promise.all([
+    const [users, users7, posts7, reports, inq, evp, vis, crews, meets, clicks7, occ, diag, okAt, cronAt, liveReq, apps] = await Promise.all([
       q('SELECT COUNT(*) AS n FROM users WHERE status = ?', 'active'),
       q('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?', wk),
       q('SELECT COUNT(*) AS n FROM posts WHERE created_at >= ?', wk),
@@ -30,6 +30,7 @@ export function register(route) {
       c.db.prepare(`SELECT src, COUNT(*) AS n FROM occ WHERE d >= ? AND d <= ? GROUP BY src`).bind(today, addDays(today, 13)).all(),
       getMeta(c.db, 'host_diag'), getMeta(c.db, 'host_ok_at'), getMeta(c.db, 'cron_at'),
       q(`SELECT COUNT(*) AS n FROM live_requests WHERE status = 'new' AND hidden = 0`).catch(() => ({ n: 0 })),
+      q(`SELECT COUNT(*) AS n FROM space_apps WHERE status = 'submitted'`).catch(() => ({ n: 0 })),
     ]);
     const nm = Object.fromEntries((await loadSpaces(c.db, { all: true })).map((s) => [s.code, s.name]));
     const d = parseJSON(diag, null);
@@ -40,7 +41,7 @@ export function register(route) {
     return {
       counts: {
         users: users.n, users7: users7.n, posts7: posts7.n, reports: reports.n, inquiries: inq.n,
-        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0,
+        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0, apps: apps?.n || 0,
         seasonDue: (season ? season.late + season.week : 0) + (seasonPlan ? seasonPlan.late + seasonPlan.week : 0),
       },
       season,

@@ -20,6 +20,7 @@
     ['avail', '예약 현황 · 방막기', 'calendar'],
     ['data', '데이터 연결', 'refresh'],
     ['spaces', '지점 관리', 'building'],
+    ['apps', '공간 등록 신청', 'flag'],
     ['g', '같이 놀기'],
     ['events', '행사', 'ticket'],
     ['community', '커뮤니티 · 신고', 'chat'],
@@ -62,7 +63,7 @@
 
   /* ---------------- 들어가기 · 메뉴 ---------------- */
   function drawNav() {
-    const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue, live: COUNTS.liveRequests };
+    const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue, live: COUNTS.liveRequests, apps: COUNTS.apps };
     const cur = (location.hash.slice(1) || 'overview');
     $('#admNav').innerHTML = NAV.map((n) => (n[0] === 'g' ? `<div class="grp">${n[1]}</div>`
       : `<button type="button" data-v="${n[0]}" class="${n[0] === cur ? 'on' : ''}">${icon(n[2])}<span>${n[1]}</span>${cnt[n[0]] ? `<span class="cnt">${cnt[n[0]] > 99 ? '99+' : cnt[n[0]]}</span>` : ''}</button>`)).join('');
@@ -126,6 +127,7 @@
     const todo = [
       ['community', '처리할 신고', c.reports, '신고가 쌓인 글·모임'],
       ['inquiries', '새 문의', c.inquiries, '제휴·단체·입점 상담'],
+      ['apps', '검수할 공간 등록 신청', c.apps || 0, '호스트가 직접 제출한 신청서'],
       ['events', '승인 기다리는 행사', c.eventsPending, '회원이 제안한 행사'],
       ['visits', '확인할 방문 인증', c.visitsPending, '예약번호 대조가 필요해요'],
     ];
@@ -1784,6 +1786,79 @@ async function run(env) {
     };
   }
 
+  /* ================= 공간 등록 신청 (호스트센터) ================= */
+  const AP = { status: 'submitted' };
+  const AST = { draft: ['mute', '작성 중'], submitted: ['warn', '검수 중'], rejected: ['red', '보완 요청'], approved: ['ok', '승인'] };
+  const WAYK = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', sms: '문자 예약', form: '쏘플 문의' };
+  const CFK = { instant: '바로 확정', approve: '호스트 확인 뒤 확정' };
+  async function apps() {
+    const d = await SP.get('/api/admin/apps?status=' + AP.status);
+    main.innerHTML = hd('공간 등록 신청', '호스트가 호스트센터에서 직접 적어 제출한 신청서예요. 승인하면 지점이 만들어지고 호스트 계정에 연결돼요. 승인은 대표 관리자만 할 수 있어요.')
+      + `<div class="a-tools">${seg('apSt', [['submitted', '검수 중'], ['rejected', '보완 요청'], ['approved', '승인'], ['draft', '작성 중'], ['all', '전체']], AP.status)}</div>
+      <div class="a-card"><table class="a-tbl"><thead><tr><th>상태</th><th>공간</th><th>호스트</th><th>요금 · 예약 방식</th><th>제출</th><th></th></tr></thead><tbody>
+      ${d.items.map((a) => { const x = a.data || {}; const bk = (x.booking || {}).ways || []; return `<tr><td>${B(AST[a.status][0], AST[a.status][1])}</td>
+        <td><b>${esc(a.name || '이름 없음')}</b><span class="sub">${esc([a.region, a.area].filter(Boolean).join(' '))}${x.max ? ` · 최대 ${x.max}명` : ''} · 사진 ${(x.photos || []).length}장</span></td>
+        <td>${esc(a.nick)}<span class="sub">${esc(a.email)}${a.contact ? ' · ' + esc(a.contact) : ''}</span></td>
+        <td class="small">${x.hourly ? '시간제' : ''}${x.hourly && (x.pkgs || []).length ? ' + ' : ''}${(x.pkgs || []).length ? `패키지 ${x.pkgs.length}` : ''}${!x.hourly && !(x.pkgs || []).length ? '-' : ''}<span class="sub">${bk.map((w) => WAYK[w.k]).join(' · ') || '-'}</span></td>
+        <td class="nw">${a.submitted_at ? when(a.submitted_at) : '-'}${a.code ? `<span class="sub">${esc(a.code)}</span>` : ''}</td>
+        <td class="nw"><button class="btn btn-line btn-sm" type="button" data-ap="${a.id}">검수</button></td></tr>`; }).join('') || emptyRow(6, '신청서가 없어요.')}</tbody></table></div>`;
+    onSeg(main, 'apSt', (v) => { AP.status = v; apps(); });
+    main.onclick = (e) => {
+      const b = e.target.closest('[data-ap]'); if (!b) return;
+      const a = d.items.find((x) => String(x.id) === b.dataset.ap);
+      if (a) appModal(a);
+    };
+  }
+  function appModal(a) {
+    const x = a.data || {};
+    const bk = x.booking || {};
+    const won = (n) => (n ? SP.won(n) : '-');
+    const row = (k, v) => `<dt>${k}</dt><dd>${v || '-'}</dd>`;
+    const ip = (id, label, v, max, ph = '', type = 'text') => `<div class="field"><label class="label" for="${id}">${label}</label><input class="input" id="${id}" type="${type}" ${type === 'text' ? `maxlength="${max}"` : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}"></div>`;
+    const f = x.feat || {};
+    const feats = [f.karaoke && f.karaoke.on ? '노래방' : '', f.bbq && f.bbq.on ? '바베큐' : '', f.pet && f.pet.on ? '애견 동반' : '', f.tv ? 'TV' : '', f.console ? '게임기' : '', f.projector ? '빔프로젝터' : '', ...(f.zones || [])].filter(Boolean).join(' · ');
+    const canDecide = a.status === 'submitted' || a.status === 'rejected' || a.status === 'draft';
+    const m = SP.modal({
+      title: `신청서 · ${a.name || '이름 없음'}`, wide: true,
+      body: `<div class="row wrap-ok" style="gap:6px;margin-bottom:12px">${B(AST[a.status][0], AST[a.status][1])}${B('ink', esc(a.nick))}<span class="small muted">${esc(a.email)}${a.contact ? ' · 연락처 ' + esc(a.contact) : ''}</span>${a.code ? B('mute', a.code) : ''}</div>
+        ${a.status === 'rejected' && a.note ? `<div class="callout red small" style="margin-bottom:12px"><div><b>보낸 보완 요청</b><br>${esc(a.note)}</div></div>` : ''}
+        ${(a.photoUrls || []).length ? `<div class="img-pick" style="margin-bottom:12px">${a.photoUrls.slice(0, 12).map((u) => `<div class="pk"><img src="${esc(u)}" alt=""></div>`).join('')}</div>` : '<p class="small muted">사진이 없어요.</p>'}
+        <dl class="kv small">
+          ${row('공간', `${esc(x.name || '')} · ${esc([x.region, x.area].filter(Boolean).join(' '))}`)}${row('주소', esc(x.addr || ''))}
+          ${row('인원', `기준 ${x.base || '-'} · 최대 ${x.max || '-'}명${x.addFeeLabel ? ` · 추가 ${esc(x.addFeeLabel)}` : ''}${x.depositLabel ? ` · 보증금 ${esc(x.depositLabel)}` : ''}`)}
+          ${row('소개', esc(x.intro || ''))}${row('시설', esc(feats))}${row('태그', esc((x.tags || []).join(', ')))}
+          ${row('시간제', x.hourly ? `최소 ${x.hourly.min}시간 · ${esc(x.hourly.hrs || '')} · ${(x.hourly.p || []).map(won).join(' / ')}${x.hourly.note ? ' · ' + esc(x.hourly.note) : ''}` : '')}
+          ${row('패키지', (x.pkgs || []).map((p) => `${esc(p.label)} ${esc(p.hrs || '')} ${(p.p || []).map(won).join(' / ')}${p.url ? ' · 네이버' : ''}`).join('<br>'))}
+          ${row('예약 방식', (bk.ways || []).map((w, i) => `${i === 0 ? '<b>대표</b> ' : ''}${WAYK[w.k]}${w.v ? ` <span class="mono">${esc(w.v)}</span>` : ''}${w.label ? ` (${esc(w.label)})` : ''}`).join('<br>'))}
+          ${row('확정 · 시간', `${CFK[bk.confirm] || '-'}${bk.hours ? ' · ' + esc(bk.hours) : ''}`)}${row('취소·환불', esc(bk.cancel || ''))}
+          ${row('호스트 표시 이름', esc(x.hostName || ''))}${row('사업자', x.biz === 'yes' ? '사업자' : x.biz === 'no' ? '아직 없음' : '-')}${row('동의', x.agree ? '동의함' : '아직')}
+        </dl>
+        <div class="field" style="margin-top:14px"><label class="label" for="apMemo">운영팀 메모 (호스트에게 안 보여요)</label><textarea class="textarea" id="apMemo" maxlength="1000" style="min-height:60px">${esc(a.memo || '')}</textarea></div>
+        ${canDecide ? `<div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">보완 요청 (반려)</h3><div class="field"><textarea class="textarea" id="apNote" maxlength="600" style="min-height:70px" placeholder="예) 사진을 5장 이상 올려 주세요. 주소에 건물명을 넣어 주세요.">${esc(a.status === 'rejected' ? a.note || '' : '')}</textarea></div><button class="btn btn-line btn-sm" type="button" id="apReject">보완 요청 보내기</button></div>
+        <div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">승인</h3><p class="a-note" style="margin:4px 0 10px">지점 코드가 새로 만들어지고 운영 방식은 「호스트 운영」, 호스트 계정에 지점이 연결돼요(권한이 회원이면 호스트로 바뀌어요). 등록 요금 결제는 따로 안내해 주세요.</p>
+          <div class="form-grid">${ip('apName', '지점 이름 (바꾸려면)', x.name, 40)}${ip('apArea', '동네 (바꾸려면)', x.area, 20)}${ip('apUntil', '노출 끝 날짜 (결제 기간 끝, 선택)', '', 0, '', 'date')}
+          <div class="field"><span class="label">공개</span><label class="switch"><input type="checkbox" id="apVisible" checked><span>승인하자마자 손님 화면에 보여요 (끄면 비공개로 만들고 나중에 지점 관리에서 공개)</span></label></div></div>
+          ${isAdmin() ? '<button class="btn btn-red" type="button" id="apApprove" style="margin-top:10px">승인하고 지점 만들기</button>' : '<p class="a-note">승인은 대표 관리자만 할 수 있어요.</p>'}</div>` : ''}
+        <div class="form-err" id="apErr" hidden></div>`,
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-ink" type="button" id="apMemoGo">메모 저장</button>',
+    });
+    const err = (e) => { const el = m.$('#apErr'); el.textContent = e.message; el.hidden = false; };
+    m.$('#apMemoGo').onclick = async () => { try { await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() }); m.close(); apps(); } catch (er) { err(er); } };
+    const rj = m.$('#apReject'); if (rj) rj.onclick = async () => {
+      const note = m.$('#apNote').value.trim(); if (!note) { err(new Error('호스트에게 보낼 보완 요청 내용을 적어 주세요.')); return; }
+      try { await SP.post(`/api/admin/apps/${a.id}/reject`, { note }); await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() }); m.close(); refreshCounts(); apps(); } catch (er) { err(er); }
+    };
+    const ap = m.$('#apApprove'); if (ap) ap.onclick = async () => {
+      if (!(await SP.confirm(`「${m.$('#apName').value.trim() || x.name}」 지점을 만들고 ${a.nick} 님 계정에 연결할까요?`, { ok: '승인' }))) return;
+      SP.busy(ap, true, '만드는 중');
+      try {
+        const r = await SP.post(`/api/admin/apps/${a.id}/approve`, { name: m.$('#apName').value.trim(), area: m.$('#apArea').value.trim(), until: m.$('#apUntil').value, visible: m.$('#apVisible').checked });
+        await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() });
+        m.close(); SP.toast(`승인했어요. 지점 코드 ${r.code}`); SPACES = null; refreshCounts(); apps();
+      } catch (er) { SP.busy(ap, false); err(er); }
+    };
+  }
+
   /* ================= 문의함 ================= */
   const IQ = { status: 'all' };
   async function inquiries() {
@@ -1988,6 +2063,6 @@ async function run(env) {
     };
   }
 
-  const VIEWS = { overview, season, avail, data, spaces: spacesView, events, community, groups, live, users, visits, inquiries, partners, settings };
+  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, events, community, groups, live, users, visits, inquiries, partners, settings };
   boot();
 })();

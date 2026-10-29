@@ -28,6 +28,7 @@ function route(method, path, fn) {
 spaces.register(route);
 spaces.registerAdmin(route);
 spaces.registerHost(route);
+spaces.registerApps(route);
 avail.register(route, { maybeSync: hostsync.maybeSync });
 hostsync.register(route);
 hostsync.registerAdmin(route);

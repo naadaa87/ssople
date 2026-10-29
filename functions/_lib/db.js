@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -53,6 +53,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS live_req_votes (req_id INTEGER NOT NULL, vk TEXT NOT NULL, created_at TEXT, PRIMARY KEY (req_id, vk))`,
   `CREATE TABLE IF NOT EXISTS live_req_cmts (id INTEGER PRIMARY KEY AUTOINCREMENT, req_id INTEGER NOT NULL, uid INTEGER, nick TEXT, ih TEXT, body TEXT NOT NULL, admin INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, created_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_live_cmts ON live_req_cmts(req_id, id)`,
+  // v7: 호스트센터 — 호스트가 직접 넣는 공간 등록 신청서 (작성 중 → 검수 중 → 승인·반려). data 는 지점 data 와 같은 모양
+  `CREATE TABLE IF NOT EXISTS space_apps (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'draft', step INTEGER NOT NULL DEFAULT 1, name TEXT, region TEXT, area TEXT, data TEXT NOT NULL DEFAULT '{}', contact TEXT, memo TEXT, note TEXT, code TEXT, created_at TEXT, updated_at TEXT, submitted_at TEXT, decided_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_space_apps ON space_apps(uid, status, id)`,
 ];
 
 let ready = null;
@@ -417,6 +420,8 @@ export async function housekeep(db) {
     db.prepare('DELETE FROM invites WHERE COALESCE(d, substr(created_at, 1, 10)) < ?').bind(y1),
     db.prepare('DELETE FROM notis WHERE created_at < ?').bind(ago(365)),
     db.prepare('DELETE FROM sync_log WHERE at < ?').bind(ago(90)),
+    db.prepare(`DELETE FROM space_apps WHERE status = 'draft' AND updated_at < ?`).bind(ago(180)),
+    db.prepare(`UPDATE space_apps SET contact = NULL WHERE status IN ('approved', 'rejected') AND decided_at < ?`).bind(ago(180)),
     db.prepare('DELETE FROM live_scores WHERE d < ?').bind(ago(60).slice(0, 10)),
   ]);
   return true;

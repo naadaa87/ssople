@@ -44,10 +44,22 @@ export function areaPaths(spaces) {
 
 /* ---------- 구조화 데이터 ---------- */
 const won = (n) => (n ? (n % 10000 === 0 ? `${n / 10000}만원` : `${(n / 10000).toFixed(1)}만원`) : '');
+/** 가장 싼 요금 — 패키지 최저가와 (시간당 최저가 × 최소 시간) 중 낮은 값 */
 export const minPrice = (s) => {
   const mins = (s.pkgs || []).map((p) => Math.min(...(p.p || []).filter(Boolean))).filter((n) => Number.isFinite(n));
+  const h = s.hourly;
+  if (h && (h.p || []).some(Boolean)) mins.push(Math.min(...h.p.filter(Boolean)) * (h.min || 1));
   return mins.length ? Math.min(...mins) : null;
 };
+/** 손님 화면 대표 예약 링크 — 호스트가 정한 예약 방식(링크형) → 패키지 네이버 예약 → 지점 네이버 예약 페이지 */
+export function bookTarget(s) {
+  const w = ((s.booking || {}).ways || []).find((x) => ['naver', 'link', 'kakao'].includes(x.k) && x.v);
+  if (w) return { url: w.v, name: w.k === 'naver' ? '네이버 예약' : w.k === 'kakao' ? '카카오톡 채널' : (w.label || '예약 링크') };
+  const p = (s.pkgs || []).find((x) => x.url);
+  if (p) return { url: p.url, name: '네이버 예약' };
+  if (s.book) return { url: s.book, name: '네이버 예약' };
+  return null;
+}
 export const featList = (s) => {
   const f = s.feat || {};
   const out = [];
@@ -152,7 +164,7 @@ export function roomJsonLd(origin, s, st = {}) {
     amenityFeature: featList(s).map((n) => ({ '@type': 'LocationFeatureSpecification', name: n, value: true })),
     parentOrganization: { '@id': origin + '/#org' },
     hasMap: s.place || undefined,
-    potentialAction: (s.pkgs || []).find((p) => p.url) ? { '@type': 'ReserveAction', target: (s.pkgs || []).find((p) => p.url).url, name: '네이버 예약' } : undefined,
+    potentialAction: bookTarget(s) ? { '@type': 'ReserveAction', target: bookTarget(s).url, name: bookTarget(s).name } : undefined,
   };
 }
 export function areaJsonLd(origin, a) {

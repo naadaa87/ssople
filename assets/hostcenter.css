@@ -64,8 +64,9 @@
 .hc-steps li::before { counter-increment: hs; content: counter(hs); position: absolute; left: 20px; top: 18px; width: 34px; height: 34px; border-radius: 50%; background: var(--red); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; }
 .hc-steps li.ops { background: var(--fog); border-color: transparent; }
 .hc-steps li.ops::before { background: #fff; color: var(--red); box-shadow: inset 0 0 0 2px var(--red); }
-.hc-steps b { display: flex; align-items: center; gap: 8px; font-size: 16.5px; }
+.hc-steps li > div > b { display: flex; align-items: center; gap: 8px; font-size: 16.5px; }
 .hc-steps p { margin-top: 6px; font-size: 14.5px; color: var(--graphite); line-height: 1.6; word-break: keep-all; }
+.hc-steps p b { font-weight: 800; color: var(--ink); }
 .hc-who { font-size: 12px; font-weight: 700; color: var(--graphite); background: var(--fog); border-radius: 999px; padding: 2px 8px; }
 .hc-steps li.ops .hc-who { background: #fff; }
 .hc-step-act { margin-top: 12px; }
@@ -162,6 +163,7 @@
 .hc-tool > .h3 { margin-bottom: 14px; }
 .hc-tools.tabbed .hc-tool > .h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .hc-tool-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 28px; align-items: start; }
+.hc-tool-in > div:only-child { grid-column: 1 / -1; }
 .hc-tool .checks li { font-size: 14.5px; }
 .hc-tool code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--fog); padding: 1px 6px; border-radius: 6px; }
 .hc-how-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: hw; }

@@ -55,7 +55,7 @@
           ${photoSec(s)}
           ${s.detail ? `<section class="room-sec" id="r-detail"><h2>공간 상세</h2>${detailView(s.detail)}${kwTags(s)}</section>` : ''}
           <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
-          <section class="room-sec" id="r-price"><h2>패키지와 요금</h2>${priceTable(s)}</section>
+          <section class="room-sec" id="r-price"><h2>${s.hourly && !(s.pkgs || []).length ? '시간제 요금' : s.hourly ? '요금' : '패키지와 요금'}</h2>${priceTable(s)}</section>
           <section class="room-sec" id="r-feat"><h2>편의시설</h2>${amenities(s)}</section>
           ${(s.items || []).length ? `<section class="room-sec" id="r-items"><div class="between" style="margin-bottom:12px"><h2 style="margin:0">비품·물품</h2><span class="small muted">${s.items.length}가지</span></div>${SP.itemsView(s.items)}<p class="tiny faint" style="margin-top:12px">호스트가 직접 적은 목록이에요. 수량은 바뀔 수 있으니 꼭 필요한 물품은 <a class="link" href="#r-qna">지점에 물어보기</a>로 확인해 주세요.</p></section>` : ''}
           <section class="room-sec" id="r-rules"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
@@ -69,9 +69,9 @@
           <div class="cal" id="cal"><div class="skel" style="height:260px"></div></div>
           <div id="calLegend" style="margin-top:10px"></div>
           <div id="pkgArea"></div>
-          <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${isHost(s) ? '이 지점은 호스트가 직접 운영해요. 예약·결제·취소는 네이버 예약에서, 자세한 문의는 호스트에게 이어져요.' : '예약·결제·취소는 네이버 예약에서 진행돼요. 달력의 마감 표시는 참고용이고, 예약 가능 여부는 네이버 예약 화면이 기준이에요.'}</span></div>
+          <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${bookNote(s)}</span></div>
           <div class="row" style="margin-top:12px;flex-wrap:wrap">
-            <a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>
+            ${hostKakao(s) ? `<a class="btn btn-kakao btn-sm" href="${esc(hostKakao(s))}" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}호스트 카카오톡</a>` : `<a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>`}
             <a class="btn btn-soft btn-sm" href="/planner?code=${s.code}#cost">${icon('won', 'sm')}예상 비용 계산</a>
           </div>
         </aside>
@@ -80,12 +80,42 @@
       ${guideCards(s)}
       <section class="sec" style="padding-top:44px"><div class="between" style="margin-bottom:18px"><h2 class="h2">근처 다른 지점</h2><a class="sec-more" href="/rooms?region=${encodeURIComponent(s.region)}">${esc(s.region)} 지점 전체</a></div><div class="rooms" id="nearList"></div></section>`;
     $('#mobileBook').hidden = false;
-    $('#mbPrice').textContent = minP ? SP.won(minP) + '부터' : '';
+    $('#mbPrice').textContent = minP ? SP.won(minP) + '부터' + (s.hourly && !(s.pkgs || []).length ? ` (${s.hourly.min}시간)` : '') : '';
+    const pw = primaryWay(s);
+    if (pw) {
+      // 호스트가 정한 예약 방식이 있으면 휴대폰 고정 버튼이 그 방식으로 바로 이어져요
+      const mb = $('#mbBtn');
+      mb.href = pw.href; mb.textContent = pw.label; mb.dataset.way = pw.k;
+      if (pw.ext) { mb.target = '_blank'; mb.rel = 'noopener'; }
+      mb.setAttribute('data-track', `${s.code}|${pw.k}`);
+    }
     SP.site().then(({ settings }) => { const k = settings && settings['kakao.url']; if (k) $$('[data-kakao]').forEach((a) => { a.href = k; }); });
     bind();
   }
 
   function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+  /* 호스트가 정한 예약 방식 — 첫 번째가 대표 버튼. 없으면 예전 방식(패키지별 네이버 예약 → 지점 네이버 예약 페이지 → 네이버 지도) */
+  const ways = (s, date) => SP.bookWays(s, date);
+  const primaryWay = (s, date) => ways(s, date)[0] || null;
+  const hostKakao = (s) => { const w = (s.booking && s.booking.ways || []).find((x) => x.k === 'kakao' && x.v); return w ? w.v : ''; };
+  function bookNote(s) {
+    const b = s.booking || {};
+    if (ways(s).length) {
+      const bits = [b.confirm === 'approve' ? '예약은 호스트가 확인한 뒤 확정돼요.' : b.confirm === 'instant' ? '예약하면 바로 확정돼요.' : '예약·결제·취소는 호스트가 정한 방법으로 진행돼요.'];
+      if (b.hours) bits.push(`예약 받는 시간 ${b.hours}.`);
+      bits.push('달력의 마감 표시는 참고용이에요.');
+      return bits.join(' ');
+    }
+    return isHost(s) ? '이 지점은 호스트가 직접 운영해요. 예약·결제·취소는 네이버 예약에서, 자세한 문의는 호스트에게 이어져요.' : '예약·결제·취소는 네이버 예약에서 진행돼요. 달력의 마감 표시는 참고용이고, 예약 가능 여부는 네이버 예약 화면이 기준이에요.';
+  }
+  function wayBtn(w, s, date, { block = false, big = false } = {}) {
+    return `<a class="btn ${w.cls}${block ? ' btn-block' : ''}${big ? '' : ' btn-sm'}" href="${esc(w.href)}"${w.ext ? ' target="_blank" rel="noopener"' : ''} data-track="${s.code}|${w.k}${date ? '||' + date : ''}">${icon(w.ic, w.k === 'kakao' ? 'fill sm' : 'sm')}${esc(w.label)}</a>`;
+  }
+  function waysList(s, date) {
+    const list = ways(s, date);
+    if (!list.length) return '';
+    return `<div class="qbook qb-ways">${list.map((w) => `<a href="${esc(w.href)}"${w.ext ? ' target="_blank" rel="noopener"' : ''} data-track="${s.code}|${w.k}${date ? '||' + date : ''}"><span><b>${esc(w.label)}</b>${w.sub ? `<small>${esc(w.sub)}</small>` : ''}</span><span class="go ${w.k}">${icon(w.ic, w.k === 'kakao' ? 'fill sm' : 'sm')}${SP.BOOK_KINDS[w.k]}</span></a>`).join('')}</div>`;
+  }
 
   /* 공간 상세 — 한 줄씩: "## 소제목", "- 목록", "> 안내 상자"(첫 줄 "> ### 제목"), 그 밖은 문단 */
   function detailParse(src) {
@@ -164,6 +194,13 @@
   /* 긴 지점 화면 안에서 바로 가기 */
   /* 소개 바로 아래 예약 칸 — 오른쪽(휴대폰은 아래) 달력 예약과 같은 네이버 예약으로 이어진다 */
   function bookSec(s) {
+    if (ways(s).length) {
+      const b = s.booking || {};
+      return `<section class="room-sec" id="r-book"><div class="between" style="margin-bottom:4px"><h2 style="margin:0">예약하기</h2><span class="small muted">${esc(SP.CONFIRM_KINDS[b.confirm] || '호스트 직접 예약')}</span></div>
+      <p class="small muted">${esc(bookNote(s))}</p>
+      ${waysList(s)}
+      <div class="rbook-acts"><a class="btn btn-soft" href="#book" data-tobook>${icon('calendar', 'sm')}날짜별 요금 보기</a></div></section>`;
+    }
     const linked = (s.pkgs || []).filter((p) => p.url);
     const fb = fallback(s);
     if (!linked.length && !fb) return '';
@@ -186,7 +223,7 @@
       ${fold ? `<button class="btn btn-line btn-block rp-more" type="button" id="rpMore">사진 ${photos.length - PH_FOLD}장 더 보기${icon('chev-d', 'sm')}</button>` : ''}</section>`;
   }
   function subnav(s) {
-    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
+    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', ways(s).length > 0 || (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
     return l.filter((x) => x[2]).map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
   }
   /* 예약 뒤 이어지는 준비 — 지점 화면에서 쏘플의 다른 기능으로 */
@@ -231,14 +268,24 @@
     return out.length ? `<div class="row" style="gap:6px;margin:6px 0 2px;flex-wrap:wrap">${out.join('')}</div>` : '';
   }
 
+  function hourlyTable(s) {
+    const h = s.hourly;
+    if (!h || !(h.p || []).some(Boolean)) return '';
+    return `<div class="tbl-wrap"><table class="tbl price-tbl"><thead><tr><th>시간제</th>${COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
+      <tr><td><b>1시간</b><div class="tiny muted">최소 ${h.min}시간 · ${esc(h.hrs || '')}</div></td>${[0, 1, 2, 3].map((i) => ((h.p || [])[i] ? `<td class="num">${SP.won(h.p[i])}</td>` : '<td class="na">-</td>')).join('')}</tr>
+      </tbody></table></div>${h.note ? `<p class="small muted" style="margin-top:8px">${esc(h.note)}</p>` : ''}`;
+  }
   function priceTable(s) {
     const pk = s.pkgs || [];
-    if (!pk.length) return '<p class="muted">요금은 네이버 예약 화면에서 확인해 주세요.</p>';
+    const hr = hourlyTable(s);
+    const own = ways(s).length > 0;
+    if (!pk.length && !hr) return `<p class="muted">${own ? '요금은 예약할 때 호스트에게 확인해 주세요.' : '요금은 네이버 예약 화면에서 확인해 주세요.'}</p>`;
     const anyDefault = pk.some((p) => p.hd);
-    return `<div class="tbl-wrap"><table class="tbl price-tbl"><thead><tr><th>패키지</th>${COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
+    const pkHtml = pk.length ? `<div class="tbl-wrap"><table class="tbl price-tbl"><thead><tr><th>패키지</th>${COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
       ${pk.map((p) => `<tr><td><b>${esc(p.label)}</b><div class="tiny muted">${esc(p.hrs || '')}</div></td>${[0, 1, 2, 3].map((i) => (p.p[i] ? `<td class="num">${SP.won(p.p[i])}</td>` : '<td class="na">-</td>')).join('')}</tr>`).join('')}
-      </tbody></table></div>
-      <p class="small muted" style="margin-top:10px">기준 ${s.base || '-'}명 요금이에요. 넘는 인원은 ${esc(s.addFeeLabel || '1인당 추가 요금')}이 붙어요. ${anyDefault ? '시간이 따로 적히지 않은 패키지는 쏘플 공통 기준 시간으로 표시했어요. 정확한 시간은 네이버 예약 화면을 따라 주세요.' : ''}</p>`;
+      </tbody></table></div>` : '';
+    return `${hr}${hr && pkHtml ? '<div style="height:12px"></div>' : ''}${pkHtml}
+      <p class="small muted" style="margin-top:10px">기준 ${s.base || '-'}명 요금이에요. 넘는 인원은 ${esc(s.addFeeLabel || '1인당 추가 요금')}이 붙어요. ${anyDefault ? '시간이 따로 적히지 않은 패키지는 쏘플 공통 기준 시간으로 표시했어요. 정확한 시간은 네이버 예약 화면을 따라 주세요.' : own ? '최종 금액과 빈 시간은 호스트의 예약 안내가 기준이에요.' : ''}</p>`;
   }
 
   function amenities(s) {
@@ -271,6 +318,9 @@
     rows.push(['미성년자', i.minors || '미성년자끼리는 낮·올데이 패키지만 이용할 수 있고, 전원 보호자 동의서가 필요해요.']);
     if (i.noise) rows.push(['소음', i.noise]);
     rows.push(['숙박', '파티·모임을 위한 공간이라 숙박 목적으로는 이용할 수 없어요.']);
+    const b = s.booking || {};
+    if (ways(s).length && b.confirm) rows.push(['예약 확정', SP.CONFIRM_KINDS[b.confirm]]);
+    if (b.cancel) rows.push(['취소·환불', b.cancel]);
     const care = String(s.care || '').split('\n').map((x) => x.trim()).filter(Boolean);
     return `${care.length ? `<ul class="care-list">${care.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
       <p class="small" style="margin-top:14px"><a class="link" href="/guide#rules">보증금·환불·인원 추가 같은 공통 규정 보기</a></p>`;
@@ -333,6 +383,11 @@
     const area = $('#pkgArea');
     const s = space;
     const live = !!(av && av.live);
+    if (ways(s).length && !sel) {
+      area.innerHTML = `<p class="small muted" style="margin-top:14px">날짜를 누르면 그 요일 요금이 보여요. 예약은 아래 방법 중 편한 것으로 하세요.</p>${waysList(s)}`;
+      $('#mbLabel').textContent = '날짜를 골라 주세요';
+      return;
+    }
     if (!sel) {
       const linked = (s.pkgs || []).filter((p) => p.url);
       const fb = fallback(s);
@@ -345,10 +400,15 @@
     }
     const pi = SP.priceIdx(sel);
     const list = (s.pkgs || []).map((p) => ({ p, price: p.p[pi], st: pkgStatus(p) })).filter((x) => x.price);
-    let html = `<h3 class="h4" style="margin-top:18px">${SP.mdwLong(sel)}</h3><div class="pkg-list">`;
-    if (!list.length) html += '<p class="muted small">이 요일에는 운영하는 패키지가 없어요.</p>';
-    // 상품 링크가 하나도 없는 지점은 버튼을 패키지마다 반복하지 않고 아래에 한 번만 둔다
-    const oneBtn = list.length && !list.some((x) => x.p.url) ? fallback(s) : null;
+    const wl = ways(s, sel);
+    const h = s.hourly;
+    const hp = h && (h.p || [])[pi];
+    let html = `<h3 class="h4" style="margin-top:18px">${SP.mdwLong(sel)}</h3>`;
+    if (hp) html += `<div class="pkg hour"><div><h3>시간제</h3><div class="hrs">최소 ${h.min}시간 · ${esc(h.hrs || '')}${h.note ? ` · ${esc(h.note)}` : ''}</div></div><div class="pr">${SP.won(hp)}<small>/1시간</small></div></div>`;
+    html += '<div class="pkg-list">';
+    if (!list.length && !hp) html += `<p class="muted small">${wl.length ? '이 요일 요금은 호스트에게 확인해 주세요.' : '이 요일에는 운영하는 패키지가 없어요.'}</p>`;
+    // 호스트 예약 방식이 있거나 상품 링크가 하나도 없는 지점은 버튼을 패키지마다 반복하지 않고 아래에 한 번만 둔다
+    const oneBtn = wl.length ? { ways: true } : list.length && !list.some((x) => x.p.url) ? fallback(s) : null;
     list.forEach(({ p, price, st }) => {
       const booked = st === 'b';   // 마감 칸은 확실한 정보라 데이터가 오래됐어도 보여 준다 (비어 있음은 최신일 때만)
       const past = st === 'c';
@@ -368,7 +428,9 @@
       html += `<div class="pkg${booked || past ? ' is-b' : ''}"><div><h3>${esc(p.label)} ${badge}</h3><div class="hrs">${esc(p.hrs || '')}</div></div><div class="pr">${SP.won(price)}</div>${btn}</div>`;
     });
     html += '</div>';
-    if (oneBtn && list.some((x) => x.st !== 'c')) {
+    if (oneBtn && oneBtn.ways) {
+      html += `<div style="margin-top:12px">${waysList(s, sel)}</div><p class="tiny faint" style="margin-top:8px">${esc(SP.mdw(sel))} 날짜로 예약하고 싶다고 알려 주시면 돼요.</p>`;
+    } else if (oneBtn && list.some((x) => x.st !== 'c')) {
       html += `<a class="btn btn-naver btn-block" style="margin-top:12px" href="${esc(oneBtn.href)}" target="_blank" rel="noopener" data-track="${s.code}|${oneBtn.kind}||${sel}">${icon('ext')}${esc(oneBtn.label)}</a>
         <p class="tiny faint" style="margin-top:8px">이 지점은 네이버 예약 페이지에서 ${esc(SP.mdw(sel))} 날짜와 패키지를 골라 주세요.</p>`;
     }
@@ -376,9 +438,10 @@
     if (allBooked) html += '<div id="altBox" style="margin-top:16px"><h3 class="h4">같은 날 예약할 수 있는 근처 지점</h3><div class="alt-list" id="altList"><p class="small muted" style="padding:8px 0">찾는 중…</p></div></div>';
     area.innerHTML = html;
     const minToday = list.filter((x) => x.st !== 'b' && x.st !== 'c').map((x) => x.price);
+    if (hp) minToday.push(hp * (h.min || 1));
     $('#mbLabel').textContent = SP.mdw(sel);
     $('#mbPrice').textContent = minToday.length ? SP.won(Math.min(...minToday)) + '부터' : '이날은 마감';
-    $('#mbBtn').textContent = '패키지 고르기';
+    if (!wl.length) $('#mbBtn').textContent = '패키지 고르기';
     if (allBooked) alternatives();
   }
 
@@ -468,7 +531,7 @@
       SP.track(space.code, 'share');
       SP.share({ title: `${space.name} 파티룸`, text: `${space.region} ${space.area} · 최대 ${space.max}명`, url: location.origin + '/room/' + space.code });
     });
-    $('#mbBtn').addEventListener('click', (e) => { e.preventDefault(); $('#book').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    $('#mbBtn').addEventListener('click', (e) => { if ($('#mbBtn').dataset.way) return; e.preventDefault(); $('#book').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     const toBook = $('[data-tobook]');
     if (toBook) toBook.addEventListener('click', (e) => { e.preventDefault(); $('#book').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     spy();
@@ -501,7 +564,7 @@
       }
     } catch (e) { notFound(e.status === 404 ? '' : e.message); return; }
     // 서버가 정한 제목(지점명 파티룸 — 지역 동네 | 쏘플파티룸)과 같은 모양으로
-    document.title = `${space.name} 파티룸 — ${space.region} ${space.area} | 쏘플파티룸`;
+    document.title = `${String(space.name).replace(/\s*파티룸$/, '')} 파티룸 — ${space.region} ${space.area} | 쏘플파티룸`;
     render();
     av = await SP.avail(today, DAYS, [code], true);
     drawCal();

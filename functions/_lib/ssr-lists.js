@@ -165,15 +165,49 @@ export function naverHref(u) {
     return x.toString();
   } catch { return u; }
 }
+/** 시간제 요금표 — 요일별 시간당 요금, 최소 이용 시간, 운영 시간 */
+export function hourlyHtml(s) {
+  const h = s.hourly;
+  if (!h || !(h.p || []).some(Boolean)) return '';
+  return `<div class="tbl-wrap"><table class="tbl price-tbl"><caption class="sr-only">${esc(s.name)} 시간제 요금 (기준 ${esc(s.base || '-')}명)</caption><thead><tr><th>시간제</th>${COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
+      <tr><td><b>1시간</b><div class="tiny muted">최소 ${esc(h.min)}시간 · ${esc(h.hrs || '')}</div></td>${[0, 1, 2, 3].map((i) => ((h.p || [])[i] ? `<td class="num">${won(h.p[i])}</td>` : '<td class="na">-</td>')).join('')}</tr>
+      </tbody></table></div>${h.note ? `<p class="small muted" style="margin-top:8px">${esc(h.note)}</p>` : ''}`;
+}
 export function roomPriceHtml(s) {
   const pk = s.pkgs || [];
-  if (!pk.length) return '<p class="muted">요금은 네이버 예약 화면에서 확인해 주세요.</p>';
-  return `<div class="tbl-wrap"><table class="tbl price-tbl"><caption class="sr-only">${esc(s.name)} 패키지별 요금 (기준 ${esc(s.base || '-')}명)</caption><thead><tr><th>패키지</th>${COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
+  const hr = hourlyHtml(s);
+  const ways = ((s.booking || {}).ways || []);
+  const basis = ways.length ? '최종 금액과 빈 시간은 호스트의 예약 안내가 기준이에요.' : '최종 금액과 빈 시간은 네이버 예약 화면이 기준이에요.';
+  if (!pk.length && !hr) return `<p class="muted">${ways.length ? '요금은 예약할 때 호스트에게 확인해 주세요.' : '요금은 네이버 예약 화면에서 확인해 주세요.'}</p>`;
+  const pkHtml = pk.length ? `<div class="tbl-wrap"><table class="tbl price-tbl"><caption class="sr-only">${esc(s.name)} 패키지별 요금 (기준 ${esc(s.base || '-')}명)</caption><thead><tr><th>패키지</th>${COLS.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>
       ${pk.map((p) => `<tr><td><b>${esc(p.label)}</b><div class="tiny muted">${esc(p.hrs || '')}</div></td>${[0, 1, 2, 3].map((i) => ((p.p || [])[i] ? `<td class="num">${won(p.p[i])}</td>` : '<td class="na">-</td>')).join('')}</tr>`).join('')}
-      </tbody></table></div>
-      <p class="small muted" style="margin-top:10px">기준 ${esc(s.base || '-')}명 요금이에요.${s.addFeeLabel ? ` 넘는 인원은 ${esc(s.addFeeLabel)}이 붙어요.` : ''}${s.depositLabel ? ` 청소 보증금 ${esc(s.depositLabel)}(퇴실 확인 뒤 돌려드려요).` : ''} 최종 금액과 빈 시간은 네이버 예약 화면이 기준이에요.</p>`;
+      </tbody></table></div>` : '';
+  return `${hr}${hr && pkHtml ? '<div style="height:12px"></div>' : ''}${pkHtml}
+      <p class="small muted" style="margin-top:10px">기준 ${esc(s.base || '-')}명 요금이에요.${s.addFeeLabel ? ` 넘는 인원은 ${esc(s.addFeeLabel)}이 붙어요.` : ''}${s.depositLabel ? ` 청소 보증금 ${esc(s.depositLabel)}(퇴실 확인 뒤 돌려드려요).` : ''} ${basis}</p>`;
+}
+/** 호스트가 정한 예약 방식 → 손님 화면 버튼 목록 (app.js SP.bookWays 와 같은 규칙) */
+export const BOOK_LABEL = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', sms: '문자 예약', form: '쏘플 문의' };
+export function bookWays(s) {
+  const ways = ((s.booking || {}).ways || []);
+  const out = [];
+  for (const w of ways) {
+    if (w.k === 'naver' && w.v) out.push({ k: 'naver', href: naverHref(w.v), label: w.label || '네이버 예약으로 예약', sub: w.note || '', ext: true });
+    else if (w.k === 'link' && w.v) out.push({ k: 'link', href: w.v, label: w.label || '예약 페이지에서 예약', sub: w.note || '', ext: true });
+    else if (w.k === 'kakao' && w.v) out.push({ k: 'kakao', href: w.v, label: w.label || '카카오톡으로 예약 문의', sub: w.note || '', ext: true });
+    else if (w.k === 'phone' && w.v) out.push({ k: 'phone', href: 'tel:' + w.v.replace(/-/g, ''), label: w.label || '전화로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false });
+    else if (w.k === 'sms' && w.v) out.push({ k: 'sms', href: 'sms:' + w.v.replace(/-/g, ''), label: w.label || '문자로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false });
+    else if (w.k === 'form') out.push({ k: 'form', href: `/write?b=qna&code=${s.code}`, label: w.label || '쏘플에 문의 남기고 예약', sub: w.note || '호스트가 답을 달면 알림이 가요', ext: false });
+  }
+  return out;
 }
 export function roomBookHtml(s) {
+  const ways = bookWays(s);
+  if (ways.length) {
+    const b = s.booking || {};
+    const rows = ways.map((w) => `<li><a href="${esc(w.href)}"${w.ext ? ' target="_blank" rel="noopener"' : ''} data-track="${esc(s.code)}|${esc(w.k)}"><b>${esc(w.label)}</b>${w.sub ? ` ${esc(w.sub)}` : ''}</a></li>`);
+    const notes = [b.confirm === 'approve' ? '예약은 호스트가 확인한 뒤 확정돼요.' : b.confirm === 'instant' ? '예약하면 바로 확정돼요.' : '', b.hours ? `예약 받는 시간 ${b.hours}` : ''].filter(Boolean);
+    return `<ul class="checks">${rows.join('')}</ul><p class="small muted">${esc(notes.join(' · ') || '예약·결제·취소는 호스트가 정한 방법으로 진행돼요.')}</p>${b.cancel ? `<p class="small muted">취소·환불: ${esc(b.cancel)}</p>` : ''}`;
+  }
   const linked = (s.pkgs || []).filter((p) => p.url);
   const from = (p) => { const v = (p.p || []).filter((x) => x); return v.length ? `${won(Math.min(...v))}부터` : ''; };
   const rows = linked.map((p) => `<li><a href="${esc(naverHref(p.url))}" target="_blank" rel="noopener" data-track="${esc(s.code)}|book|${esc(p.k)}|"><b>${esc(p.label)}</b> ${esc([p.hrs, from(p)].filter(Boolean).join(' · '))} — 네이버 예약</a></li>`);

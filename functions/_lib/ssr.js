@@ -174,15 +174,14 @@ export async function roomMeta(env, params, url, base = "") {
   const code = String(params.code || '').toUpperCase();
   const s = (await loadSpaces(env.DB)).find((x) => x.code === code);
   if (!s) return null;
-  const mins = (s.pkgs || []).map((p) => Math.min(...(p.p || []).filter(Boolean))).filter((n) => Number.isFinite(n));
-  const from = mins.length ? Math.min(...mins) : null;
+  const from = minPrice(s);
   const feats = [];
   if (s.feat?.karaoke?.on) feats.push('노래방');
   if (s.feat?.bbq?.on) feats.push('바베큐');
   if (s.feat?.pet?.on) feats.push('애견 동반');
   if ((s.feat?.zones || []).length) feats.push(...s.feat.zones.slice(0, 2));
   const desc = [`${s.region} ${s.area}`, s.base && s.max ? `기준 ${s.base}명 · 최대 ${s.max}명` : '', from ? `${won(from)}부터` : '', feats.join('·')]
-    .filter(Boolean).join(' | ') + ' — 요금 확인하고 네이버 예약으로 바로 잡으세요.';
+    .filter(Boolean).join(' | ') + (((s.booking || {}).ways || []).length ? ' — 요금 확인하고 호스트가 정한 방법으로 바로 예약하세요.' : ' — 요금 확인하고 네이버 예약으로 바로 잡으세요.');
   let st = {};
   try { st = await getSettings(env.DB); } catch { st = {}; }
   const origin = base || '';
@@ -196,13 +195,13 @@ export async function roomMeta(env, params, url, base = "") {
 ${all.length ? `<p class="muted">${all.map((f) => esc(f)).join(' · ')}</p>` : ''}
 ${s.intro ? String(s.intro).split(/\n\s*\n/).map((pg) => `<p style="margin-top:12px">${esc(pg.trim())}</p>`).join('') : ''}
 <section class="room-sec"><h2>예약하기</h2>${roomBookHtml(s)}</section>
-<section class="room-sec"><h2>패키지와 요금</h2>${roomPriceHtml(s)}</section>
+<section class="room-sec"><h2>${s.hourly && !(s.pkgs || []).length ? '시간제 요금' : '패키지와 요금'}</h2>${roomPriceHtml(s)}</section>
 ${detailSsr(s)}
 ${s.info?.route || s.info?.parking ? `<section class="room-sec"><h2>찾아오는 길</h2>${s.info.route ? `<p>${esc(s.info.route)}</p>` : ''}${s.info.parking ? `<p>${esc(s.info.parking)}</p>` : ''}</section>` : ''}
 ${roomGuideLinks(s)}
 ${near ? `<p class="muted small" style="margin-top:10px">근처 다른 지점: ${near} · <a class="link" href="${esc(sameName ? rp : ap)}">${esc(s.area)} 파티룸 전체</a></p>` : ''}`;
   return {
-    title: `${s.name} 파티룸 — ${s.region} ${s.area}`, desc, image: OG_ROOMS.has(s.code) ? ogImg(`room/${s.code}`) : (s.photos || [])[0] ? photoUrl(s.photos[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
+    title: `${String(s.name).replace(/\s*파티룸$/, '')} 파티룸 — ${s.region} ${s.area}`, desc, image: OG_ROOMS.has(s.code) ? ogImg(`room/${s.code}`) : (s.photos || [])[0] ? photoUrl(s.photos[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
     keywords: [...new Set([`${s.area} 파티룸`, `${s.region} 파티룸`, `${s.area} 파티룸 대여`, `${s.name}`, '쏘플파티룸', ...all.slice(0, 4).map((f) => `${f} 파티룸`), ...(s.kw || []).slice(0, 8)])].join(', '),
     jsonld: [roomJsonLd(origin, s, st), breadcrumbJsonLd(origin, [['홈', '/'], ['지역별 지점', '/locations'], [s.region, rp], ...(sameName ? [] : [[s.area, ap]]), [s.name, `/room/${s.code}`]])],
     html: { '#roomRoot': summary },
@@ -337,7 +336,7 @@ export async function rss(context) {
       const BOARD = { notice: '공지', tip: '팁', review: '후기', qna: '질문', free: '자유', host: '지점 소식' };
       for (const p of ps) items.push({ title: p.title || cut(p.body, 40), link: `${origin}/c/${p.id}`, desc: cut(p.body, 200), at: p.updated_at || p.created_at, cat: BOARD[p.board] || '커뮤니티' });
       const sp = await loadSpaces(env.DB);
-      for (const s of sp.slice(0, 40)) items.push({ title: `${s.name} 파티룸 — ${s.region} ${s.area}`, link: `${origin}/room/${s.code}`, desc: `${s.addr || ''} 기준 ${s.base || '-'}명 · 최대 ${s.max || '-'}명. 요금 확인 후 네이버 예약.`, at: s.updated_at, cat: '지점' });
+      for (const s of sp.slice(0, 40)) items.push({ title: `${String(s.name).replace(/\s*파티룸$/, '')} 파티룸 — ${s.region} ${s.area}`, link: `${origin}/room/${s.code}`, desc: `${s.addr || ''} 기준 ${s.base || '-'}명 · 최대 ${s.max || '-'}명. 요금 확인 후 네이버 예약.`, at: s.updated_at, cat: '지점' });
     }
   } catch { /* DB 연결 전이면 고정 글만 */ }
   const fixed = [

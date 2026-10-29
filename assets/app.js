@@ -325,16 +325,36 @@
     if (s.photos && s.photos[0]) return `<img src="${SP.esc(s.photos[0])}" alt="${SP.esc(alt || s.name)}" loading="lazy">`;
     return `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${SP.moodPhoto(s)}-s.webp')"><span class="ca-note">실제 사진 준비 중</span><span class="ca-seal"></span><span class="ca-area">${SP.esc(s.area)}</span></div>`;
   };
+  /** 가장 싼 요금 — 패키지 최저가와 (시간당 최저가 × 최소 시간) 중 낮은 값 (서버 seo.js minPrice 와 같은 규칙) */
   SP.minPrice = (s) => {
     let m = null;
     (s.pkgs || []).forEach((p) => (p.p || []).forEach((x) => { if (x && (m == null || x < m)) m = x; }));
+    const h = s.hourly;
+    if (h && (h.p || []).some(Boolean)) { const x = Math.min(...h.p.filter(Boolean)) * (h.min || 1); if (m == null || x < m) m = x; }
     return m;
   };
   SP.priceOn = (s, date) => {
     const i = SP.priceIdx(date);
     let m = null;
     (s.pkgs || []).forEach((p) => { const x = (p.p || [])[i]; if (x && (m == null || x < m)) m = x; });
+    const h = s.hourly;
+    if (h && (h.p || [])[i]) { const x = h.p[i] * (h.min || 1); if (m == null || x < m) m = x; }
     return m;
+  };
+  /* 호스트가 정한 예약 방식 → 손님 화면 버튼 목록 (서버 ssr-lists.js bookWays 와 같은 규칙) */
+  SP.BOOK_KINDS = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', sms: '문자 예약', form: '쏘플 문의' };
+  SP.CONFIRM_KINDS = { instant: '바로 확정', approve: '호스트 확인 뒤 확정' };
+  SP.bookWays = (s, date) => {
+    const out = [];
+    for (const w of ((s.booking || {}).ways || [])) {
+      if (w.k === 'naver' && w.v) out.push({ k: 'naver', href: SP.naverHref(w.v, date), label: w.label || '네이버 예약으로 예약', sub: w.note || '', ext: true, cls: 'btn-naver', ic: 'ext' });
+      else if (w.k === 'link' && w.v) out.push({ k: 'link', href: w.v, label: w.label || '예약 페이지에서 예약', sub: w.note || '', ext: true, cls: 'btn-ink', ic: 'ext' });
+      else if (w.k === 'kakao' && w.v) out.push({ k: 'kakao', href: w.v, label: w.label || '카카오톡으로 예약 문의', sub: w.note || '', ext: true, cls: 'btn-kakao', ic: 'kakao' });
+      else if (w.k === 'phone' && w.v) out.push({ k: 'phone', href: 'tel:' + w.v.replace(/-/g, ''), label: w.label || '전화로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false, cls: 'btn-red', ic: 'phone' });
+      else if (w.k === 'sms' && w.v) out.push({ k: 'sms', href: 'sms:' + w.v.replace(/-/g, ''), label: w.label || '문자로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false, cls: 'btn-ink', ic: 'chat' });
+      else if (w.k === 'form') out.push({ k: 'form', href: `/write?b=qna&code=${s.code}`, label: w.label || '쏘플에 문의 남기고 예약', sub: w.note || '호스트가 답을 달면 알림이 가요', ext: false, cls: 'btn-line', ic: 'chat' });
+    }
+    return out;
   };
   SP.featTags = (s, max = 4) => {
     const t = [];

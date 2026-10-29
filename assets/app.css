@@ -1652,7 +1652,7 @@ select.sb-input { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w
 }
 
 /* ---------------- 호스트 — 내 공간 관리 ---------------- */
-.hs-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 30px; }
+.hs-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 30px; }
 .hs-stat { display: flex; flex-direction: column; gap: 4px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-card); background: #fff; }
 a.hs-stat:hover { border-color: var(--ink); }
 .hs-stat small { font-size: 13px; font-weight: 600; color: var(--graphite); }
@@ -1668,6 +1668,7 @@ a.hs-stat:hover { border-color: var(--ink); }
 .hs-check li.ok::before { background: var(--ok); }
 .hs-check li.warn { color: var(--red-deep); font-weight: 700; }
 .hs-check li.warn::before { background: var(--red); }
+@media (max-width: 1000px) { .hs-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) {
   .hs-sum { grid-template-columns: 1fr; gap: 8px; }
   .hs-stat { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 14px 16px; }
@@ -1871,3 +1872,46 @@ a.hs-stat:hover { border-color: var(--ink); }
   .plan-day small { display: block; margin: 0 0 2px; font-size: 13.5px; }
   .plan-incl .checks { grid-template-columns: 1fr; }
 }
+
+/* ---------------- 호스트센터 — 공간 등록 신청·예약 방식·요금 ---------------- */
+.hs-land { padding: 10px 0 20px; }
+.hs-land-copy { max-width: 720px; }
+.hs-land-copy > p { margin: 10px 0 20px; color: var(--graphite); font-size: 15.5px; line-height: 1.75; }
+.hs-land-steps { list-style: none; counter-reset: st; display: grid; gap: 10px; margin: 0 0 24px; }
+.hs-land-steps li { counter-increment: st; display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 12px; align-items: start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.hs-land-steps li::before { content: counter(st); width: 30px; height: 30px; border-radius: 50%; background: var(--red); color: #fff; font-weight: 800; display: grid; place-items: center; grid-row: 1 / span 2; }
+.hs-land-steps b { font-size: 15.5px; }
+.hs-land-steps span { display: block; font-size: 13.5px; color: var(--graphite); margin-top: 2px; }
+.hs-wz { max-width: 860px; }
+.hs-wz-bar { list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 0 0 16px; }
+.hs-wz-bar button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ash); font-size: 12.5px; font-weight: 700; }
+.hs-wz-bar button b { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--fog); color: var(--graphite); font-size: 13px; }
+.hs-wz-bar li.done button { color: var(--ink); } .hs-wz-bar li.done button b { background: var(--ok); color: #fff; }
+.hs-wz-bar li.on button { border-color: var(--red); color: var(--red-deep); background: var(--red-tint); } .hs-wz-bar li.on button b { background: var(--red); color: #fff; }
+.hs-wz-bar button:disabled { opacity: .55; cursor: default; }
+.hs-wz-body { padding: 22px; }
+.hs-wz-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.hs-wz-sum .hs-check li { padding: 2px 0; }
+.hs-ways { display: grid; gap: 10px; }
+.hs-way { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: #fff; display: grid; gap: 8px; }
+.hs-way.main { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-tint); }
+.hs-way-hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hs-way-hd b { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; }
+.hs-way .help { margin-top: 0; }
+.ibtn.sm { width: 30px; height: 30px; border-radius: 9px; background: var(--fog); }
+.img-pick .pk .pk-main { position: absolute; left: 0; bottom: 0; padding: 2px 7px; background: var(--red); color: #fff; font-size: 11px; font-weight: 800; border-top-right-radius: 8px; }
+.callout.small { font-size: 13.5px; padding: 10px 12px; }
+@media (max-width: 720px) {
+  .hs-wz-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hs-wz-bar button span { font-size: 11.5px; }
+  .hs-wz-body { padding: 16px 14px; }
+  .hs-wz-foot .btn { flex: 1; }
+  .hs-land-steps li { padding: 12px 14px; }
+}
+/* 손님 화면 — 호스트가 정한 예약 방식 버튼 */
+.qbook.qb-ways .go { color: var(--ink); }
+.qbook.qb-ways .go.naver { color: #03a14c; } .qbook.qb-ways .go.kakao { color: #8a6d00; } .qbook.qb-ways .go.phone, .qbook.qb-ways .go.sms { color: var(--red-deep); }
+.qbook.qb-ways a:hover { background: var(--fog); }
+.qbook.qb-ways small { display: block; margin-top: 2px; }
+.pkg.hour { background: var(--fog); margin-top: 12px; }
+.pkg.hour .pr small { display: block; font-size: 12px; font-weight: 600; color: var(--ash); }

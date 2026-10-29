@@ -18,6 +18,9 @@ export async function hcAccess(c) {
     if (u.role === 'admin' || u.role === 'staff') return { kind: 'admin', codes: hostCodes(u) };
     const codes = hostCodes(u);
     if (codes.length || u.role === 'host') return { kind: 'host', codes };
+    // 공간 등록 신청서를 쓰기 시작한 회원도 안내를 볼 수 있게
+    const app = await c.db.prepare('SELECT 1 AS x FROM space_apps WHERE uid = ? LIMIT 1').bind(u.id).first().catch(() => null);
+    if (app) return { kind: 'host', codes };
   }
   if (await c.adminLevel()) return { kind: 'admin', codes: [] };
   const tok = getCookie(c.req, HC_COOKIE);

@@ -47,7 +47,7 @@
     if (me && me.user && !me.access) {
       const p = document.createElement('div');
       p.className = 'callout hc-gate-note';
-      p.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><div><b>${esc(me.user.nick)}님 계정은 아직 지점과 연결되지 않았어요.</b><br>공용 아이디로 안내를 보거나, 쏘플 카카오톡 채널로 가입 이메일과 지점 이름을 보내 연결을 요청해 주세요.</div>`;
+      p.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><div><b>${esc(me.user.nick)}님 계정은 아직 지점과 연결되지 않았어요.</b><br>새 파티룸을 올리려면 <a class="link" href="/myspace?new=1">공간 등록 신청</a>을 시작해 주세요. 이미 운영 중인 쏘플 지점이면 카카오톡 채널로 가입 이메일과 지점 이름을 보내 연결을 요청하고, 그동안은 공용 아이디로 안내를 볼 수 있어요.</div>`;
       $('#hcLoginNote').after(p);
       const acc = form.querySelector('a[href^="/login"]');
       if (acc) acc.hidden = true;
@@ -86,9 +86,9 @@
       const sp = (me && me.spaces) || [];
       box.innerHTML = `<span class="hc-acct-k">호스트 계정</span>
         <b class="hc-acct-name">${esc((me.user && me.user.nick) || '호스트')}님, 반가워요</b>
-        <p>${sp.length ? `연결된 지점 ${sp.length}곳이에요. 지점 이름을 누르면 손님이 보는 화면이 열려요.` : '아직 연결된 지점이 없어요. 카카오톡 채널로 지점 연결을 요청해 주세요.'}</p>
+        <p>${sp.length ? `연결된 지점 ${sp.length}곳이에요. 지점 이름을 누르면 손님이 보는 화면이 열려요.` : '아직 연결된 지점이 없어요. 새 공간은 「공간 등록 신청」으로, 이미 운영 중인 쏘플 지점은 카카오톡 채널로 연결을 요청해 주세요.'}</p>
         ${sp.length ? `<div class="hc-acct-sp">${sp.map((s) => `<a href="/room/${encodeURIComponent(s.code)}" target="_blank" rel="noopener"><span>${esc(s.name)}</span>${s.visible ? '<svg class="ic sm" aria-hidden="true"><use href="#i-ext"/></svg>' : '<span class="badge mute">비공개</span>'}</a>`).join('')}</div>` : ''}
-        <div class="hc-acct-act"><a class="btn btn-red btn-sm" href="/myspace"><svg class="ic sm" aria-hidden="true"><use href="#i-edit"/></svg>내 공간 관리</a></div>`;
+        <div class="hc-acct-act"><a class="btn btn-red btn-sm" href="/myspace"><svg class="ic sm" aria-hidden="true"><use href="#i-edit"/></svg>내 공간 관리</a><a class="btn btn-line btn-sm" href="/myspace?new=1"><svg class="ic sm" aria-hidden="true"><use href="#i-plus"/></svg>공간 등록 신청</a></div>`;
     } else if (kind === 'admin') {
       box.innerHTML = `<span class="hc-acct-k">관리자</span>
         <b class="hc-acct-name">관리자 계정으로 보고 있어요</b>
@@ -98,8 +98,8 @@
       const u = me && me.user;
       box.innerHTML = `<span class="hc-acct-k">공용 아이디</span>
         <b class="hc-acct-name">안내를 보는 중이에요</b>
-        <p>${u ? `${esc(u.nick)}님 계정은 아직 지점과 연결되지 않았어요. ` : ''}내 지점의 소개·사진·시설을 고치고 문의에 답하려면 본인 쏘플 계정에 지점을 연결해야 해요. 방법은 「처음 시작하기」에 있어요.</p>
-        <div class="hc-acct-act">${u ? '<a class="btn btn-ink btn-sm" href="#start">연결 요청 방법</a>' : '<a class="btn btn-ink btn-sm" href="/login?next=%2Fmyspace">쏘플 계정으로 로그인</a>'}<button class="btn btn-ghost btn-sm" type="button" id="hcOut">나가기</button></div>`;
+        <p>${u ? `${esc(u.nick)}님 계정은 아직 지점과 연결되지 않았어요. ` : ''}새 파티룸을 올리려면 본인 쏘플 계정으로 「공간 등록 신청」을, 이미 운영 중인 쏘플 지점이면 지점 연결을 요청해 주세요. 방법은 「처음 시작하기」에 있어요.</p>
+        <div class="hc-acct-act">${u ? '<a class="btn btn-red btn-sm" href="/myspace?new=1"><svg class="ic sm" aria-hidden="true"><use href="#i-plus"/></svg>공간 등록 신청</a><a class="btn btn-ink btn-sm" href="#start">연결 요청 방법</a>' : '<a class="btn btn-red btn-sm" href="/signup?next=%2Fmyspace%3Fnew%3D1">가입하고 공간 등록</a><a class="btn btn-ink btn-sm" href="/login?next=%2Fmyspace">쏘플 계정으로 로그인</a>'}<button class="btn btn-ghost btn-sm" type="button" id="hcOut">나가기</button></div>`;
       const out = $('#hcOut');
       if (out) out.onclick = async () => {
         SP.busy(out, true);
