@@ -32,7 +32,11 @@ export function register(route) {
       q(`SELECT COUNT(*) AS n FROM live_requests WHERE status = 'new' AND hidden = 0`).catch(() => ({ n: 0 })),
       q(`SELECT COUNT(*) AS n FROM space_apps WHERE status = 'submitted'`).catch(() => ({ n: 0 })),
     ]);
-    const nm = Object.fromEntries((await loadSpaces(c.db, { all: true })).map((s) => [s.code, s.name]));
+    const allSp = await loadSpaces(c.db, { all: true });
+    const nm = Object.fromEntries(allSp.map((s) => [s.code, s.name]));
+    // 호스트 운영 지점 중 노출 끝 날짜가 14일 안이거나 지난 곳 (연장 안내 대상)
+    const soon = addDays(today, 14);
+    const expiring = allSp.filter((s) => s.listing && s.listing.type === 'host' && s.listing.until && s.listing.until <= soon).length;
     const d = parseJSON(diag, null);
     let season = null;
     try { season = summarize(await loadPlan(c.db, today)); } catch { season = null; }
@@ -41,7 +45,7 @@ export function register(route) {
     return {
       counts: {
         users: users.n, users7: users7.n, posts7: posts7.n, reports: reports.n, inquiries: inq.n,
-        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0, apps: apps?.n || 0,
+        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0, apps: apps?.n || 0, expiring,
         seasonDue: (season ? season.late + season.week : 0) + (seasonPlan ? seasonPlan.late + seasonPlan.week : 0),
       },
       season,

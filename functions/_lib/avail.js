@@ -1,9 +1,9 @@
 // 예약 현황(빈 방 / 마감) 계산
 //  - occ 표: 호스트 동기화(host) · 엑셀 업로드(upload) · 수동 방막기(manual) · 수신 API(push)
 //  - 지점마다 패키지 시간(분 단위)을 겹쳐 보고 판단한다. 고객 개인정보는 다루지 않는다.
-import { HttpError, addDays, dayDiff, todayKST, kstMinuteOfDay, isYmd, weekdayOf, int, nowIso, parseJSON } from './util.js';
+import { HttpError, addDays, dayDiff, todayKST, kstMinuteOfDay, isYmd, weekdayOf, int, nowIso, parseJSON, str } from './util.js';
 import { getSettings, getMeta } from './db.js';
-import { loadSpaces } from './spaces.js';
+import { loadSpaces, hostCodes } from './spaces.js';
 
 export const DEF_SPAN = {
   day: [720, 1020], night: [1140, 2040], allday: [720, 1320], tonight: [1140, 1440],
@@ -11,6 +11,11 @@ export const DEF_SPAN = {
 };
 
 export function pkgsOf(space) {
+  // 시간제만 쓰는 지점 — 운영 시간을 하나의 '시간제' 칸으로 보고 마감·휴무를 표시한다
+  if (!(space.pkgs || []).length && space.hourly && (space.hourly.p || []).some(Boolean)) {
+    const h = space.hourly;
+    return [{ k: 'hour', fam: 'day', s: h.open, e: h.close, p: h.p }];
+  }
   return (space.pkgs || []).map((p) => {
     const d = DEF_SPAN[p.k] || [720, 1020];
     const s = Number.isFinite(p.s) ? p.s : d[0];
@@ -161,13 +166,61 @@ export function register(route, { maybeSync }) {
     try { b = JSON.parse(await c.req.text() || '{}'); } catch { b = {}; }
     const code = /^S-\d{4}$/.test(b.code) ? b.code : null;
     if (!code) return { ok: true };
-    const kind = ['book', 'place', 'call', 'kakao', 'share'].includes(b.kind) ? b.kind : 'book';
+    // view: 지점 화면을 연 수 (호스트 성과 보기용), 나머지는 예약·연락 버튼을 누른 수
+    const kind = ['book', 'place', 'call', 'kakao', 'share', 'view', 'naver', 'link', 'phone', 'sms', 'talk', 'insta', 'form'].includes(b.kind) ? b.kind : 'book';
     const pkg = /^[a-z0-9]{1,10}$/.test(b.pkg || '') ? b.pkg : null;
     const d = isYmd(b.d) ? b.d : null;
     const ih = await c.ih();
     await c.limit('ck:' + ih, 120, 600);
+    if (kind === 'view') {
+      // 같은 사람이 같은 지점을 하루에 여러 번 열어도 한 번만
+      const dup = await c.db.prepare(`SELECT 1 AS x FROM clicks WHERE code = ? AND kind = 'view' AND ih = ? AND at >= ? LIMIT 1`).bind(code, ih, new Date(Date.now() - 12 * 3600e3).toISOString()).first();
+      if (dup) return { ok: true };
+    }
     await c.db.prepare('INSERT INTO clicks (code, kind, pkg, d, at, ih) VALUES (?, ?, ?, ?, ?, ?)')
       .bind(code, kind, pkg, d, nowIso(), ih).run();
+    return { ok: true };
+  });
+}
+
+/* ---------------- 호스트: 마감·휴무 표시 (호스트가 직접 운영하는 지점) ---------------- */
+async function hostOwn(c, code) {
+  const u = await c.needUser();
+  const adm = u.role === 'admin' || u.role === 'staff';
+  if (!adm && !hostCodes(u).includes(code)) throw new HttpError(403, '이 지점을 고칠 권한이 없어요.');
+  const s = (await loadSpaces(c.db, { all: true })).find((x) => x.code === code);
+  if (!s) throw new HttpError(404, '지점을 찾을 수 없어요.');
+  if (!adm && !(s.listing && s.listing.type === 'host')) throw new HttpError(403, '호스트가 직접 운영하는 지점만 마감을 표시할 수 있어요. 쏘플 위탁운영 지점은 예약 시스템과 자동으로 맞춰져요.');
+  return { u, s };
+}
+export function registerHostOcc(route) {
+  route('GET', '/api/host/spaces/:code/occ', async (c) => {
+    const { s } = await hostOwn(c, c.params.code);
+    const from = todayKST();
+    const days = 62;
+    const rows = (await c.db.prepare(`SELECT d, slot, kind, note FROM occ WHERE code = ? AND src = 'manual' AND d >= ? AND d <= ? ORDER BY d`).bind(s.code, from, addDays(from, days - 1)).all()).results || [];
+    const pk = pkgsOf(s);
+    return { code: s.code, from, days, rows, fams: [...new Set(pk.map((p) => p.fam))], hasPrice: pk.length > 0 };
+  });
+  route('POST', '/api/host/spaces/:code/occ', async (c) => {
+    const { s } = await hostOwn(c, c.params.code);
+    await c.limit('ho:' + s.code, 200, 3600, '너무 많이 바꿨어요. 잠시 후 다시 해 주세요.');
+    const b = await c.body();
+    if (!isYmd(b.d) || b.d < todayKST() || dayDiff(todayKST(), b.d) > 120) throw new HttpError(400, '오늘부터 120일 안의 날짜를 골라 주세요.');
+    const slot = ['all', 'day', 'night'].includes(b.slot) ? b.slot : 'all';
+    const action = b.action === 'clear' ? 'clear' : 'block';
+    const stmts = [c.db.prepare(`DELETE FROM occ WHERE src = 'manual' AND code = ? AND d = ?`).bind(s.code, b.d)];
+    if (action === 'block') {
+      const pk = pkgsOf(s);
+      const fam = slot === 'all' ? pk : pk.filter((p) => p.fam === slot);
+      let st = null, en = null;
+      if (fam.length) { st = Math.min(...fam.map((p) => p.s)); en = Math.max(...fam.map((p) => p.e)); } else { [st, en] = slotSpan(pk, slot); }
+      if (slot === 'day') { const night = pk.filter((p) => p.fam === 'night'); if (night.length) en = Math.min(en, Math.min(...night.map((p) => p.s))); }
+      const note = str(b.note, { max: 40 }) || '호스트 표시';
+      stmts.push(c.db.prepare(`INSERT INTO occ (code, d, slot, s, e, src, kind, note, created_at) VALUES (?, ?, ?, ?, ?, 'manual', 'block', ?, ?)`).bind(s.code, b.d, slot, st, en, note, nowIso()));
+    }
+    await c.db.batch(stmts);
+    clearAvailCache();
     return { ok: true };
   });
 }

@@ -30,6 +30,7 @@ spaces.registerAdmin(route);
 spaces.registerHost(route);
 spaces.registerApps(route);
 avail.register(route, { maybeSync: hostsync.maybeSync });
+avail.registerHostOcc(route);
 hostsync.register(route);
 hostsync.registerAdmin(route);
 community.register(route);

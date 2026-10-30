@@ -60,6 +60,7 @@
           ${(s.items || []).length ? `<section class="room-sec" id="r-items"><div class="between" style="margin-bottom:12px"><h2 style="margin:0">비품·물품</h2><span class="small muted">${s.items.length}가지</span></div>${SP.itemsView(s.items)}<p class="tiny faint" style="margin-top:12px">호스트가 직접 적은 목록이에요. 수량은 바뀔 수 있으니 꼭 필요한 물품은 <a class="link" href="#r-qna">지점에 물어보기</a>로 확인해 주세요.</p></section>` : ''}
           <section class="room-sec" id="r-rules"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
           <section class="room-sec" id="r-route"><h2>찾아오는 길</h2>${route(s)}</section>
+          ${isHost(s) ? `<section class="room-sec" id="r-host"><h2>호스트 정보</h2>${hostInfo(s)}</section>` : ''}
           <section class="room-sec" id="r-qna"><div class="between" style="margin-bottom:6px"><h2 style="margin:0">지점에 물어보기</h2><a class="btn btn-ink btn-sm" href="/write?b=qna&code=${s.code}">${icon('chat', 'sm')}문의 남기기</a></div><p class="small muted" style="margin-bottom:12px">비품, 꾸미기, 반입, 주차처럼 궁금한 걸 남기면 ${isHost(s) ? '호스트가' : '지점 담당자가'} 답해요. 모두가 보는 공개 질문이라 예약번호·연락처는 적지 마세요. 급한 일은 카카오톡 상담이 빨라요.</p><div id="qaList"><div class="skel" style="height:60px"></div></div></section>
           <section class="room-sec" id="reviews"><div class="between" style="margin-bottom:12px"><h2 style="margin:0" id="rvHead">이용후기</h2><a class="btn btn-line btn-sm" href="/write?b=review&code=${s.code}">${icon('edit', 'sm')}후기 쓰기</a></div><div id="rvList"><div class="skel" style="height:80px"></div></div></section>
           <section class="room-sec" id="r-social"><h2>네이버·인스타그램 후기</h2><p class="small muted" style="margin-bottom:12px">다녀간 분들이 네이버와 인스타그램에 남긴 글과 사진도 함께 보세요.</p><div id="socialBox">${SP.socialView ? SP.socialView(s, SP.settings) : ''}</div></section>
@@ -71,7 +72,7 @@
           <div id="pkgArea"></div>
           <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${bookNote(s)}</span></div>
           <div class="row" style="margin-top:12px;flex-wrap:wrap">
-            ${hostKakao(s) ? `<a class="btn btn-kakao btn-sm" href="${esc(hostKakao(s))}" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}호스트 카카오톡</a>` : `<a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>`}
+            ${hostKakao(s) ? `<a class="btn btn-kakao btn-sm" href="${esc(hostKakao(s))}" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}호스트 카카오톡</a>` : isHost(s) ? `<a class="btn btn-line btn-sm" href="#r-qna">${icon('chat', 'sm')}지점에 물어보기</a>` : `<a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>`}
             <a class="btn btn-soft btn-sm" href="/planner?code=${s.code}#cost">${icon('won', 'sm')}예상 비용 계산</a>
           </div>
         </aside>
@@ -94,6 +95,17 @@
   }
 
   function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+  /* 호스트 운영 지점 — 누가 운영하는지와 쏘플의 역할을 분명하게 */
+  function hostInfo(s) {
+    const l = s.listing || {}, b = s.hostBiz || {};
+    const rows = [['운영', l.hostName ? `${l.hostName} (호스트 직접 운영)` : '호스트 직접 운영']];
+    if (b.name) rows.push(['상호', b.name]);
+    if (b.ceo) rows.push(['대표자', b.ceo]);
+    if (b.no) rows.push(['사업자등록번호', b.no]);
+    if (b.mail) rows.push(['통신판매업 신고', b.mail]);
+    return `<dl class="kv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+      <p class="small muted" style="margin-top:12px">쏘플파티룸은 이 공간의 정보를 소개하고 호스트가 정한 예약 방법으로 연결해 드려요. 예약·결제·취소·환불은 손님과 호스트 사이에서 진행돼요. 궁금한 점은 <a class="link" href="#r-qna">지점에 물어보기</a>로 남겨 주세요.</p>`;
+  }
   /* 호스트가 정한 예약 방식 — 첫 번째가 대표 버튼. 없으면 예전 방식(패키지별 네이버 예약 → 지점 네이버 예약 페이지 → 네이버 지도) */
   const ways = (s, date) => SP.bookWays(s, date);
   const primaryWay = (s, date) => ways(s, date)[0] || null;
@@ -223,7 +235,7 @@
       ${fold ? `<button class="btn btn-line btn-block rp-more" type="button" id="rpMore">사진 ${photos.length - PH_FOLD}장 더 보기${icon('chev-d', 'sm')}</button>` : ''}</section>`;
   }
   function subnav(s) {
-    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', ways(s).length > 0 || (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
+    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', ways(s).length > 0 || (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-host', '호스트', isHost(s)], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
     return l.filter((x) => x[2]).map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
   }
   /* 예약 뒤 이어지는 준비 — 지점 화면에서 쏘플의 다른 기능으로 */
@@ -404,7 +416,8 @@
     const h = s.hourly;
     const hp = h && (h.p || [])[pi];
     let html = `<h3 class="h4" style="margin-top:18px">${SP.mdwLong(sel)}</h3>`;
-    if (hp) html += `<div class="pkg hour"><div><h3>시간제</h3><div class="hrs">최소 ${h.min}시간 · ${esc(h.hrs || '')}${h.note ? ` · ${esc(h.note)}` : ''}</div></div><div class="pr">${SP.won(hp)}<small>/1시간</small></div></div>`;
+    const hst = hp && !(s.pkgs || []).length ? pkgStatus({ k: 'hour' }) : 'o';
+    if (hp) html += `<div class="pkg hour${hst === 'b' || hst === 'c' ? ' is-b' : ''}"><div><h3>시간제 ${hst === 'b' ? '<span class="badge mute">마감</span>' : hst === 'c' ? '<span class="badge mute">지난 시간</span>' : ''}</h3><div class="hrs">최소 ${h.min}시간 · ${esc(h.hrs || '')}${h.note ? ` · ${esc(h.note)}` : ''}</div></div><div class="pr">${SP.won(hp)}<small>/1시간</small></div></div>`;
     html += '<div class="pkg-list">';
     if (!list.length && !hp) html += `<p class="muted small">${wl.length ? '이 요일 요금은 호스트에게 확인해 주세요.' : '이 요일에는 운영하는 패키지가 없어요.'}</p>`;
     // 호스트 예약 방식이 있거나 상품 링크가 하나도 없는 지점은 버튼을 패키지마다 반복하지 않고 아래에 한 번만 둔다
@@ -566,6 +579,8 @@
     // 서버가 정한 제목(지점명 파티룸 — 지역 동네 | 쏘플파티룸)과 같은 모양으로
     document.title = `${String(space.name).replace(/\s*파티룸$/, '')} 파티룸 — ${space.region} ${space.area} | 쏘플파티룸`;
     render();
+    // 지점 화면을 연 수 (호스트 성과 보기) — 호스트 본인·자동 브라우저는 세지 않아요
+    if (!navigator.webdriver) SP.me().then((m) => { const u = m && m.user; if (!(u && (u.hostCodes || []).includes(space.code))) SP.track(space.code, 'view'); }).catch(() => {});
     av = await SP.avail(today, DAYS, [code], true);
     drawCal();
     drawPkgs();

@@ -209,4 +209,126 @@
     return { read() { sync(); return { tag: host.querySelector('#soTag').value.trim().replace(/^#/, ''), naver: host.querySelector('#soNaver').value.trim(), links: links.filter((l) => l.u) }; } };
   };
   SP.ITEM_CATS = CAT;
+
+  /* ---------------- 요금 · 예약 방식 편집기 (호스트 신청서 · 내 공간 관리 · 관리자 지점 편집 공용) ---------------- */
+  const COLS = ['월~목', '금', '토', '일'];
+  const PK = [['day', '낮'], ['night', '밤'], ['allday', '올데이'], ['tonight', '투나잇'], ['morning', '오전'], ['hour3', '3시간'], ['full', '풀패키지']];
+  const hm = (min) => (min == null || min === '' ? '' : `${String(Math.floor((min % 1440) / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`);
+  const t2m = (v) => { if (!v) return null; const [h, mi] = v.split(':').map(Number); return h * 60 + (mi || 0); };
+  const num = (v) => (v === '' || v == null ? '' : v);
+  SP.WAY_DEFS = [
+    ['naver', '네이버 예약', '네이버 예약(스마트플레이스) 상품이나 예약 페이지 주소', 'https://booking.naver.com/booking/12/bizes/…', 'url'],
+    ['phone', '전화 예약', '손님이 바로 거는 전화번호 — 손님 화면에 그대로 보여요', '010-0000-0000', 'tel'],
+    ['kakao', '카카오톡 채널', '카카오톡 채널(pf.kakao.com) 또는 오픈채팅 주소', 'https://pf.kakao.com/_xxxx/chat', 'url'],
+    ['talk', '네이버 톡톡', '네이버 톡톡 주소 (talk.naver.com)', 'https://talk.naver.com/…', 'url'],
+    ['insta', '인스타그램 DM', '인스타그램 계정 주소 (instagram.com/계정)', 'https://instagram.com/…', 'url'],
+    ['sms', '문자 예약', '문자를 받을 번호 — 손님 화면에 그대로 보여요', '010-0000-0000', 'tel'],
+    ['link', '다른 예약 링크', '스페이스클라우드·아워플레이스·자체 홈페이지 같은 예약 페이지 주소 (https://)', 'https://', 'url'],
+    ['form', '쏘플 문의로 예약 요청', '손님이 지점 화면 「지점에 물어보기」에 남기면 호스트가 답해요. 번호가 필요 없어요', '', ''],
+  ];
+  /** 요금 — 시간제 / 패키지 / 둘 다. read() → { hourly, pkgs } (패키지 시각이 비면 오류) */
+  SP.priceEditor = (host, s = {}, { hourOnly = false } = {}) => {
+    let mode = hourOnly ? (s.hourly ? 'hour' : 'off') : s.hourly && (s.pkgs || []).length ? 'both' : s.hourly ? 'hour' : (s.pkgs || []).length ? 'pkg' : '';
+    const h = s.hourly || { min: 2, open: 600, close: 1440, p: [null, null, null, null], note: '' };
+    const pkgs = (s.pkgs || []).map((p) => ({ ...p, p: (p.p || [null, null, null, null]).slice() }));
+    host.innerHTML = `<div class="field full"><span class="label">${hourOnly ? '시간제 요금' : '요금 방식'}</span><div class="chips" style="margin-top:6px">
+        ${hourOnly ? '<button type="button" class="chip" data-mode="off">시간제 안 씀</button><button type="button" class="chip" data-mode="hour">시간제 씀</button>' : '<button type="button" class="chip" data-mode="hour">시간제</button><button type="button" class="chip" data-mode="pkg">패키지</button><button type="button" class="chip" data-mode="both">시간제 + 패키지</button>'}</div>
+        <p class="help">${hourOnly ? '패키지 요금은 「패키지 · 요금」 탭에서 고쳐요. ' : ''}시간제는 "1시간에 얼마, 최소 몇 시간"으로, 패키지는 "낮 12~17시 8만원"처럼 묶어서 팔 때 써요. 둘 다 쓰면 손님 화면에 두 표가 같이 보여요.</p></div>
+      <p class="small muted" data-none>요금 방식을 골라 주세요.</p>
+      <div data-hour hidden><h3 class="h4" style="margin:10px 0 8px">시간제 요금</h3><div class="form-grid">
+        <div class="field"><label class="label">최소 이용 시간</label><input class="input" type="number" min="1" max="24" data-h="min" value="${h.min}"></div>
+        <div class="field"><label class="label">운영 시간 (시작 ~ 끝)</label><div class="row"><input class="input" type="time" data-h="open" value="${hm(h.open)}"><span>~</span><input class="input" type="time" data-h="close" value="${hm(h.close)}"></div><p class="help">끝이 시작보다 이르면 다음 날로 계산해요. 24시간이면 00:00 ~ 00:00</p></div>
+        ${COLS.map((d, j) => `<div class="field"><label class="label">${d} · 1시간 (원)</label><input class="input" type="number" min="0" step="1000" data-h="p${j}" value="${num(h.p[j])}" placeholder="20000"></div>`).join('')}
+        <div class="field full"><label class="label">안내 한 줄 <span class="opt">선택</span></label><input class="input" data-h="note" maxlength="120" value="${esc(h.note || '')}" placeholder="예) 2시간부터, 30분 단위 연장 가능"></div>
+      </div></div>
+      <div data-pkg hidden><h3 class="h4" style="margin:16px 0 8px">패키지 요금</h3><p class="small muted" style="margin-bottom:8px">요일별(월~목·금·토·일) 요금이고, 비우면 그 요일엔 팔지 않는 걸로 보여요. 끝 시각이 시작보다 이르면 다음 날로 계산해요.</p><div data-pkgs></div><button class="btn btn-soft btn-sm" type="button" data-pkadd style="margin-top:10px">${icon('plus', 'sm')}패키지 추가</button></div>`;
+    const drawMode = () => {
+      host.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+      host.querySelector('[data-hour]').hidden = !(mode === 'hour' || mode === 'both');
+      host.querySelector('[data-pkg]').hidden = !(mode === 'pkg' || mode === 'both');
+      host.querySelector('[data-none]').hidden = !!mode || hourOnly;
+    };
+    const drawPkgs = () => {
+      host.querySelector('[data-pkgs]').innerHTML = pkgs.map((p, i) => `<div class="box" style="padding:14px;margin-bottom:10px"><div class="form-grid">
+        <div class="field"><label class="label">종류</label><select class="select input-sm" data-pk="${i}" data-f="k">${PK.map(([k, l]) => `<option value="${k}"${(p.k || 'day') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field"><label class="label">이름 (손님에게 보여요)</label><input class="input input-sm" data-pk="${i}" data-f="label" maxlength="12" value="${esc(p.label || '')}" placeholder="낮 / 밤 / 올데이"></div>
+        <div class="field full"><label class="label">시간 (시작 ~ 끝)</label><div class="row"><input class="input input-sm" type="time" data-pk="${i}" data-f="s" value="${hm(p.s)}"><span>~</span><input class="input input-sm" type="time" data-pk="${i}" data-f="e" value="${hm(p.e)}"></div></div>
+        ${COLS.map((d, j) => `<div class="field"><label class="label">${d} 요금(원)</label><input class="input input-sm" type="number" min="0" step="1000" data-pk="${i}" data-f="p${j}" value="${num(p.p[j])}"></div>`).join('')}
+        <div class="field full"><label class="label">이 패키지의 네이버 예약 주소 <span class="opt">선택</span></label><input class="input input-sm" data-pk="${i}" data-f="url" value="${esc(p.url || '')}" placeholder="https://booking.naver.com/booking/12/bizes/.../items/..."></div>
+        </div><button class="btn btn-ghost btn-sm" type="button" data-pkrm="${i}" style="margin-top:6px">이 패키지 빼기</button></div>`).join('') || '<p class="small muted">아직 패키지가 없어요. 「패키지 추가」를 눌러 주세요.</p>';
+    };
+    const readPkgs = () => {
+      host.querySelectorAll('[data-pk]').forEach((inp) => {
+        const p = pkgs[Number(inp.dataset.pk)]; const k = inp.dataset.f;
+        if (k === 's' || k === 'e') p[k] = t2m(inp.value);
+        else if (/^p\d$/.test(k)) p.p[Number(k[1])] = inp.value === '' ? null : Number(inp.value);
+        else p[k] = inp.value.trim();
+      });
+    };
+    drawPkgs(); drawMode();
+    host.addEventListener('click', (e) => {
+      const m = e.target.closest('[data-mode]'); if (m) { mode = m.dataset.mode; drawMode(); return; }
+      if (e.target.closest('[data-pkadd]')) { readPkgs(); pkgs.push({ k: pkgs.length ? 'night' : 'day', label: pkgs.length ? '밤' : '낮', s: pkgs.length ? 1140 : 720, e: pkgs.length ? 1500 : 1020, p: [null, null, null, null], url: '' }); drawPkgs(); return; }
+      const rm = e.target.closest('[data-pkrm]'); if (rm) { readPkgs(); pkgs.splice(Number(rm.dataset.pkrm), 1); drawPkgs(); }
+    });
+    const hv = (k) => host.querySelector(`[data-h="${k}"]`).value;
+    return {
+      mode: () => mode,
+      read: () => {
+        readPkgs();
+        const useH = mode === 'hour' || mode === 'both', useP = mode === 'pkg' || mode === 'both';
+        if (useP && pkgs.some((p) => p.s == null || p.e == null)) throw new Error('패키지 시작·끝 시각을 넣어 주세요.');
+        return {
+          hourly: useH ? { min: hv('min'), open: t2m(hv('open')) ?? 0, close: t2m(hv('close')) ?? 0, p: [0, 1, 2, 3].map((j) => (hv('p' + j) === '' ? null : Number(hv('p' + j)))), note: hv('note').trim() } : null,
+          pkgs: useP ? pkgs.map((p) => ({ k: p.k || 'day', label: p.label, s: p.s, e: p.e, p: p.p, url: p.url })) : [],
+        };
+      },
+    };
+  };
+  /** 예약 방식 — 여러 개 고르고 순서를 정해요. 첫 번째가 손님 화면의 대표 버튼. read() → { ways, confirm, hours, cancel } */
+  SP.waysEditor = (host, b = {}, { legacyBook = '' } = {}) => {
+    let ways = (b.ways || []).map((w) => ({ ...w }));
+    if (!ways.length && legacyBook) ways = [{ k: 'naver', v: legacyBook, label: '', note: '' }];
+    let confirm = b.confirm || '';
+    const draw = () => {
+      const on = new Set(ways.map((w) => w.k));
+      host.querySelector('[data-ways]').innerHTML = `
+        <div class="hs-ways">${ways.map((w, i) => { const def = SP.WAY_DEFS.find((x) => x[0] === w.k) || SP.WAY_DEFS[0]; return `<div class="hs-way${i === 0 ? ' main' : ''}">
+          <div class="hs-way-hd"><b>${i === 0 ? '<span class="badge red">대표</span>' : `<span class="badge mute">${i + 1}</span>`}${def[1]}</b>
+            <span class="row" style="gap:4px">${i ? `<button class="ibtn sm" type="button" data-wup="${i}" aria-label="앞으로">${icon('chev-l', 'sm')}</button>` : ''}<button class="ibtn sm" type="button" data-wrm="${i}" aria-label="빼기">${icon('x', 'sm')}</button></span></div>
+          ${def[4] ? `<input class="input input-sm" type="${def[4]}" data-w="${i}" data-f="v" value="${esc(w.v || '')}" placeholder="${esc(def[3])}" inputmode="${def[4] === 'tel' ? 'tel' : 'url'}">` : ''}
+          <p class="help">${def[2]}</p>
+          <div class="row hs-way-opt" style="gap:6px"><input class="input input-sm" data-w="${i}" data-f="label" maxlength="20" value="${esc(w.label || '')}" placeholder="버튼 이름 (선택)"><input class="input input-sm" data-w="${i}" data-f="note" maxlength="60" value="${esc(w.note || '')}" placeholder="한 줄 안내 (선택) 예) 평일 10~19시"></div>
+        </div>`; }).join('') || '<p class="small muted">아직 고른 예약 방식이 없어요. 아래에서 하나 이상 더해 주세요.</p>'}</div>
+        <div class="chips" style="margin-top:10px">${SP.WAY_DEFS.filter(([k]) => !on.has(k)).map(([k, l]) => `<button type="button" class="chip" data-wadd="${k}">${icon('plus', 'sm')}${l}</button>`).join('')}</div>`;
+    };
+    host.innerHTML = `<p class="small muted" style="margin-bottom:8px">손님이 예약하는 방법이에요. 여러 개 넣을 수 있고, <b>첫 번째가 지점 화면의 대표 버튼</b>(휴대폰 아래 고정 버튼)이 돼요. 쏘플은 결제를 받지 않고 손님을 이 방법으로 이어 줘요.</p>
+      <div data-ways></div>
+      <div class="form-grid" style="margin-top:16px">
+        <div class="field"><span class="label">예약 확정 방식</span><div class="chips" style="margin-top:6px"><button type="button" class="chip" data-cf="instant">바로 확정</button><button type="button" class="chip" data-cf="approve">호스트 확인 뒤 확정</button></div></div>
+        <div class="field"><label class="label" for="w_hours">예약 받는 시간 <span class="opt">선택</span></label><input class="input" id="w_hours" maxlength="60" value="${esc(b.hours || '')}" placeholder="예) 매일 10:00~22:00"></div>
+        <div class="field full"><label class="label" for="w_cancel">취소·환불 규정</label><textarea class="textarea" id="w_cancel" maxlength="600" style="min-height:76px" placeholder="예) 이용 3일 전까지 전액 환불, 이후 환불 없음">${esc(b.cancel || '')}</textarea><p class="help">손님 화면 「이용 전에 확인해 주세요」에 그대로 보여요. 전화번호는 자동으로 가려져요.</p></div>
+      </div>`;
+    const drawCf = () => host.querySelectorAll('[data-cf]').forEach((x) => x.classList.toggle('on', x.dataset.cf === confirm));
+    const read = () => { host.querySelectorAll('[data-w]').forEach((inp) => { ways[Number(inp.dataset.w)][inp.dataset.f] = inp.value.trim(); }); };
+    draw(); drawCf();
+    host.addEventListener('click', (e) => {
+      const cf = e.target.closest('[data-cf]'); if (cf) { confirm = confirm === cf.dataset.cf ? '' : cf.dataset.cf; drawCf(); return; }
+      const add = e.target.closest('[data-wadd]'); if (add) { read(); ways.push({ k: add.dataset.wadd, v: '', label: '', note: '' }); draw(); const ins = host.querySelectorAll(`[data-w="${ways.length - 1}"][data-f="v"]`); if (ins[0]) ins[0].focus(); return; }
+      const up = e.target.closest('[data-wup]'); if (up) { read(); const i = Number(up.dataset.wup); [ways[i - 1], ways[i]] = [ways[i], ways[i - 1]]; draw(); return; }
+      const rm = e.target.closest('[data-wrm]'); if (rm) { read(); ways.splice(Number(rm.dataset.wrm), 1); draw(); }
+    });
+    return { read: () => { read(); return { ways: ways.map((w) => ({ k: w.k, v: w.v, label: w.label, note: w.note })), confirm, hours: host.querySelector('#w_hours').value.trim(), cancel: host.querySelector('#w_cancel').value.trim() }; } };
+  };
+  /** 사업자 정보 — 손님 화면 「호스트 정보」 */
+  SP.bizEditor = (host, v = {}) => {
+    const b = v || {};
+    host.innerHTML = `<div class="form-grid">
+      <div class="field"><label class="label">상호</label><input class="input" data-b="name" maxlength="40" value="${esc(b.name || '')}" placeholder="예) 성수파티룸"></div>
+      <div class="field"><label class="label">대표자</label><input class="input" data-b="ceo" maxlength="20" value="${esc(b.ceo || '')}"></div>
+      <div class="field"><label class="label">사업자등록번호</label><input class="input" data-b="no" maxlength="12" inputmode="numeric" value="${esc(b.no || '')}" placeholder="123-45-67890"></div>
+      <div class="field"><label class="label">통신판매업 신고번호 <span class="opt">있으면</span></label><input class="input" data-b="mail" maxlength="30" value="${esc(b.mail || '')}" placeholder="2026-서울성동-0000"></div>
+    </div><p class="help">사업자로 운영하면 손님 화면 「호스트 정보」에 상호·대표자·사업자등록번호가 보여요. 손님이 믿고 예약하는 데 도움이 돼요.</p>`;
+    return { read: () => { const o = {}; host.querySelectorAll('[data-b]').forEach((i) => { o[i.dataset.b] = i.value.trim(); }); return o.name || o.ceo || o.no || o.mail ? o : null; } };
+  };
 })();

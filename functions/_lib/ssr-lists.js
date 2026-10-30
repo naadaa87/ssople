@@ -186,7 +186,7 @@ export function roomPriceHtml(s) {
       <p class="small muted" style="margin-top:10px">기준 ${esc(s.base || '-')}명 요금이에요.${s.addFeeLabel ? ` 넘는 인원은 ${esc(s.addFeeLabel)}이 붙어요.` : ''}${s.depositLabel ? ` 청소 보증금 ${esc(s.depositLabel)}(퇴실 확인 뒤 돌려드려요).` : ''} ${basis}</p>`;
 }
 /** 호스트가 정한 예약 방식 → 손님 화면 버튼 목록 (app.js SP.bookWays 와 같은 규칙) */
-export const BOOK_LABEL = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', sms: '문자 예약', form: '쏘플 문의' };
+export const BOOK_LABEL = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', talk: '네이버 톡톡', insta: '인스타그램 DM', sms: '문자 예약', form: '쏘플 문의' };
 export function bookWays(s) {
   const ways = ((s.booking || {}).ways || []);
   const out = [];
@@ -194,6 +194,8 @@ export function bookWays(s) {
     if (w.k === 'naver' && w.v) out.push({ k: 'naver', href: naverHref(w.v), label: w.label || '네이버 예약으로 예약', sub: w.note || '', ext: true });
     else if (w.k === 'link' && w.v) out.push({ k: 'link', href: w.v, label: w.label || '예약 페이지에서 예약', sub: w.note || '', ext: true });
     else if (w.k === 'kakao' && w.v) out.push({ k: 'kakao', href: w.v, label: w.label || '카카오톡으로 예약 문의', sub: w.note || '', ext: true });
+    else if (w.k === 'talk' && w.v) out.push({ k: 'talk', href: w.v, label: w.label || '네이버 톡톡으로 예약 문의', sub: w.note || '', ext: true });
+    else if (w.k === 'insta' && w.v) out.push({ k: 'insta', href: w.v, label: w.label || '인스타그램 DM으로 예약 문의', sub: w.note || '', ext: true });
     else if (w.k === 'phone' && w.v) out.push({ k: 'phone', href: 'tel:' + w.v.replace(/-/g, ''), label: w.label || '전화로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false });
     else if (w.k === 'sms' && w.v) out.push({ k: 'sms', href: 'sms:' + w.v.replace(/-/g, ''), label: w.label || '문자로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false });
     else if (w.k === 'form') out.push({ k: 'form', href: `/write?b=qna&code=${s.code}`, label: w.label || '쏘플에 문의 남기고 예약', sub: w.note || '호스트가 답을 달면 알림이 가요', ext: false });

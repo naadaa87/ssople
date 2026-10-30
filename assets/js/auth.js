@@ -6,6 +6,16 @@
   if ($('#toSignup')) $('#toSignup').href = '/signup?next=' + encodeURIComponent(next);
   if ($('#toLogin')) $('#toLogin').href = '/login?next=' + encodeURIComponent(next);
   SP.me().then((m) => { if (m.user) go(); });
+  // 호스트센터에서 넘어온 가입·로그인 — 끝나면 공간 등록 신청서로 바로 이어진다는 걸 먼저 알려 줘요
+  if (/^\/(myspace|hostcenter)/.test(next)) {
+    const box = document.querySelector('#signupForm, #loginForm');
+    if (box) {
+      const n = document.createElement('div');
+      n.className = 'callout hs-auth-note';
+      n.innerHTML = `${SP.icon('flag')}<div><b>쏘플파티룸 호스트 ${$('#signupForm') ? '가입' : '로그인'}</b><br>${/new=1/.test(next) ? '가입하면 바로 공간 등록 신청서로 이어져요. 신청서는 중간에 저장되니 천천히 써도 돼요.' : '로그인하면 호스트센터 · 내 공간 관리로 이어져요.'} 이메일 하나로 손님 계정과 호스트 기능을 함께 써요.</div>`;
+      box.parentNode.insertBefore(n, box);
+    }
+  }
 
   const lf = $('#loginForm');
   if (lf) lf.addEventListener('submit', async (e) => {

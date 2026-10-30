@@ -40,6 +40,19 @@
   /** 노출 존(프리미엄/플러스) — 노출 끝 날짜가 지났으면 빈 값 */
   SP.zoneOf = (s) => { const l = (s && s.listing) || {}; if (!l.zone) return ''; if (l.until && l.until < SP.today()) return ''; return l.zone === 'premium' || l.zone === 'plus' ? l.zone : ''; };
   SP.zoneRank = (s) => { const z = SP.zoneOf(s); return z === 'premium' ? 0 : z === 'plus' ? 1 : 2; };
+  /* 홍보 채널 기록 — 주소에 ?utm_source=instagram 같은 값이 있으면 30일 동안 기억해 두었다가
+     공간 등록 신청·지점 연결 요청을 보낼 때 함께 보내요 (어느 홍보로 호스트가 왔는지 보려고). 개인정보는 담지 않아요. */
+  (() => {
+    try {
+      const q = new URLSearchParams(location.search);
+      const src = q.get('utm_source') || q.get('ref');
+      if (src) {
+        const v = [src, q.get('utm_medium'), q.get('utm_campaign')].filter(Boolean).join('/').slice(0, 60);
+        localStorage.setItem('sp.ref', JSON.stringify({ v, at: Date.now() }));
+      }
+    } catch { /* 저장이 막힌 브라우저는 넘어간다 */ }
+  })();
+  SP.ref = () => { try { const r = JSON.parse(localStorage.getItem('sp.ref') || 'null'); return r && Date.now() - r.at < 30 * 864e5 ? r.v : ''; } catch { return ''; } };
   /* 지점 노출 순서 — 들어올 때마다 랜덤.
      서버가 미리 그려 둔 목록(첫 화면·지점 찾기·지역 화면)이 있으면 그 순서를 그대로 이어 받아서,
      스크립트가 목록을 다시 그려도 카드 자리가 갑자기 바뀌지 않게 해요. 목록에 없던 지점은 그 뒤에 랜덤으로 붙어요. */
@@ -264,10 +277,10 @@
     } catch { return url; }
   };
   /* 구글 애널리틱스(GA4) — 관리자 설정에 측정 ID를 넣었을 때만 gtag가 있다. 없으면 아무 일도 안 한다 */
-  const GA_EVENT = { book: 'click_naver_booking', place: 'click_naver_map', kakao: 'click_kakao', call: 'click_call' };
+  const GA_EVENT = { book: 'click_naver_booking', naver: 'click_naver_booking', place: 'click_naver_map', kakao: 'click_kakao', call: 'click_call', phone: 'click_call' };
   SP.ga = (name, params) => { try { if (typeof window.gtag === 'function') window.gtag('event', name, { ...params, transport_type: 'beacon' }); } catch { /* 무시 */ } };
   SP.track = (code, kind, pkg, d) => {
-    SP.ga(GA_EVENT[kind] || 'click_' + kind, { room_code: code || undefined, package: pkg || undefined, use_date: d || undefined, page_path: location.pathname });
+    if (kind !== 'view') SP.ga(GA_EVENT[kind] || 'click_' + kind, { room_code: code || undefined, package: pkg || undefined, use_date: d || undefined, page_path: location.pathname });
     const body = JSON.stringify({ code, kind, pkg: pkg || null, d: d || null });
     try { if (navigator.sendBeacon && navigator.sendBeacon('/api/click', new Blob([body], { type: 'text/plain' }))) return; } catch { /* 무시 */ }
     fetch('/api/click', { method: 'POST', body, keepalive: true }).catch(() => {});
@@ -342,7 +355,7 @@
     return m;
   };
   /* 호스트가 정한 예약 방식 → 손님 화면 버튼 목록 (서버 ssr-lists.js bookWays 와 같은 규칙) */
-  SP.BOOK_KINDS = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', sms: '문자 예약', form: '쏘플 문의' };
+  SP.BOOK_KINDS = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', talk: '네이버 톡톡', insta: '인스타그램 DM', sms: '문자 예약', form: '쏘플 문의' };
   SP.CONFIRM_KINDS = { instant: '바로 확정', approve: '호스트 확인 뒤 확정' };
   SP.bookWays = (s, date) => {
     const out = [];
@@ -350,6 +363,8 @@
       if (w.k === 'naver' && w.v) out.push({ k: 'naver', href: SP.naverHref(w.v, date), label: w.label || '네이버 예약으로 예약', sub: w.note || '', ext: true, cls: 'btn-naver', ic: 'ext' });
       else if (w.k === 'link' && w.v) out.push({ k: 'link', href: w.v, label: w.label || '예약 페이지에서 예약', sub: w.note || '', ext: true, cls: 'btn-ink', ic: 'ext' });
       else if (w.k === 'kakao' && w.v) out.push({ k: 'kakao', href: w.v, label: w.label || '카카오톡으로 예약 문의', sub: w.note || '', ext: true, cls: 'btn-kakao', ic: 'kakao' });
+      else if (w.k === 'talk' && w.v) out.push({ k: 'talk', href: w.v, label: w.label || '네이버 톡톡으로 예약 문의', sub: w.note || '', ext: true, cls: 'btn-naver', ic: 'chat' });
+      else if (w.k === 'insta' && w.v) out.push({ k: 'insta', href: w.v, label: w.label || '인스타그램 DM으로 예약 문의', sub: w.note || '', ext: true, cls: 'btn-ink', ic: 'instagram' });
       else if (w.k === 'phone' && w.v) out.push({ k: 'phone', href: 'tel:' + w.v.replace(/-/g, ''), label: w.label || '전화로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false, cls: 'btn-red', ic: 'phone' });
       else if (w.k === 'sms' && w.v) out.push({ k: 'sms', href: 'sms:' + w.v.replace(/-/g, ''), label: w.label || '문자로 예약', sub: [w.v, w.note].filter(Boolean).join(' · '), ext: false, cls: 'btn-ink', ic: 'chat' });
       else if (w.k === 'form') out.push({ k: 'form', href: `/write?b=qna&code=${s.code}`, label: w.label || '쏘플에 문의 남기고 예약', sub: w.note || '호스트가 답을 달면 알림이 가요', ext: false, cls: 'btn-line', ic: 'chat' });

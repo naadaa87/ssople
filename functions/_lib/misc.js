@@ -5,7 +5,7 @@ import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
 import { loadSpaces } from './spaces.js';
 import { imgUrl, checkText } from './community.js';
 
-export const APP_VERSION = '2026.10.29a';
+export const APP_VERSION = '2026.10.30b';
 
 export const INQUIRY_KINDS = {
   partner: '제휴 혜택 제공',
@@ -106,7 +106,13 @@ export function register(route) {
     const adm = await c.adminLevel();
     if (!u && !adm) throw new HttpError(401, '로그인이 필요해요.', { needLogin: true });
     if (!c.env.PHOTOS) throw new HttpError(503, '사진 저장소(PHOTOS)가 아직 연결되지 않았어요. 관리자에게 알려 주세요.');
-    await c.limit('up:' + (u ? u.id : 'adm'), adm ? 400 : 40, 3600, '사진을 너무 많이 올렸어요. 잠시 후 다시 해 주세요.');
+    // 호스트·공간 등록 신청 중인 회원은 지점 사진을 한꺼번에 올리니 넉넉하게
+    let cap = adm ? 400 : 40;
+    if (u && !adm) {
+      if (u.role === 'host' || (u.hostCodes || []).length) cap = 200;
+      else if (await c.db.prepare('SELECT 1 AS x FROM space_apps WHERE uid = ? LIMIT 1').bind(u.id).first().catch(() => null)) cap = 200;
+    }
+    await c.limit('up:' + (u ? u.id : 'adm'), cap, 3600, '사진을 너무 많이 올렸어요. 잠시 후 다시 해 주세요.');
     const ct = (c.req.headers.get('content-type') || '').split(';')[0].trim();
     const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[ct];
     if (!ext) throw new HttpError(400, '사진 파일(jpg, png, webp)만 올릴 수 있어요.');

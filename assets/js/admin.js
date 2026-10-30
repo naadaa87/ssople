@@ -127,7 +127,8 @@
     const todo = [
       ['community', '처리할 신고', c.reports, '신고가 쌓인 글·모임'],
       ['inquiries', '새 문의', c.inquiries, '제휴·단체·입점 상담'],
-      ['apps', '검수할 공간 등록 신청', c.apps || 0, '호스트가 직접 제출한 신청서'],
+      ['apps', '검수할 공간 등록 · 지점 연결', c.apps || 0, '호스트가 직접 보낸 신청'],
+      ['spaces', '노출 기간 끝나 가는 호스트 지점', c.expiring || 0, '14일 안에 끝나거나 지난 곳 · 연장 안내'],
       ['events', '승인 기다리는 행사', c.eventsPending, '회원이 제안한 행사'],
       ['visits', '확인할 방문 인증', c.visitsPending, '예약번호 대조가 필요해요'],
     ];
@@ -1261,7 +1262,7 @@ async function run(env) {
       isAdmin() ? `<button class="btn btn-line btn-sm" type="button" data-imweb>${icon('download', 'sm')}아임웹 사진 가져오기</button><button class="btn btn-red btn-sm" type="button" data-new>${icon('plus', 'sm')}새 지점</button>` : '')
       + `<div class="a-tools"><input class="input" id="spQ" placeholder="지점 이름·코드로 찾기" value="${esc(SPF.q)}"><select class="select" id="spRegion"><option value="">모든 권역</option>${regions.map((r) => `<option${r === SPF.region ? ' selected' : ''}>${esc(r)}</option>`).join('')}</select><span class="small muted">${rows.length}곳 · 공개 ${list.filter((s) => s.visible).length}곳</span></div>
       <div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>지점</th><th>권역 · 동네</th><th class="r">인원</th><th>패키지</th><th class="r">사진</th><th>네이버</th><th>공개</th><th></th></tr></thead><tbody>
-      ${rows.map((s) => `<tr><td><b>${esc(s.name)}</b><span class="sub mono">${esc(s.code)}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
+      ${rows.map((s) => `<tr><td><b>${esc(s.name)}</b>${s.hostPaused ? ' ' + B('warn', '잠시 쉼') : ''}${s.listing && s.listing.type === 'host' && s.listing.until ? ' ' + (s.listing.until < SP.today() ? B('red', '노출 기간 지남') : SP.dayDiff(SP.today(), s.listing.until) <= 14 ? B('warn', '노출 ' + SP.dayDiff(SP.today(), s.listing.until) + '일 남음') : '') : ''}<span class="sub mono">${esc(s.code)}${s.listing && s.listing.type === 'host' ? ' · 호스트 운영' + (s.listing.until ? ' ~' + esc(s.listing.until) : '') : ''}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
         <td>${(s.pkgs || []).map((p) => `<span class="tag">${esc(p.label || PKG[p.k] || p.k)}</span>`).join(' ') || '<span class="red small">없음</span>'}</td><td class="r">${(s.photos || []).length}</td>
         <td>${(s.pkgs || []).length && (s.pkgs || []).every((p) => p.url) ? B('ok', '상품별 연결') : (s.pkgs || []).some((p) => p.url) || s.book ? B('ok', '예약 연결') : B('warn', '주소 없음')}</td>
         <td><label class="switch"><input type="checkbox" data-vis="${s.code}"${s.visible ? ' checked' : ''} aria-label="${esc(s.name)} 공개"></label></td>
@@ -1381,7 +1382,7 @@ async function run(env) {
     const ck = (k, label) => `<label class="check"><input type="checkbox" id="fb_${k}"${f[k] ? ' checked' : ''}><span>${label}</span></label>`;
     const m = SP.modal({
       title: `${s.name} 고치기`, wide: true,
-      body: `<div class="ed-tabs" id="edTabs"><button type="button" class="on" data-t="base">기본</button><button type="button" data-t="pkg">패키지 · 요금</button><button type="button" data-t="feat">시설</button><button type="button" data-t="items">비품</button><button type="button" data-t="info">이용 안내</button><button type="button" data-t="social">SNS·후기</button><button type="button" data-t="photo">사진 ${photos.length}</button></div>
+      body: `<div class="ed-tabs" id="edTabs"><button type="button" class="on" data-t="base">기본</button><button type="button" data-t="pkg">패키지 · 요금</button><button type="button" data-t="feat">시설</button><button type="button" data-t="items">비품</button><button type="button" data-t="info">이용 안내</button><button type="button" data-t="social">SNS·후기</button><button type="button" data-t="book">예약 방식 · 시간제</button><button type="button" data-t="photo">사진 ${photos.length}</button></div>
       <div data-p="base"><div class="form-grid">
         ${ip('e_name', '지점 이름', s.name, 40)}${ip('e_short', '짧은 이름 (카드에 쓰여요)', s.short, 30)}
         <div class="field"><label class="label" for="e_region">권역</label><select class="select" id="e_region">${['서울', '경기', '인천', '대전', '부산', '전주', '기타'].map((r) => `<option${r === s.region ? ' selected' : ''}>${r}</option>`).join('')}</select></div>
@@ -1419,6 +1420,10 @@ async function run(env) {
         <p class="tiny faint" style="margin-top:10px">도어락 번호, 와이파이 비밀번호, 점주 연락처, 입금 계좌는 고객 화면에 노출되니 절대 적지 마세요. 입실 안내 문자로만 보내 주세요.</p></div>
       <div data-p="items" hidden><div id="edItems"></div></div>
       <div data-p="social" hidden><div id="edSocial"></div></div>
+      <div data-p="book" hidden><p class="a-note" style="margin-bottom:10px">호스트가 정한 예약 방식·시간제 요금·사업자 정보예요. 비워 두면 예전처럼 패키지별 네이버 예약으로 보여요.</p>
+        <div id="edWays"></div><div style="margin-top:18px" id="edHour"></div>
+        <h3 class="h4" style="margin:18px 0 8px">사업자 정보 (호스트 운영 지점 · 손님 화면 「호스트 정보」)</h3><div id="edBiz"></div>
+        <div class="field" style="margin-top:14px"><label class="switch"><input type="checkbox" id="e_paused"${s.hostPaused ? ' checked' : ''}><span>호스트가 「잠시 쉬기」로 내려 둠 (켜 두면 공개여도 손님 화면에 안 보여요)</span></label></div></div>
       <div data-p="photo" hidden><p class="a-note" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 사진은 한 장에 5MB까지, 40장까지 올릴 수 있어요.</p><div id="imwBox"></div><div class="ph-grid" id="phGrid"></div><input type="file" id="phFile" accept="image/*" multiple hidden></div>
       <div class="form-err" id="edErr" hidden></div>`,
       foot: `${isAdmin() ? '<button class="btn btn-ghost btn-sm" type="button" id="edReset" style="margin-right:auto">처음 데이터로 되돌리기</button>' : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="edSave">저장</button>`,
@@ -1427,6 +1432,9 @@ async function run(env) {
     m.$('#edTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; m.$$('#edTabs button').forEach((x) => x.classList.toggle('on', x === b)); m.$$('[data-p]').forEach((p) => { p.hidden = p.dataset.p !== b.dataset.t; }); });
     const itemsEd = SP.itemsEditor(P('edItems'), s.items || []);
     const socialEd = SP.socialEditor(P('edSocial'), s.social || {});
+    const waysEd = SP.waysEditor(P('edWays'), s.booking || {});
+    const hourEd = SP.priceEditor(P('edHour'), { hourly: s.hourly, pkgs: [] }, { hourOnly: true });
+    const bizEd = SP.bizEditor(P('edBiz'), s.hostBiz || {});
 
     const drawPkgs = () => {
       P('pkgEd').innerHTML = pkgs.map((p, i) => `<div class="pkg-row" data-i="${i}">
@@ -1514,6 +1522,7 @@ async function run(env) {
         info: { size: P('i_size').value.trim(), parking: P('i_parking').value.trim(), route: P('i_route').value.trim(), noise: P('i_noise').value.trim(), minors: P('i_minors').value.trim(), sameday: P('i_sameday').value.trim(), tour: P('i_tour').value.trim() },
         photos: photos.map((p) => p.k),
         items: itemsEd.read(), social: socialEd.read(),
+        booking: waysEd.read(), hourly: hourEd.read().hourly, hostBiz: bizEd.read(), hostPaused: P('e_paused').checked,
       };
       if (pkgs.some((p) => p.s == null || p.e == null)) { err.textContent = '패키지 시작·끝 시각을 19:00처럼 24시간 기준으로 넣어 주세요.'; err.hidden = false; m.$('#edTabs [data-t="pkg"]').click(); return; }
       const btn = P('edSave'); SP.busy(btn, true, '저장하는 중…');
@@ -1786,27 +1795,70 @@ async function run(env) {
     };
   }
 
-  /* ================= 공간 등록 신청 (호스트센터) ================= */
+  /* ================= 공간 등록 신청 · 지점 연결 요청 · 호스트 변경 기록 (호스트센터) ================= */
   const AP = { status: 'submitted' };
   const AST = { draft: ['mute', '작성 중'], submitted: ['warn', '검수 중'], rejected: ['red', '보완 요청'], approved: ['ok', '승인'] };
-  const WAYK = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', sms: '문자 예약', form: '쏘플 문의' };
+  const WAYK = { naver: '네이버 예약', link: '예약 링크', phone: '전화 예약', kakao: '카카오톡 채널', talk: '네이버 톡톡', insta: '인스타그램 DM', sms: '문자 예약', form: '쏘플 문의' };
   const CFK = { instant: '바로 확정', approve: '호스트 확인 뒤 확정' };
+  const PLANK = { 1: '1개월', 3: '3개월', 6: '6개월', 12: '12개월', ask: '상담 뒤 결정' };
+  const ROLEK = { owner: '대표 · 점주', manager: '매니저', staff: '직원' };
+  /** 승인일부터 N개월 노출 — 마지막 날 (서버 untilAfter 와 같은 규칙) */
+  const untilAfter = (from, months) => { const [y, mo, d] = from.split('-').map(Number); const t = new Date(Date.UTC(y, mo - 1 + months, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(d, last)); return SP.addDays(t.toISOString().slice(0, 10), -1); };
   async function apps() {
+    if (AP.status === 'edits') return hostEdits();
     const d = await SP.get('/api/admin/apps?status=' + AP.status);
-    main.innerHTML = hd('공간 등록 신청', '호스트가 호스트센터에서 직접 적어 제출한 신청서예요. 승인하면 지점이 만들어지고 호스트 계정에 연결돼요. 승인은 대표 관리자만 할 수 있어요.')
-      + `<div class="a-tools">${seg('apSt', [['submitted', '검수 중'], ['rejected', '보완 요청'], ['approved', '승인'], ['draft', '작성 중'], ['all', '전체']], AP.status)}</div>
-      <div class="a-card"><table class="a-tbl"><thead><tr><th>상태</th><th>공간</th><th>호스트</th><th>요금 · 예약 방식</th><th>제출</th><th></th></tr></thead><tbody>
-      ${d.items.map((a) => { const x = a.data || {}; const bk = (x.booking || {}).ways || []; return `<tr><td>${B(AST[a.status][0], AST[a.status][1])}</td>
-        <td><b>${esc(a.name || '이름 없음')}</b><span class="sub">${esc([a.region, a.area].filter(Boolean).join(' '))}${x.max ? ` · 최대 ${x.max}명` : ''} · 사진 ${(x.photos || []).length}장</span></td>
+    main.innerHTML = hd('공간 등록 신청', '호스트가 호스트센터에서 직접 보낸 「새 공간 등록 신청」과 「운영 중인 지점 연결 요청」이에요. 승인하면 지점이 만들어지거나 회원 계정에 지점이 연결돼요. 승인은 대표 관리자만 할 수 있어요.')
+      + `<div class="a-tools">${seg('apSt', [['submitted', '검수 중'], ['rejected', '보완 요청'], ['approved', '승인'], ['draft', '작성 중'], ['all', '전체'], ['edits', '호스트 변경 기록']], AP.status)}</div>
+      <div class="a-card"><table class="a-tbl"><thead><tr><th>상태</th><th>종류</th><th>공간</th><th>호스트</th><th>요금 · 예약 방식 · 기간</th><th>제출 · 경로</th><th></th></tr></thead><tbody>
+      ${d.items.map((a) => { const x = a.data || {}; const bk = (x.booking || {}).ways || []; const link = a.kind === 'link'; return `<tr><td>${B(AST[a.status][0], AST[a.status][1])}</td>
+        <td>${link ? B('ink', '지점 연결') : B('mute', '새 공간')}</td>
+        <td><b>${esc(a.name || '이름 없음')}</b><span class="sub">${link ? esc((x.codes || []).join(', ')) + ' · ' + esc(ROLEK[x.role] || '') : `${esc([a.region, a.area].filter(Boolean).join(' '))}${x.max ? ` · 최대 ${x.max}명` : ''} · 사진 ${(x.photos || []).length}장`}</span></td>
         <td>${esc(a.nick)}<span class="sub">${esc(a.email)}${a.contact ? ' · ' + esc(a.contact) : ''}</span></td>
-        <td class="small">${x.hourly ? '시간제' : ''}${x.hourly && (x.pkgs || []).length ? ' + ' : ''}${(x.pkgs || []).length ? `패키지 ${x.pkgs.length}` : ''}${!x.hourly && !(x.pkgs || []).length ? '-' : ''}<span class="sub">${bk.map((w) => WAYK[w.k]).join(' · ') || '-'}</span></td>
-        <td class="nw">${a.submitted_at ? when(a.submitted_at) : '-'}${a.code ? `<span class="sub">${esc(a.code)}</span>` : ''}</td>
-        <td class="nw"><button class="btn btn-line btn-sm" type="button" data-ap="${a.id}">검수</button></td></tr>`; }).join('') || emptyRow(6, '신청서가 없어요.')}</tbody></table></div>`;
+        <td class="small">${link ? '-' : `${x.hourly ? '시간제' : ''}${x.hourly && (x.pkgs || []).length ? ' + ' : ''}${(x.pkgs || []).length ? `패키지 ${x.pkgs.length}` : ''}${!x.hourly && !(x.pkgs || []).length ? '-' : ''}<span class="sub">${bk.map((w) => WAYK[w.k]).join(' · ') || '-'}${x.plan ? ' · ' + PLANK[x.plan] : ''}</span>`}</td>
+        <td class="nw">${a.submitted_at ? when(a.submitted_at) : '-'}<span class="sub">${x.ref ? esc(x.ref) : '경로 없음'}${a.code ? ' · ' + esc(a.code) : ''}</span></td>
+        <td class="nw"><button class="btn btn-line btn-sm" type="button" data-ap="${a.id}">${a.status === 'submitted' ? '검수' : '보기'}</button></td></tr>`; }).join('') || emptyRow(7, '신청서가 없어요.')}</tbody></table></div>
+      <p class="a-note" style="margin-top:10px">「제출 · 경로」의 경로는 호스트가 들어온 홍보 링크의 utm_source 값이에요(예: instagram/story). 홍보 채널별로 몇 명이 신청했는지 볼 수 있어요.</p>`;
     onSeg(main, 'apSt', (v) => { AP.status = v; apps(); });
     main.onclick = (e) => {
       const b = e.target.closest('[data-ap]'); if (!b) return;
       const a = d.items.find((x) => String(x.id) === b.dataset.ap);
-      if (a) appModal(a);
+      if (a) (a.kind === 'link' ? linkAppModal : appModal)(a);
+    };
+  }
+  async function hostEdits() {
+    const d = await SP.get('/api/admin/host-edits');
+    main.innerHTML = hd('공간 등록 신청', '호스트가 내 공간 관리에서 고친 기록이에요. 예약 방식·요금·주소처럼 손님이 바로 쓰는 칸을 고친 줄은 빨간 표시가 붙어요. 이상한 링크나 정보가 있으면 지점 관리에서 바로 고쳐 주세요.')
+      + `<div class="a-tools">${seg('apSt', [['submitted', '검수 중'], ['rejected', '보완 요청'], ['approved', '승인'], ['draft', '작성 중'], ['all', '전체'], ['edits', '호스트 변경 기록']], AP.status)}</div>
+      <div class="a-card"><table class="a-tbl"><thead><tr><th>때</th><th>지점</th><th>호스트</th><th>고친 칸</th><th></th></tr></thead><tbody>
+      ${d.items.map((r) => `<tr><td class="nw">${when(r.at)}</td><td><b>${esc(r.spaceName)}</b><span class="sub mono">${esc(r.code)}</span></td><td>${esc(r.nick || '')}</td><td>${r.important ? B('red', '확인') + ' ' : ''}${esc(r.labels.join(', '))}</td><td class="nw"><a class="btn btn-ghost btn-sm" href="/room/${esc(r.code)}" target="_blank" rel="noopener">고객 화면</a></td></tr>`).join('') || emptyRow(5, '아직 기록이 없어요.')}</tbody></table></div>`;
+    onSeg(main, 'apSt', (v) => { AP.status = v; apps(); });
+  }
+  function linkAppModal(a) {
+    const x = a.data || {};
+    const can = a.status !== 'approved';
+    const m = SP.modal({
+      title: `지점 연결 요청 · ${a.nick}`,
+      body: `<div class="row wrap-ok" style="gap:6px;margin-bottom:12px">${B(AST[a.status][0], AST[a.status][1])}${B('ink', ROLEK[x.role] || '')}<span class="small muted">${esc(a.email)} · 연락처 <span class="mono">${esc(a.contact || '-')}</span></span></div>
+        <p class="a-note" style="margin-bottom:10px">점주 확인(네이버 예약·사업자 정보의 대표자, 기존 연락처로 전화 등)을 먼저 해 주세요. 연결하면 이 회원이 그 지점의 소개·사진·시설·문의 답변을 직접 고칠 수 있어요. 쏘플 위탁운영 지점은 요금·예약 방식은 못 고쳐요.</p>
+        <div class="field"><span class="label">연결할 지점</span><div style="display:grid;gap:6px;margin-top:6px">${(x.codes || []).map((c, i) => `<label class="check"><input type="checkbox" data-lc="${esc(c)}" checked ${can ? '' : 'disabled'}><span><b>${esc((x.names || [])[i] || c)}</b> <span class="mono small">${esc(c)}</span>${(a.userCodes || []).includes(c) ? ' · 이미 연결됨' : ''}</span></label>`).join('')}</div></div>
+        ${x.note ? `<div class="q" style="background:var(--fog);border-radius:10px;padding:12px;white-space:pre-wrap;margin-top:10px">${esc(x.note)}</div>` : ''}
+        <p class="small muted" style="margin-top:8px">지금 이 회원에게 연결된 지점: ${esc((a.userCodes || []).join(', ') || '없음')}${x.ref ? ` · 들어온 경로 ${esc(x.ref)}` : ''}</p>
+        <div class="field" style="margin-top:12px"><label class="label" for="apMemo">운영팀 메모 (회원에게 안 보여요)</label><textarea class="textarea" id="apMemo" maxlength="1000" style="min-height:60px">${esc(a.memo || '')}</textarea></div>
+        ${can ? `<div class="field"><label class="label" for="apNote">연결하지 못한 이유 (반려할 때만 — 회원에게 보여요)</label><textarea class="textarea" id="apNote" maxlength="600" style="min-height:60px" placeholder="예) 점주 확인이 안 됐어요. 대표자 이름으로 다시 연락 주세요.">${esc(a.status === 'rejected' ? a.note || '' : '')}</textarea></div>` : ''}
+        <div class="form-err" id="apErr" hidden></div>`,
+      foot: `<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-ghost" type="button" id="apMemoGo">메모 저장</button>${can ? `<button class="btn btn-line" type="button" id="apReject">반려</button>${isAdmin() ? '<button class="btn btn-red" type="button" id="apApprove">연결하기</button>' : ''}` : ''}`,
+    });
+    const err = (e) => { const el = m.$('#apErr'); el.textContent = e.message; el.hidden = false; };
+    m.$('#apMemoGo').onclick = async () => { try { await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() }); m.close(); apps(); } catch (er) { err(er); } };
+    const rj = m.$('#apReject'); if (rj) rj.onclick = async () => {
+      const note = m.$('#apNote').value.trim(); if (!note) { err(new Error('회원에게 보여 줄 이유를 적어 주세요.')); return; }
+      try { await SP.post(`/api/admin/apps/${a.id}/reject`, { note }); m.close(); refreshCounts(); apps(); } catch (er) { err(er); }
+    };
+    const ok = m.$('#apApprove'); if (ok) ok.onclick = async () => {
+      const codes = m.$$('[data-lc]').filter((i) => i.checked).map((i) => i.dataset.lc);
+      if (!codes.length) { err(new Error('연결할 지점을 하나 이상 골라 주세요.')); return; }
+      SP.busy(ok, true, '연결하는 중');
+      try { await SP.post(`/api/admin/apps/${a.id}/approve`, { codes }); await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() }); m.close(); SP.toast('연결했어요. 회원에게 알림이 갔어요.'); refreshCounts(); apps(); } catch (er) { SP.busy(ok, false); err(er); }
     };
   }
   function appModal(a) {
@@ -1817,10 +1869,12 @@ async function run(env) {
     const ip = (id, label, v, max, ph = '', type = 'text') => `<div class="field"><label class="label" for="${id}">${label}</label><input class="input" id="${id}" type="${type}" ${type === 'text' ? `maxlength="${max}"` : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}"></div>`;
     const f = x.feat || {};
     const feats = [f.karaoke && f.karaoke.on ? '노래방' : '', f.bbq && f.bbq.on ? '바베큐' : '', f.pet && f.pet.on ? '애견 동반' : '', f.tv ? 'TV' : '', f.console ? '게임기' : '', f.projector ? '빔프로젝터' : '', ...(f.zones || [])].filter(Boolean).join(' · ');
+    const hb = x.hostBiz || {};
     const canDecide = a.status === 'submitted' || a.status === 'rejected' || a.status === 'draft';
+    const autoUntil = x.plan && x.plan !== 'ask' ? untilAfter(SP.today(), Number(x.plan)) : '';
     const m = SP.modal({
       title: `신청서 · ${a.name || '이름 없음'}`, wide: true,
-      body: `<div class="row wrap-ok" style="gap:6px;margin-bottom:12px">${B(AST[a.status][0], AST[a.status][1])}${B('ink', esc(a.nick))}<span class="small muted">${esc(a.email)}${a.contact ? ' · 연락처 ' + esc(a.contact) : ''}</span>${a.code ? B('mute', a.code) : ''}</div>
+      body: `<div class="row wrap-ok" style="gap:6px;margin-bottom:12px">${B(AST[a.status][0], AST[a.status][1])}${B('ink', esc(a.nick))}<span class="small muted">${esc(a.email)}${a.contact ? ' · 연락처 ' + esc(a.contact) : ''}</span>${a.code ? B('mute', a.code) : ''}${x.ref ? B('mute', '경로 ' + x.ref) : ''}</div>
         ${a.status === 'rejected' && a.note ? `<div class="callout red small" style="margin-bottom:12px"><div><b>보낸 보완 요청</b><br>${esc(a.note)}</div></div>` : ''}
         ${(a.photoUrls || []).length ? `<div class="img-pick" style="margin-bottom:12px">${a.photoUrls.slice(0, 12).map((u) => `<div class="pk"><img src="${esc(u)}" alt=""></div>`).join('')}</div>` : '<p class="small muted">사진이 없어요.</p>'}
         <dl class="kv small">
@@ -1831,18 +1885,19 @@ async function run(env) {
           ${row('패키지', (x.pkgs || []).map((p) => `${esc(p.label)} ${esc(p.hrs || '')} ${(p.p || []).map(won).join(' / ')}${p.url ? ' · 네이버' : ''}`).join('<br>'))}
           ${row('예약 방식', (bk.ways || []).map((w, i) => `${i === 0 ? '<b>대표</b> ' : ''}${WAYK[w.k]}${w.v ? ` <span class="mono">${esc(w.v)}</span>` : ''}${w.label ? ` (${esc(w.label)})` : ''}`).join('<br>'))}
           ${row('확정 · 시간', `${CFK[bk.confirm] || '-'}${bk.hours ? ' · ' + esc(bk.hours) : ''}`)}${row('취소·환불', esc(bk.cancel || ''))}
-          ${row('호스트 표시 이름', esc(x.hostName || ''))}${row('사업자', x.biz === 'yes' ? '사업자' : x.biz === 'no' ? '아직 없음' : '-')}${row('동의', x.agree ? '동의함' : '아직')}
+          ${row('희망 이용 기간', esc(PLANK[x.plan] || ''))}
+          ${row('호스트 표시 이름', esc(x.hostName || ''))}${row('사업자', x.biz === 'yes' ? `사업자 · ${esc([hb.name, hb.ceo, hb.no, hb.mail].filter(Boolean).join(' · ') || '정보 없음')}` : x.biz === 'no' ? '아직 없음' : '-')}${row('동의', x.agree ? `동의함${x.agreedAt ? ' · ' + when(x.agreedAt) : ''}` : '아직')}
         </dl>
         <div class="field" style="margin-top:14px"><label class="label" for="apMemo">운영팀 메모 (호스트에게 안 보여요)</label><textarea class="textarea" id="apMemo" maxlength="1000" style="min-height:60px">${esc(a.memo || '')}</textarea></div>
         ${canDecide ? `<div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">보완 요청 (반려)</h3><div class="field"><textarea class="textarea" id="apNote" maxlength="600" style="min-height:70px" placeholder="예) 사진을 5장 이상 올려 주세요. 주소에 건물명을 넣어 주세요.">${esc(a.status === 'rejected' ? a.note || '' : '')}</textarea></div><button class="btn btn-line btn-sm" type="button" id="apReject">보완 요청 보내기</button></div>
-        <div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">승인</h3><p class="a-note" style="margin:4px 0 10px">지점 코드가 새로 만들어지고 운영 방식은 「호스트 운영」, 호스트 계정에 지점이 연결돼요(권한이 회원이면 호스트로 바뀌어요). 등록 요금 결제는 따로 안내해 주세요.</p>
-          <div class="form-grid">${ip('apName', '지점 이름 (바꾸려면)', x.name, 40)}${ip('apArea', '동네 (바꾸려면)', x.area, 20)}${ip('apUntil', '노출 끝 날짜 (결제 기간 끝, 선택)', '', 0, '', 'date')}
+        <div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">승인</h3><p class="a-note" style="margin:4px 0 10px">지점 코드가 새로 만들어지고 운영 방식은 「호스트 운영」, 호스트 계정에 지점이 연결돼요(권한이 회원이면 호스트로 바뀌어요). 노출 끝 날짜를 비우면 호스트가 고른 기간(${esc(PLANK[x.plan] || '없음')})으로 오늘부터 계산해요${autoUntil ? ` → ${autoUntil}` : ''}. 결제는 설정의 「결제 · 연장 안내」 문구로 안내돼요.</p>
+          <div class="form-grid">${ip('apName', '지점 이름 (바꾸려면)', x.name, 40)}${ip('apArea', '동네 (바꾸려면)', x.area, 20)}${ip('apUntil', '노출 끝 날짜 (비우면 이용 기간으로 자동)', '', 0, '', 'date')}
           <div class="field"><span class="label">공개</span><label class="switch"><input type="checkbox" id="apVisible" checked><span>승인하자마자 손님 화면에 보여요 (끄면 비공개로 만들고 나중에 지점 관리에서 공개)</span></label></div></div>
           ${isAdmin() ? '<button class="btn btn-red" type="button" id="apApprove" style="margin-top:10px">승인하고 지점 만들기</button>' : '<p class="a-note">승인은 대표 관리자만 할 수 있어요.</p>'}</div>` : ''}
         <div class="form-err" id="apErr" hidden></div>`,
       foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-ink" type="button" id="apMemoGo">메모 저장</button>',
     });
-    const err = (e) => { const el = m.$('#apErr'); el.textContent = e.message; el.hidden = false; };
+    const err = (e) => { const el = m.$('#apErr'); el.textContent = e.message; el.hidden = false; el.scrollIntoView({ block: 'center' }); };
     m.$('#apMemoGo').onclick = async () => { try { await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() }); m.close(); apps(); } catch (er) { err(er); } };
     const rj = m.$('#apReject'); if (rj) rj.onclick = async () => {
       const note = m.$('#apNote').value.trim(); if (!note) { err(new Error('호스트에게 보낼 보완 요청 내용을 적어 주세요.')); return; }
@@ -1854,7 +1909,7 @@ async function run(env) {
       try {
         const r = await SP.post(`/api/admin/apps/${a.id}/approve`, { name: m.$('#apName').value.trim(), area: m.$('#apArea').value.trim(), until: m.$('#apUntil').value, visible: m.$('#apVisible').checked });
         await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() });
-        m.close(); SP.toast(`승인했어요. 지점 코드 ${r.code}`); SPACES = null; refreshCounts(); apps();
+        m.close(); SP.toast(`승인했어요. 지점 코드 ${r.code}${r.until ? ` · 노출 ${r.until}까지` : ''}`); SPACES = null; refreshCounts(); apps();
       } catch (er) { SP.busy(ap, false); err(er); }
     };
   }
@@ -2027,7 +2082,7 @@ async function run(env) {
       + sec('고객센터 · 연결', I('cs.phone', '대표 번호', '1544-3523') + I('cs.hours', '상담 시간', '월~목 10:00~19:00 · 금~일 10:00~22:00') + I('kakao.url', '카카오톡 상담 주소', 'https://pf.kakao.com/...') + I('link.chatbot', '챗봇 주소', '', '비워 두면 안 보여요.')
         + I('link.host', '호스트 센터 주소', 'https://host.jssystems.kr', '비워 두면 바닥글에서 숨겨요. 지금은 호스트 센터를 쓰지 않으니 비워 두세요.') + I('link.play', '쏘플 파티게임(폰 연결 버전) 주소', '', '배포한 ssople-play 주소(https://…)를 넣으면 파티게임 화면에 \'객실 TV로 방 열기\' 버튼과 놀이터 연결 카드가 보여요. 아직 없으면 비워 두세요.') + I('link.live', '온라인 파티룸 주소', '/live', '비워 두면 홈페이지 안의 온라인 파티룸(/live)으로 연결돼요. 실시간 서버 주소는 「온라인 파티룸」 메뉴에서 넣어요.'))
       + sec('SNS', I('sns.instagram', '인스타그램', 'https://instagram.com/...') + I('sns.blog', '블로그', 'https://blog.naver.com/...') + I('sns.youtube', '유튜브', 'https://youtube.com/...'), '적어 두면 검색엔진에 공식 채널로 같이 알려져요.')
-      + sec('호스트 프로그램', I('host.price1', '공간 등록 1개월 — 월 요금 (원)', '150000', '', 'number') + I('host.price3', '공간 등록 3개월 — 월 요금 (원)', '135000', '', 'number') + I('host.price6', '공간 등록 6개월 — 월 요금 (원)', '120000', '', 'number') + I('host.price12', '공간 등록 12개월 — 월 요금 (원)', '100000', '', 'number') + I('host.managed_fee', '위탁운영 수수료 (매출의 %)', '20', '결제 수수료를 포함한 비율이에요.', 'number'), '호스트 모집 화면의 공간 등록 요금표와 첫 화면·창업안내의 요금 문구에 그대로 보여요. 하루 요금은 월 요금을 30일로 나눠 100원 단위로 내려서 보여 줘요 (월 10만원 → 하루 3,300원).')
+      + sec('호스트 프로그램', `<div class="field full"><span class="label">공간 등록 신청</span><label class="switch"><input type="checkbox" id="st_host.apply_open" data-key="host.apply_open" data-bool${s['host.apply_open'] !== '0' ? ' checked' : ''}><span>호스트센터에서 새 공간 등록 신청 받기 (끄면 「새 공간 등록」 버튼이 잠겨요)</span></label></div>` + T('host.pay_note', '승인된 호스트에게 보이는 결제 · 연장 안내', '예) 승인 뒤 3일 안에 아래 계좌로 입금해 주세요. 입금 확인 뒤 세금계산서를 보내 드려요.\n연장은 노출 끝나기 7일 전까지 카카오톡 채널로 알려 주세요.', '내 공간 관리 맨 위에 승인된 호스트에게만 보여요(손님·일반 회원에게는 안 보여요). 입금 계좌, 결제 기한, 세금계산서, 연장 방법을 적어 두세요.') + I('host.price1', '공간 등록 1개월 — 월 요금 (원)', '150000', '', 'number') + I('host.price3', '공간 등록 3개월 — 월 요금 (원)', '135000', '', 'number') + I('host.price6', '공간 등록 6개월 — 월 요금 (원)', '120000', '', 'number') + I('host.price12', '공간 등록 12개월 — 월 요금 (원)', '100000', '', 'number') + I('host.managed_fee', '위탁운영 수수료 (매출의 %)', '20', '결제 수수료를 포함한 비율이에요.', 'number'), '호스트 모집 화면의 공간 등록 요금표와 첫 화면·창업안내의 요금 문구에 그대로 보여요. 하루 요금은 월 요금을 30일로 나눠 100원 단위로 내려서 보여 줘요 (월 10만원 → 하루 3,300원).')
       + sec('호스트센터 공용 로그인', `<div class="field"><span class="label">공용 로그인</span><label class="switch"><input type="checkbox" id="st_hc.open" data-key="hc.open" data-bool${s['hc.open'] !== '0' ? ' checked' : ''}><span>공용 아이디로 들어가기 허용</span></label></div>` + I('hc.id', '공용 아이디', '1234') + I('hc.pw', '공용 비밀번호', '1234', '바꾸면 예전 비밀번호로 들어와 있던 사람은 다시 로그인해야 해요.'), '호스트·점주 안내 화면 <a class="link" href="/hostcenter" target="_blank" rel="noopener">ssople.com/hostcenter</a>에 들어갈 때 쓰는 공용 아이디예요. 공용 아이디로는 안내만 볼 수 있고 지점 정보는 고칠 수 없어요. 호스트 권한이 있는 회원과 관리자는 이 아이디 없이 바로 들어가요.')
       + sec('검색 등록 (소유 확인)', I('seo.canonical_host', '대표 주소 (도메인)', '비워 두세요 — 자동으로 ssople.com', '비워 두면 돼요. ssople.com 을 Cloudflare Pages(ssople)의 사용자 지정 도메인으로 연결하면, ssople.com 으로 처음 들어온 순간부터 자동으로 대표 주소가 ssople.com 이 돼요. 그때부터 ssople.pages.dev·www.ssople.com 접속은 ssople.com 으로 넘어가고, 정식 주소·사이트맵·RSS도 ssople.com 기준이 돼요. 연결에 문제가 생겨 되돌려야 하면 여기에 ssople.pages.dev 를 적고 저장하세요.', 'text', true) + I('seo.naver_verify', '네이버 서치어드바이저 확인 코드', '비워 두세요 — 기본 코드가 이미 들어가 있어요', 'https://ssople.com 의 네이버 확인 코드(2b4906…)는 홈페이지에 이미 넣어 뒀어요. 확인 파일(naverbbbed…html)도 함께 준비돼 있어요. 네이버에서 다른 코드를 새로 받았을 때만 "HTML 태그"의 content 값을 붙여 넣으세요.') + I('seo.google_verify', '구글 서치 콘솔 확인 코드', '예) AbCdEf...', 'search.google.com/search-console → 속성 추가(URL 접두어) → "HTML 태그" 방식의 content 값만.') + I('seo.bing_verify', '빙 웹마스터 확인 코드 (선택)', '', '안 쓰면 비워 두세요.') + I('seo.ga4_id', '구글 애널리틱스(GA4) 측정 ID (선택)', 'G-XXXXXXXXXX', 'analytics.google.com → 관리 → 데이터 스트림 → 웹에서 보이는 G-로 시작하는 값. 넣으면 방문 통계와 네이버 예약·지도·카카오톡 버튼 클릭이 GA4에 이벤트로 쌓여요. 개인정보처리방침의 쿠키 안내도 자동으로 GA 사용 문구로 바뀌어요. 비우면 GA를 쓰지 않아요.'), '저장하면 홈페이지 머리 부분에 확인용 태그가 들어가요. 그다음 각 서비스에서 "소유 확인"을 누르면 돼요. 사이트맵 주소는 /sitemap.xml, RSS 주소는 /rss.xml 이에요.')
       + sec('사업자 정보', I('biz.name', '상호', '브이픽서(주)') + I('biz.role', '회사 설명 (상호 옆 한 줄)', '쏘플파티룸 브랜드 플랫폼', '바닥글과 회사 정보에 상호 옆에 붙어요. 비우면 상호만 보여요.') + I('biz.ceo', '대표자', '') + I('biz.no', '사업자등록번호', '000-00-00000') + I('biz.mailorder', '통신판매업 신고번호', '', '신고했다면 적어 주세요.') + I('biz.addr', '사업장 주소', '', '', 'text', true) + I('biz.email', '대표 이메일') + I('biz.privacy_officer', '개인정보 보호책임자', '', '개인정보처리방침에 이름이 들어가요.'), '바닥글, 브랜드 이야기의 회사 정보, 이용약관, 개인정보처리방침에 그대로 들어가요.')

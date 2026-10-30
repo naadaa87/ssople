@@ -14,6 +14,12 @@
   $('#hKinds').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) setKind(b.dataset.k); });
   setKind(kind);
 
+  /* 「공간 등록하기」·「지점 연결」 버튼 — 로그인 전이면 가입 화면을 거쳐 신청서로 바로 이어지게 */
+  SP.me().then((m) => {
+    if (m && m.user) return;
+    $$('[data-host-cta]').forEach((a) => { a.href = '/signup?next=' + encodeURIComponent(a.getAttribute('href')); });
+  }).catch(() => {});
+
   /* 공간 등록 요금표는 data-set="host.day1" 같은 칸이라, 관리자 설정 값이 있으면 app.js 가 그 숫자로 바꿔 보여 줘요 */
   if (location.hash === '#apply') setTimeout(() => $('#apply').scrollIntoView({ block: 'start' }), 200);
 

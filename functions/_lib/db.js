@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -54,8 +54,11 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS live_req_cmts (id INTEGER PRIMARY KEY AUTOINCREMENT, req_id INTEGER NOT NULL, uid INTEGER, nick TEXT, ih TEXT, body TEXT NOT NULL, admin INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, created_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_live_cmts ON live_req_cmts(req_id, id)`,
   // v7: 호스트센터 — 호스트가 직접 넣는 공간 등록 신청서 (작성 중 → 검수 중 → 승인·반려). data 는 지점 data 와 같은 모양
-  `CREATE TABLE IF NOT EXISTS space_apps (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'draft', step INTEGER NOT NULL DEFAULT 1, name TEXT, region TEXT, area TEXT, data TEXT NOT NULL DEFAULT '{}', contact TEXT, memo TEXT, note TEXT, code TEXT, created_at TEXT, updated_at TEXT, submitted_at TEXT, decided_at TEXT)`,
+  `CREATE TABLE IF NOT EXISTS space_apps (id INTEGER PRIMARY KEY AUTOINCREMENT, uid INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'draft', step INTEGER NOT NULL DEFAULT 1, name TEXT, region TEXT, area TEXT, data TEXT NOT NULL DEFAULT '{}', contact TEXT, memo TEXT, note TEXT, code TEXT, created_at TEXT, updated_at TEXT, submitted_at TEXT, decided_at TEXT, kind TEXT NOT NULL DEFAULT 'new')`,
   `CREATE INDEX IF NOT EXISTS idx_space_apps ON space_apps(uid, status, id)`,
+  // v8: 호스트가 지점 정보를 고친 기록 (운영팀 확인용 — 예약 링크·요금·주소처럼 손님에게 중요한 칸)
+  `CREATE TABLE IF NOT EXISTS host_edits (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, uid INTEGER, nick TEXT, fields TEXT, important INTEGER NOT NULL DEFAULT 0, at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_host_edits ON host_edits(id)`,
 ];
 
 let ready = null;
@@ -87,6 +90,10 @@ export function ensureSchema(env) {
         if (v && v < 2) {
           // v2: 회원에 호스트 지점 연결(host_codes) 칸 추가
           try { await env.DB.prepare('ALTER TABLE users ADD COLUMN host_codes TEXT').run(); } catch { /* 이미 있으면 통과 */ }
+        }
+        if (v && v < 8) {
+          // v8: 공간 등록 신청서 종류(new: 새 공간, link: 운영 중인 지점 연결 요청)
+          try { await env.DB.prepare(`ALTER TABLE space_apps ADD COLUMN kind TEXT NOT NULL DEFAULT 'new'`).run(); } catch { /* 이미 있으면 통과 */ }
         }
         if (v && v < 3) {
           // v3: 지점 소식 분류(tag: notice·news·event)와 지점 문의 답변 여부(answered)
@@ -335,8 +342,11 @@ export const DEFAULTS = {
   'hc.open': '1',
   'hc.id': '1234',
   'hc.pw': '1234',
+  // 호스트센터 — 공간 등록 신청 받기(1=받기, 0=잠시 멈춤), 승인된 호스트에게만 보이는 결제·연장 안내 문구
+  'host.apply_open': '1',
+  'host.pay_note': '',
 };
-const PRIVATE_KEYS = new Set(['community.banned', 'hc.id', 'hc.pw']);
+const PRIVATE_KEYS = new Set(['community.banned', 'hc.id', 'hc.pw', 'host.pay_note']);
 
 let setCache = null;
 let setCacheAt = 0;
@@ -422,6 +432,7 @@ export async function housekeep(db) {
     db.prepare('DELETE FROM sync_log WHERE at < ?').bind(ago(90)),
     db.prepare(`DELETE FROM space_apps WHERE status = 'draft' AND updated_at < ?`).bind(ago(180)),
     db.prepare(`UPDATE space_apps SET contact = NULL WHERE status IN ('approved', 'rejected') AND decided_at < ?`).bind(ago(180)),
+    db.prepare('DELETE FROM host_edits WHERE at < ?').bind(ago(365)),
     db.prepare('DELETE FROM live_scores WHERE d < ?').bind(ago(60).slice(0, 10)),
   ]);
   return true;
