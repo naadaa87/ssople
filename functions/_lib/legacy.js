@@ -39,7 +39,7 @@ export const LEGACY_PATHS = {
 
 /** 옛 지점 글(/home/?bmode=view&idx=…) → 새 지점 화면. 지금 운영하지 않는 지점은 가장 가까운 안내로 */
 export const LEGACY_POSTS = {
-  928829: '/room/S-0010', // 신촌 신촌서강
+  928829: '/area/sinchon', // 신촌 신촌서강 — 2026-11-02 영업 종료, 신촌 지점 모음으로
   1036477: '/room/S-0026', // 분당 달빛정원
   1192776: '/room/S-0025', // 부평 게임 파티룸
   998539: '/area/gyeonggi', // 평택 다올 (지금 목록에 없음)

@@ -2067,3 +2067,9 @@ a.hs-stat:hover { border-color: var(--ink); }
   .gal-feats { grid-template-columns: minmax(0, 1fr); }
   .lb-cap { bottom: 12px; font-size: 13px; }
 }
+
+/* 영업을 마친 지점 옛 주소로 들어왔을 때 안내 (2026-11-02) */
+.closed-note { padding-top: 18px; }
+.closed-note .callout { align-items: center; }
+.closed-note .callout > span { flex: 1; }
+.closed-note .ibtn { flex: none; width: 32px; height: 32px; }

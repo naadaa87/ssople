@@ -20,8 +20,16 @@ export async function loadSpaces(db, { all = false } = {}) {
     }));
     cacheAt = Date.now();
   }
-  // 손님 화면 — 공개 지점 중 호스트가 「잠시 쉬기」로 둔 지점은 뺀다
-  return all ? cache : cache.filter((s) => s.visible && !s.hostPaused);
+  // 손님 화면 — 공개 지점 중 호스트가 「잠시 쉬기」로 둔 지점, 영업을 마친 지점은 뺀다
+  return all ? cache : cache.filter((s) => s.visible && !s.hostPaused && !s.closed);
+}
+
+/** 영업을 마친 지점의 옛 주소가 갈 곳 — 같은 동네 → 같은 권역 → 지역별 지점 (?closed=지점명 으로 안내 문구) */
+export function closedTarget(s, open) {
+  const q = '?closed=' + encodeURIComponent(String(s.name || '').replace(/\s*파티룸$/, ''));
+  if (open.some((x) => x.area === s.area)) return areaPath(s.area) + q;
+  if (open.some((x) => x.region === s.region)) return regionPath(s.region) + q;
+  return '/locations' + q;
 }
 
 export function photoUrl(p) {
@@ -479,6 +487,8 @@ export function cleanSpaceInput(b, prev = {}) {
   if ('book' in b) out.book = url(b.book, { name: '네이버 예약 페이지 주소' });
   if ('intro' in b) out.intro = str(b.intro, { max: 1500, multiline: true, name: '소개' });
   if ('notice' in b) out.notice = str(b.notice, { max: 400, multiline: true, name: '지점 공지' });
+  // 영업 종료(날짜) — 손님 화면·검색·사이트맵에서 빠지고, 옛 주소는 근처 지점 화면으로 이어져요 (관리자만)
+  if ('closed' in b) out.closed = isYmd(b.closed) ? b.closed : '';
   // 공간 상세(## 소제목 / - 목록 / > 안내 상자), 지점 이용 안내(한 줄에 하나), 시설 목록("분류: 항목, 항목"), 검색 해시태그
   if ('detail' in b) out.detail = maskPhones(str(b.detail, { max: 3000, multiline: true, name: '공간 상세' }));
   if ('care' in b) out.care = maskPhones(str(b.care, { max: 1000, multiline: true, name: '지점 이용 안내' }));

@@ -1253,22 +1253,24 @@ async function run(env) {
   }
 
   /* ================= 지점 관리 ================= */
-  const SPF = { q: '', region: '' };
+  const SPF = { q: '', region: '', closed: false };
   async function spacesView() {
     const list = await spaces(true);
     const regions = [...new Set(list.map((s) => s.region))];
-    const rows = list.filter((s) => (!SPF.region || s.region === SPF.region) && (!SPF.q || (s.name + s.area + s.code + (s.aliases || []).join('')).toLowerCase().includes(SPF.q.toLowerCase())));
+    const nClosed = list.filter((s) => s.closed).length;
+    const rows = list.filter((s) => (SPF.closed || !s.closed) && (!SPF.region || s.region === SPF.region) && (!SPF.q || (s.name + s.area + s.code + (s.aliases || []).join('')).toLowerCase().includes(SPF.q.toLowerCase())));
     main.innerHTML = hd('지점 관리', '고객 화면에 보이는 지점 정보예요. 요금과 네이버 예약 주소는 네이버 예약 화면과 같게 맞춰 주세요. 도어락·와이파이·계좌 같은 내부 정보는 여기에 적지 마세요.',
       isAdmin() ? `<button class="btn btn-line btn-sm" type="button" data-imweb>${icon('download', 'sm')}아임웹 사진 가져오기</button><button class="btn btn-red btn-sm" type="button" data-new>${icon('plus', 'sm')}새 지점</button>` : '')
-      + `<div class="a-tools"><input class="input" id="spQ" placeholder="지점 이름·코드로 찾기" value="${esc(SPF.q)}"><select class="select" id="spRegion"><option value="">모든 권역</option>${regions.map((r) => `<option${r === SPF.region ? ' selected' : ''}>${esc(r)}</option>`).join('')}</select><span class="small muted">${rows.length}곳 · 공개 ${list.filter((s) => s.visible).length}곳</span></div>
+      + `<div class="a-tools"><input class="input" id="spQ" placeholder="지점 이름·코드로 찾기" value="${esc(SPF.q)}"><select class="select" id="spRegion"><option value="">모든 권역</option>${regions.map((r) => `<option${r === SPF.region ? ' selected' : ''}>${esc(r)}</option>`).join('')}</select><span class="small muted">${rows.length}곳 · 공개 ${list.filter((s) => s.visible && !s.closed).length}곳</span>${nClosed ? `<label class="check small"><input type="checkbox" id="spClosed"${SPF.closed ? ' checked' : ''}><span>영업 종료 ${nClosed}곳도 보기</span></label>` : ''}</div>
       <div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>지점</th><th>권역 · 동네</th><th class="r">인원</th><th>패키지</th><th class="r">사진</th><th>네이버</th><th>공개</th><th></th></tr></thead><tbody>
-      ${rows.map((s) => `<tr><td><b>${esc(s.name)}</b>${s.hostPaused ? ' ' + B('warn', '잠시 쉼') : ''}${s.listing && s.listing.type === 'host' && s.listing.until ? ' ' + (s.listing.until < SP.today() ? B('red', '노출 기간 지남') : SP.dayDiff(SP.today(), s.listing.until) <= 14 ? B('warn', '노출 ' + SP.dayDiff(SP.today(), s.listing.until) + '일 남음') : '') : ''}<span class="sub mono">${esc(s.code)}${s.listing && s.listing.type === 'host' ? ' · 호스트 운영' + (s.listing.until ? ' ~' + esc(s.listing.until) : '') : ''}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
+      ${rows.map((s) => `<tr${s.closed ? ' style="opacity:.55"' : ''}><td><b>${esc(s.name)}</b>${s.closed ? ' ' + B('mute', `영업 종료 ${Number(s.closed.slice(5, 7))}.${Number(s.closed.slice(8, 10))}`) : ''}${s.hostPaused ? ' ' + B('warn', '잠시 쉼') : ''}${s.listing && s.listing.type === 'host' && s.listing.until ? ' ' + (s.listing.until < SP.today() ? B('red', '노출 기간 지남') : SP.dayDiff(SP.today(), s.listing.until) <= 14 ? B('warn', '노출 ' + SP.dayDiff(SP.today(), s.listing.until) + '일 남음') : '') : ''}<span class="sub mono">${esc(s.code)}${s.listing && s.listing.type === 'host' ? ' · 호스트 운영' + (s.listing.until ? ' ~' + esc(s.listing.until) : '') : ''}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
         <td>${(s.pkgs || []).map((p) => `<span class="tag">${esc(p.label || PKG[p.k] || p.k)}</span>`).join(' ') || '<span class="red small">없음</span>'}</td><td class="r">${(s.photos || []).length}</td>
         <td>${(s.pkgs || []).length && (s.pkgs || []).every((p) => p.url) ? B('ok', '상품별 연결') : (s.pkgs || []).some((p) => p.url) || s.book ? B('ok', '예약 연결') : B('warn', '주소 없음')}</td>
-        <td><label class="switch"><input type="checkbox" data-vis="${s.code}"${s.visible ? ' checked' : ''} aria-label="${esc(s.name)} 공개"></label></td>
+        <td><label class="switch"><input type="checkbox" data-vis="${s.code}"${s.visible && !s.closed ? ' checked' : ''}${s.closed ? ' disabled' : ''} aria-label="${esc(s.name)} 공개"></label></td>
         <td><div class="a-acts"><a class="btn btn-ghost btn-sm" href="/room/${esc(s.code)}" target="_blank" rel="noopener">보기</a><button class="btn btn-line btn-sm" type="button" data-edit="${s.code}">고치기</button></div></td></tr>`).join('') || emptyRow(8, '조건에 맞는 지점이 없어요.')}</tbody></table></div>`;
     $('#spQ').oninput = SP.debounce((e) => { SPF.q = e.target.value.trim(); spacesView().then(() => { const q = $('#spQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }); }, 300);
     $('#spRegion').onchange = (e) => { SPF.region = e.target.value; spacesView(); };
+    const spc = $('#spClosed'); if (spc) spc.onchange = (e) => { SPF.closed = e.target.checked; spacesView(); };
     main.onclick = (e) => {
       const ed = e.target.closest('[data-edit]'); if (ed) { editSpace(SPACES.find((s) => s.code === ed.dataset.edit)); return; }
       if (e.target.closest('[data-new]')) newSpace();
@@ -1400,6 +1402,7 @@ async function run(env) {
         ${tx('e_detail', '공간 상세 — 줄 맨 앞에 ## 소제목 · - 목록 · > 회색 안내 상자', s.detail, 3000, '## 프라이빗 PC방 : 고성능 PC 6대\n- 게임은 입실 후 직접 설치해 주세요.\n> 유료 게임은 고객님 계정으로 이용해요.')}
         ${ip('e_kw', '검색 해시태그 (쉼표로 나눠요)', (s.kw || []).join(', '), 300, '건대파티룸, 건대생일파티', 'text', 'full')}
         <div class="field"><label class="switch"><input type="checkbox" id="e_visible"${s.visible ? ' checked' : ''}><span>고객 화면에 공개</span></label></div>
+        <div class="field full"><label class="switch"><input type="checkbox" id="e_closed"${s.closed ? ' checked' : ''}><span>영업 종료${s.closed ? ` (${esc(s.closed)})` : ''}</span></label><p class="help">켜면 손님 화면·검색·사이트맵에서 모두 빠지고, 이 지점의 옛 주소는 같은 동네(없으면 같은 권역) 지점 화면으로 이어져요. 후기·문의 기록과 지점 정보는 그대로 남아서 다시 끄면 돌아와요.</p></div>
         ${ip('e_sort', '관리 순서 (관리자 목록용 · 손님 화면은 랜덤)', s.sort, 0, '', 'number')}
         <div class="field full" style="margin-top:6px"><div class="a-note">운영 방식과 노출 존 — 호스트 센터에서 신청한 공간은 여기서 운영 방식을 정하고, 유료 노출 존은 결제 기간에 맞춰 끝 날짜를 넣어요. 끝 날짜가 지나면 존 표시가 자동으로 빠져요. 손님 화면의 지점 순서는 존과 상관없이 들어올 때마다 랜덤이에요.</div></div>
         <div class="field"><label class="label" for="e_ltype">운영 방식</label><select class="select" id="e_ltype">${[['managed', '쏘플 위탁운영'], ['host', '호스트 운영 (공간 등록)'], ['direct', '쏘플 직영']].map(([k, l]) => `<option value="${k}"${(s.listing && s.listing.type) === k || (!s.listing && k === 'managed') ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
@@ -1573,7 +1576,7 @@ async function run(env) {
         base: P('e_base').value, max: P('e_max').value, addFeeLabel: P('e_addFeeLabel').value.trim(), addFee: P('e_addFee').value, depositLabel: P('e_depositLabel').value.trim(),
         place: P('e_place').value.trim(), book: P('e_book').value.trim(), tags: list(P('e_tags').value), aliases: list(P('e_aliases').value), intro: P('e_intro').value.trim(), notice: P('e_notice').value.trim(),
         detail: P('e_detail').value.trim(), care: P('e_care').value.trim(), facs: P('e_facs').value.trim(), kw: list(P('e_kw').value),
-        visible: P('e_visible').checked, sort: P('e_sort').value,
+        visible: P('e_visible').checked, sort: P('e_sort').value, closed: P('e_closed').checked ? (s.closed || SP.today()) : '',
         listing: { type: P('e_ltype').value, zone: P('e_lzone').value, until: P('e_luntil').value, hostName: P('e_lhost').value.trim() },
         pkgs: pkgs.map((p) => ({ k: p.k, label: p.label, s: p.s, e: p.e, p: p.p, url: p.url })),
         feat: {

@@ -652,8 +652,22 @@
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', chrome);
-  else chrome();
+  /* 영업을 마친 지점의 옛 주소로 들어온 손님 — 근처 지점 화면 위에 안내 한 줄 (?closed=지점명) */
+  function closedNote() {
+    let nm = '';
+    try { nm = new URLSearchParams(location.search).get('closed') || ''; } catch { nm = ''; }
+    nm = nm.replace(/[<>]/g, '').trim().slice(0, 30);
+    const main = document.getElementById('main');
+    if (!nm || !main) return;
+    const box = document.createElement('div');
+    box.className = 'wrap closed-note';
+    box.innerHTML = `<div class="callout" role="status">${SP.icon('info', 'sm')}<span><b>${SP.esc(nm)}</b> 지점은 영업을 마쳤어요. 가까운 쏘플 지점을 보여 드릴게요.</span><button type="button" class="ibtn" aria-label="안내 닫기">${SP.icon('x', 'sm')}</button></div>`;
+    box.querySelector('button').onclick = () => { box.remove(); try { const u = new URL(location.href); u.searchParams.delete('closed'); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch { /* 무시 */ } };
+    main.prepend(box);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { chrome(); closedNote(); });
+  else { chrome(); closedNote(); }
 })();
 
 /* ---------------- 폼에서 자주 쓰는 조각 ---------------- */
