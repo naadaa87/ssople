@@ -20,8 +20,9 @@
   function render() {
     const s = space;
     const photos = s.photos || [];
+    const gBy = Object.fromEntries((s.gallery || []).map((g) => [g.u, g]));   // 갤러리 사진은 작은 칸에 작은 사진을
     const gallery = photos.length
-      ? `<div class="gallery${photos.length === 1 ? ' one' : ''}">${photos.slice(0, 5).map((p, i) => `<div><img src="${esc(p)}" alt="${esc(s.name)} 사진 ${i + 1}" data-i="${i}" ${i ? 'loading="lazy"' : ''}></div>`).join('')}${photos.length > 1 ? `<button class="btn btn-line btn-sm more${photos.length <= 5 ? ' m-only' : ''}" type="button" data-i="0">${icon('image', 'sm')}사진 ${photos.length}장 모두 보기</button>` : ''}</div>`
+      ? `<div class="gallery${photos.length === 1 ? ' one' : ''}">${photos.slice(0, 5).map((p, i) => `<div><img src="${esc(i && gBy[p] ? gBy[p].s : p)}" alt="${esc(s.name)} ${gBy[p] && gBy[p].t ? esc(gBy[p].t) : '사진 ' + (i + 1)}" data-i="${i}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}></div>`).join('')}${photos.length > 1 ? `<button class="btn btn-line btn-sm more${photos.length <= 5 ? ' m-only' : ''}" type="button" data-i="0">${icon('image', 'sm')}사진 ${photos.length}장 모두 보기</button>` : ''}</div>`
       : `<div class="gallery one nophoto"><div class="room-cover" style="border:0;border-radius:0">${SP.cover(s)}<div class="ph-wait"><b>실제 사진을 준비하고 있어요 · 지금 보이는 건 쏘플 분위기 컷이에요</b>${s.place ? `<a class="btn btn-line btn-sm" href="${esc(s.place)}" target="_blank" rel="noopener" data-track="${s.code}|place">${icon('image', 'sm')}네이버 플레이스에서 사진 보기</a>` : ''}</div></div></div>`;
     const minP = SP.minPrice(s);
     $('#roomRoot').innerHTML = `
@@ -52,7 +53,7 @@
           <nav class="room-nav" id="roomNav" aria-label="이 지점 안내 바로가기">${subnav(s)}</nav>
           ${s.intro ? `<section class="room-sec" id="r-intro"><h2>공간 소개</h2><div class="prose prewrap">${esc(s.intro)}</div></section>` : ''}
           ${bookSec(s)}
-          ${photoSec(s)}
+          ${(s.gallery || []).length ? gallerySec(s) : photoSec(s)}
           ${s.detail ? `<section class="room-sec" id="r-detail"><h2>공간 상세</h2>${detailView(s.detail)}${kwTags(s)}</section>` : ''}
           <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
           <section class="room-sec" id="r-price"><h2>${s.hourly && !(s.pkgs || []).length ? '시간제 요금' : s.hourly ? '요금' : '패키지와 요금'}</h2>${priceTable(s)}</section>
@@ -235,7 +236,7 @@
       ${fold ? `<button class="btn btn-line btn-block rp-more" type="button" id="rpMore">사진 ${photos.length - PH_FOLD}장 더 보기${icon('chev-d', 'sm')}</button>` : ''}</section>`;
   }
   function subnav(s) {
-    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', ways(s).length > 0 || (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', '사진', (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-host', '호스트', isHost(s)], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
+    const l = [['r-intro', '소개', !!s.intro], ['r-book', '예약', ways(s).length > 0 || (s.pkgs || []).some((p) => p.url) || !!s.book || !!s.place], ['r-photos', (s.gallery || []).length ? '갤러리' : '사진', (s.gallery || []).length > 0 || (s.photos || []).length > 1], ['r-detail', '상세', !!s.detail], ['r-price', '요금', true], ['r-feat', '시설', true], ['r-items', '비품', (s.items || []).length > 0], ['r-rules', '이용 안내', true], ['r-route', '오시는 길', true], ['r-host', '호스트', isHost(s)], ['r-qna', '문의', true], ['reviews', '후기', true], ['r-social', 'SNS 후기', true]];
     return l.filter((x) => x[2]).map(([id, t]) => `<a href="#${id}">${t}</a>`).join('');
   }
   /* 예약 뒤 이어지는 준비 — 지점 화면에서 쏘플의 다른 기능으로 */
@@ -516,14 +517,62 @@
     el.innerHTML = list.map((x) => SP.roomCard(x, { avail: a.spaces && a.spaces[x.code], from: today, live: !!a.live })).join('');
   }
 
+  /* 사진 갤러리 — 쏘플이 보정·가공한 사진을 공간 · 시설·분위기 · 이렇게 놀아요(AI 연출) · 홍보 이미지로 나눠 보여 줘요 */
+  const GAL_FOLD = 9;
+  let galCat = 'all';
+  function galOthers(s) {
+    const have = new Set((s.gallery || []).map((g) => g.u));
+    return (s.photos || []).filter((u) => !have.has(u)).map((u) => ({ u, s: u, c: 'etc', t: '' }));
+  }
+  function galList(s, cat) {
+    if (cat === 'etc') return galOthers(s);
+    const g = s.gallery || [];
+    return cat === 'all' ? g : g.filter((x) => x.c === cat);
+  }
+  function galBox(s) {
+    const list = galList(s, galCat);
+    const name = String(s.name).replace(/\s*파티룸$/, '');
+    const fold = list.length > GAL_FOLD + 1;
+    const big = galCat === 'all' || galCat === 'space';
+    return `<div class="gal-grid${fold ? ' fold' : ''}" id="galGrid">${list.map((g, i) => `<button type="button" class="gal-cell${big && i === 0 ? ' big' : ''}${g.c === 'poster' ? ' poster' : ''}" data-g="${i}" aria-label="${esc(g.t || `${i + 1}번째 사진`)} 크게 보기"><img src="${esc(g.s)}" alt="${esc(`${name} ${g.t || '사진 ' + (i + 1)}${g.ai ? ' (AI 연출 이미지)' : ''}`)}" loading="lazy" decoding="async"${g.w ? ` width="${g.w}" height="${g.h}"` : ''}>${g.ai ? '<span class="gal-ai">AI 연출</span>' : ''}${g.t ? `<span class="gal-cap">${esc(g.t)}</span>` : ''}</button>`).join('')}</div>
+      ${fold ? `<button class="btn btn-line btn-block rp-more" type="button" id="galMore">사진 ${list.length - GAL_FOLD}장 더 보기${icon('chev-d', 'sm')}</button>` : ''}
+      ${list.some((g) => g.ai) ? `<p class="gal-note">${icon('info', 'sm')}<span>${esc(SP.GAL_AI_NOTE)}</span></p>` : ''}
+      ${galCat === 'etc' ? '<p class="gal-note">호스트가 예전에 올린 지점 사진이에요.</p>' : ''}`;
+  }
+  function gallerySec(s) {
+    const g = s.gallery || [];
+    const others = galOthers(s);
+    const tabs = [['all', '전체', g.length], ...Object.entries(SP.GAL_CATS).map(([k, l]) => [k, l, g.filter((x) => x.c === k).length]), ['etc', '그 밖의 사진', others.length]].filter((t) => t[2] > 0);
+    const at = s.galleryAt ? `${Number(s.galleryAt.slice(5, 7))}월 ${Number(s.galleryAt.slice(8, 10))}일 업데이트` : '';
+    return `<section class="room-sec" id="r-photos"><div class="between" style="margin-bottom:4px;gap:8px;flex-wrap:wrap"><h2 style="margin:0">사진 갤러리</h2><span class="small muted">${[`사진 ${g.length}장`, at].filter(Boolean).join(' · ')}</span></div>
+      <p class="small muted" style="margin-bottom:12px">호스트가 보내 준 사진을 쏘플이 한 장씩 다듬었어요. 누르면 크게 볼 수 있어요.</p>
+      <div class="chips gal-tabs" role="tablist" aria-label="사진 분류">${tabs.map(([k, l, n]) => `<button type="button" class="chip${k === galCat ? ' on' : ''}" role="tab" aria-selected="${k === galCat}" data-gcat="${k}">${esc(l)} <span class="n">${n}</span></button>`).join('')}</div>
+      <div id="galBox">${galBox(s)}</div></section>`;
+  }
+  /** 위쪽 큰 사진 — 갤러리 사진이면 설명을 붙여 크게 보기 */
+  function heroItems(s) {
+    const by = Object.fromEntries((s.gallery || []).map((g) => [g.u, g]));
+    return (s.photos || []).map((u) => ({ src: u, cap: by[u] ? by[u].t : '' }));
+  }
+
   /* ---------------- 동작 ---------------- */
   function bind() {
     $('#roomRoot').addEventListener('click', (e) => {
       const cp = e.target.closest('[data-copy]');
       if (cp) { SP.copy(cp.dataset.copy, '주소를 복사했어요.'); return; }
       if (e.target.closest('#rpMore')) { $('#rpGrid').classList.remove('fold'); e.target.closest('#rpMore').remove(); return; }
+      const gc = e.target.closest('[data-gcat]');
+      if (gc) {
+        galCat = gc.dataset.gcat;
+        $$('[data-gcat]').forEach((b) => { const on = b === gc; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+        $('#galBox').innerHTML = galBox(space);
+        return;
+      }
+      if (e.target.closest('#galMore')) { $('#galGrid').classList.remove('fold'); e.target.closest('#galMore').remove(); return; }
+      const gi = e.target.closest('[data-g]');
+      if (gi) { SP.lightbox(SP.galItems(galList(space, galCat)), Number(gi.dataset.g)); return; }
       const img = e.target.closest('[data-i]');
-      if (img && space.photos && space.photos.length) { SP.lightbox(space.photos, Number(img.dataset.i)); return; }
+      if (img && space.photos && space.photos.length) { SP.lightbox(heroItems(space), Number(img.dataset.i)); return; }
       const mv = e.target.closest('[data-mv]');
       if (mv) {
         const [y, mo] = month.split('-').map(Number);
@@ -579,6 +628,9 @@
     // 서버가 정한 제목(지점명 파티룸 — 지역 동네 | 쏘플파티룸)과 같은 모양으로
     document.title = `${String(space.name).replace(/\s*파티룸$/, '')} 파티룸 — ${space.region} ${space.area} | 쏘플파티룸`;
     render();
+    // 다른 화면에서 #r-photos(갤러리) · #r-book(예약) 같은 주소로 들어오면 그 칸으로
+    const hid = decodeURIComponent((location.hash || '').slice(1));
+    if (/^[\w-]{2,30}$/.test(hid)) { const el = document.getElementById(hid) || (hid === 'r-book' ? document.getElementById('book') : null); if (el) setTimeout(() => el.scrollIntoView({ block: 'start' }), 120); }
     // 지점 화면을 연 수 (호스트 성과 보기) — 호스트 본인·자동 브라우저는 세지 않아요
     if (!navigator.webdriver) SP.me().then((m) => { const u = m && m.user; if (!(u && (u.hostCodes || []).includes(space.code))) SP.track(space.code, 'view'); }).catch(() => {});
     av = await SP.avail(today, DAYS, [code], true);

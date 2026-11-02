@@ -213,6 +213,7 @@ export async function applySeedUpdate(db) {
         ...fresh,
         photos: (cur.photos && cur.photos.length) ? cur.photos : (fresh.photos || []),
         ...(cur.photoSrc ? { photoSrc: cur.photoSrc } : {}),
+        ...(Array.isArray(cur.gallery) ? { gallery: cur.gallery, galleryAt: cur.galleryAt } : {}),
         intro: cur.intro || fresh.intro || '', notice: cur.notice || fresh.notice || '',
         aliases: (cur.aliases && cur.aliases.length) ? cur.aliases : (fresh.aliases || []),
         visible: sv !== false,

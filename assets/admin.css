@@ -555,3 +555,16 @@ button.tile:hover, a.tile:hover { border-color: var(--ink); }
   .sz-two { grid-template-columns: 1fr; }
   .sz-months { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
+
+/* 지점 편집 — 갤러리 (2026-11-02) */
+.gal-ed { display: grid; gap: 8px; }
+.gal-row { display: grid; grid-template-columns: 84px 150px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.gal-row img { width: 84px; height: 63px; object-fit: cover; border-radius: 8px; background: var(--fog); }
+.gal-row .check { white-space: nowrap; font-size: 13.5px; }
+.gal-acts { display: flex; gap: 4px; }
+.gal-acts button { width: 30px; height: 30px; border-radius: 8px; background: var(--fog); display: grid; place-items: center; }
+.gal-acts button:disabled { opacity: .35; }
+@media (max-width: 720px) {
+  .gal-row { grid-template-columns: 72px minmax(0, 1fr); }
+  .gal-row img { grid-row: span 4; width: 72px; height: 72px; align-self: start; }
+}

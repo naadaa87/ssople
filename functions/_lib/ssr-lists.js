@@ -2,10 +2,11 @@
 // 손님 화면은 각 화면 스크립트(home.js·rooms.js·locations.js·area.js)가 같은 자리를 최신 정보로 다시 그린다.
 // 그래서 여기 모양은 화면 스크립트의 카드(SP.roomCard 등)와 같은 class 를 쓰고, 날짜별 빈 방·후기 수처럼 그때그때 바뀌는 값은 넣지 않는다.
 // 지점 순서는 요청마다 랜덤. 화면 스크립트(SP.rnd)가 여기서 정한 순서를 이어 받아서, 다시 그려도 카드 자리가 그대로예요.
-import { photoUrl, zoneOf } from './spaces.js';
+import { zoneOf } from './spaces.js';
 import { regionPath, areaPath } from './slugs.js';
 import { minPrice, featList } from './seo.js';
 import { shuffle } from './util.js';
+import { coverOf, publicGallery, galleryAt } from './gallery.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const ic = (n, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -31,8 +32,7 @@ function moodPhoto(s) {
   return pool[h % pool.length];
 }
 function cover(s, { eager = false } = {}) {
-  const p = (s.photos || [])[0];
-  const src = p ? photoUrl(p) : '';
+  const src = coverOf(s);   // 쏘플이 보정한 사진이 있으면 그 사진(작은 크기)
   if (src) return `<img src="${esc(src)}" alt="${esc(s.name)} 파티룸 사진" ${eager ? '' : 'loading="lazy" '}decoding="async">`;
   return `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${moodPhoto(s)}-s.webp')"><span class="ca-note">실제 사진 준비 중</span><span class="ca-seal"></span><span class="ca-area">${esc(s.area)}</span></div>`;
 }
@@ -98,10 +98,56 @@ export function homeBlocks(spaces, st = {}) {
       chips.push(`<a class="chip" href="${esc(areaPath(a))}">${esc(a)} <span class="n">${list.length}</span></a>`);
     }
   }
+  const gal = galleryOrder(spaces).slice(0, 3);
   return {
     '#popRooms': pop.map((s, i) => roomCardHtml(s, { eager: i < 4 })).join(''),
+    ...(gal.length ? { '#homeGallery': gal.map(galFeatHtml).join('') } : {}),
     '#regionTiles': tiles,
     '#areaList': `<span class="area-chips-lb">동네별</span>${chips.join('')}`,
+  };
+}
+
+/* ---------------- 지점 갤러리 (첫 화면 카드 · /gallery) — 화면 스크립트 SP.galFeat · gallery.js 와 같은 모양 ---------------- */
+const isRealG = (x) => (x.c === 'space' || x.c === 'facility') && !x.ai;
+/** 새로 올린 지점부터, 같은 날끼리는 랜덤 */
+export function galleryOrder(spaces) {
+  return shuffle(spaces.filter((s) => publicGallery(s).length)).sort((a, b) => String(galleryAt(b)).localeCompare(String(galleryAt(a))));
+}
+function galFeatHtml(s) {
+  const g = publicGallery(s);
+  const real = g.filter(isRealG);
+  const pics = [...new Set([real[0], real.find((x) => x.c === 'facility'), g.find((x) => x.c === 'scene'), real[1], real[2], ...g])].filter(Boolean).slice(0, 3);
+  const name = String(s.name).replace(/\s*파티룸$/, '');
+  return `<a class="gal-feat" href="/room/${esc(s.code)}#r-photos">
+      <div class="gf-pics">${pics.map((x) => `<img src="${esc(x.s)}" alt="${esc(`${name} ${x.t}${x.ai ? ' (AI 연출 이미지)' : ''}`)}" loading="lazy" decoding="async">`).join('')}</div>
+      <div class="gf-body"><div class="gf-top"><span class="room-area">${ic('pin', 'sm')}${esc(s.region)} ${esc(s.area)}</span><span class="gf-count">사진 ${g.length}장</span></div>
+        <h3>${esc(s.name)}</h3><p>${esc(real.slice(0, 3).map((x) => x.t).join(' · '))}</p></div></a>`;
+}
+/** /gallery — 검색 로봇이 읽는 지점별 사진 목록 */
+export function galleryBlocks(spaces) {
+  const list = galleryOrder(spaces);
+  if (!list.length) return null;
+  const n = list.reduce((x, s) => x + publicGallery(s).length, 0);
+  const last = list.map((s) => galleryAt(s)).filter(Boolean).sort().pop() || '';
+  const regs = [...new Set(list.map((s) => s.region))];
+  const tile = (b, l) => `<div><b>${esc(b)}</b><span>${esc(l)}</span></div>`;
+  const body = list.map((s) => {
+    const g = publicGallery(s);
+    const name = String(s.name).replace(/\s*파티룸$/, '');
+    const items = g.filter((x) => x.c !== 'poster');
+    const poster = g.find((x) => x.c === 'poster');
+    const show = items.slice(0, poster ? 6 : 8);
+    const more = items.length - show.length;
+    const p = minPrice(s);
+    return `<section class="gal-branch" id="g-${esc(s.code)}">
+      <div class="gb-hd"><div><span class="room-area">${ic('pin', 'sm')}${esc(s.region)} ${esc(s.area)}</span><h2><a href="/room/${esc(s.code)}">${esc(s.name)}</a></h2><p>기준 ${esc(s.base || '-')}명 · 최대 ${esc(s.max || '-')}명${featList(s).length ? ' · ' + esc(featList(s).slice(0, 4).join(' · ')) : ''}${p ? ` · ${esc(won(p))}부터` : ''}</p></div>
+        <div class="row" style="gap:8px"><a class="btn btn-line btn-sm" href="/room/${esc(s.code)}#r-photos">${ic('image', 'sm')}지점 사진 ${g.length}장</a><a class="btn btn-red btn-sm" href="/room/${esc(s.code)}#r-book">${ic('calendar', 'sm')}요금 보고 예약</a></div></div>
+      <div class="gb-body${poster ? ' has-poster' : ''}">${poster ? `<span class="gb-poster"><img src="${esc(poster.s)}" alt="${esc(`${name} 홍보 이미지 — ${poster.t}`)}" loading="lazy" decoding="async"></span>` : ''}
+        <div class="gb-grid">${show.map((x, i) => `<span class="gal-cell"><img src="${esc(x.s)}" alt="${esc(`${name} ${x.t}${x.ai ? ' (AI 연출 이미지)' : ''}`)}" loading="lazy" decoding="async">${x.ai ? '<span class="gal-ai">AI 연출</span>' : ''}${x.t ? `<span class="gal-cap">${esc(x.t)}</span>` : ''}${i === show.length - 1 && more > 0 ? `<span class="gb-more">+${more}</span>` : ''}</span>`).join('')}</div></div></section>`;
+  }).join('');
+  return {
+    '#galStats': tile(`${list.length}곳`, '갤러리가 있는 지점') + tile(`${n}장`, '쏘플이 다듬은 사진') + tile(`${regs.length}곳`, '권역') + tile(last ? `${Number(last.slice(5, 7))}.${Number(last.slice(8, 10))}` : '-', '마지막 업데이트'),
+    '#galRoot': body,
   };
 }
 

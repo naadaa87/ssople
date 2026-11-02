@@ -228,6 +228,7 @@
       <ul class="hs-check">
         ${exp}
         <li class="${(s.photos || []).length >= 5 ? 'ok' : ''}">사진 ${(s.photos || []).length}장${(s.photos || []).length < 5 ? ' · 5장 이상 권장' : ''}</li>
+        ${s.galleryN ? `<li class="ok">쏘플 갤러리 ${s.galleryN}장 · <a class="link" href="/room/${esc(s.code)}#r-photos" target="_blank" rel="noopener">보기</a></li>` : ''}
         <li class="${s.intro ? 'ok' : ''}">소개 글 ${s.intro ? '있음' : '없음'}</li>
         ${own ? `<li class="${hasPrice(s) ? 'ok' : ''}">요금 ${s.hourly && (s.pkgs || []).length ? '시간제 · 패키지' : s.hourly ? '시간제' : (s.pkgs || []).length ? '패키지' : '아직 없음'}</li>
         <li class="${hasWays(s) ? 'ok' : ''}">예약 방식 ${nWays ? nWays + '개' : s.book || (s.pkgs || []).some((p) => p.url) ? '네이버 예약' : '아직 없음'}</li>` : ''}

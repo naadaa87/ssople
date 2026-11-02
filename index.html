@@ -33,7 +33,7 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261030b">
+<link rel="stylesheet" href="/assets/app.css?v=20261102a">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "예약은 어디서 하나요?", "acceptedAnswer": {"@type": "Answer", "text": "지점 화면에서 날짜와 패키지를 고르면 그 지점의 네이버 예약 화면으로 바로 넘어가요. 예약 확정, 결제, 변경과 취소도 모두 네이버 예약에서 해요."}}, {"@type": "Question", "name": "홈페이지에서 빈 시간도 볼 수 있나요?", "acceptedAnswer": {"@type": "Answer", "text": "홈페이지는 네이버 예약과 자동으로 연결돼 있지 않아요. 지점 화면에서 요금과 시설을 보고 네이버 예약 버튼을 누르면 그 지점의 빈 시간이 바로 보여요. 예약 가능 표시가 보이는 경우에도 마지막 확인은 네이버 예약 화면 기준이에요."}}, {"@type": "Question", "name": "보증금이 있나요?", "acceptedAnswer": {"@type": "Answer", "text": "대부분 지점이 청소 보증금 8만원을 받아요. 지점마다 5만~10만원으로 조금씩 달라서 지점 화면에 따로 적어 뒀어요. 퇴실 후 정리 상태를 확인하고 이용일 기준 다음 주 수요일 무렵 돌려 드려요."}}, {"@type": "Question", "name": "미성년자끼리도 이용할 수 있나요?", "acceptedAnswer": {"@type": "Answer", "text": "낮·올데이 패키지만 이용할 수 있고, 이용하는 사람 모두의 보호자 동의서가 필요해요. 지점에 따라 미성년자 이용이 어려운 곳도 있으니 지점 화면의 안내를 먼저 확인해 주세요."}}, {"@type": "Question", "name": "잠을 자고 가도 되나요?", "acceptedAnswer": {"@type": "Answer", "text": "쏘플파티룸은 파티와 모임을 위한 공간 대여 서비스라 숙박 목적으로는 이용할 수 없어요. 밤 패키지도 파티·모임 이용을 기준으로 운영해요."}}]}</script>
 </head>
 <body data-page="index" data-nav="home">
@@ -145,6 +145,7 @@
           <div class="gp-col">
             <a href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span><b>지점 찾기</b><small>날짜·인원·노래방·바베큐로 고르기</small></span></a>
             <a href="/locations"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg><span><b>지역별 지점</b><small>서울·경기·인천·대전·부산·전주</small></span></a>
+            <a href="/gallery"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg><span><b>공간 갤러리</b><small>새로 다듬은 지점 사진 모아 보기</small></span></a>
             <a href="/corporate"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg><span><b>기업·단체 행사</b><small>워크숍·송년회 단체 대관</small></span></a>
           </div>
           <div class="gp-col gp-mini">
@@ -226,6 +227,7 @@
       <a class="dr-cta" href="/rooms"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>지점 찾기 · 예약</a>
       <div class="dr-group"><h4>지점 · 안내</h4>
         <a href="/locations"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg>지역별 지점</a>
+        <a href="/gallery"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg>공간 갤러리</a>
         <a href="/corporate"><svg class="ic" aria-hidden="true"><use href="#i-building"/></svg>기업·단체 행사</a>
         <a href="/guide"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>이용 안내</a>
         <a href="/membership"><svg class="ic" aria-hidden="true"><use href="#i-badge"/></svg>쏘플 클럽</a>
@@ -331,7 +333,14 @@
   </div>
 </section>
 
-<section class="sec fog">
+<section class="sec fog" id="homeGalSec">
+  <div class="wrap">
+    <div class="sec-hd"><div><span class="eyebrow">지점 갤러리</span><h2 class="h2">사진으로 먼저 둘러보세요</h2><p>호스트가 보내 준 사진을 쏘플이 한 장씩 다듬었어요. 새로 단장한 지점부터 보여 드려요.</p></div><a class="sec-more" href="/gallery">갤러리 전체<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
+    <div class="gal-feats" id="homeGallery"><div class="skel" style="aspect-ratio:16/13"></div><div class="skel" style="aspect-ratio:16/13"></div></div>
+  </div>
+</section>
+
+<section class="sec">
   <div class="wrap">
     <div class="sec-hd"><div><span class="eyebrow">쏘플 픽</span><h2 class="h2">이번 주 추천 기획전</h2><p>계절과 분위기에 맞춰 골라 둔 방이에요.</p></div><a class="sec-more" href="/event">행사·소식 전체<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
     <div class="picks">
@@ -342,7 +351,7 @@
   </div>
 </section>
 
-<section class="sec">
+<section class="sec fog">
   <div class="wrap">
     <div class="sec-hd"><div><span class="eyebrow">전국 지점</span><h2 class="h2">우리 동네 파티룸 찾기</h2><p id="regionSub">권역을 누르면 그 지역 지점을 모아 보여 드려요.</p></div><a class="sec-more" href="/locations">지점 안내<svg class="ic sm" aria-hidden="true"><use href="#i-chev-r"/></svg></a></div>
     <div class="regions" id="regionTiles"></div>
@@ -350,7 +359,7 @@
   </div>
 </section>
 
-<section class="sec fog">
+<section class="sec">
   <div class="wrap">
     <div class="sec-hd center"><div><span class="eyebrow">이용 방법</span><h2 class="h2">지점 고르기부터 다녀온 뒤까지</h2><p>결제는 네이버 예약에서, 입장은 문자 안내로 끝나요. 그 사이 준비와 놀거리는 쏘플 홈페이지에서 챙기면 돼요.</p></div></div>
     <ol class="how4 five">
@@ -367,7 +376,7 @@
   </div>
 </section>
 
-<section class="sec">
+<section class="sec fog">
   <div class="wrap">
     <div class="sec-hd"><div><span class="eyebrow">같이 놀기</span><h2 class="h2">같이 놀 사람, 여기 있어요</h2><p>쏘플이 여는 행사, 파티룸을 같이 빌릴 파티팀, 꾸준히 만나는 모임까지.</p></div></div>
     <div class="grid g2" style="gap:30px">
@@ -387,7 +396,7 @@
   </div>
 </section>
 
-<section class="sec fog">
+<section class="sec">
   <div class="wrap">
     <div class="sec-hd center"><div><span class="eyebrow">후기</span><h2 class="h2">다녀간 분들의 이야기</h2><p id="reviewSum">방문 인증을 받은 후기는 따로 표시돼요.</p></div></div>
     <div class="quotes" id="homeReviews"><div class="skel" style="height:220px"></div><div class="skel" style="height:220px"></div><div class="skel" style="height:220px"></div></div>
@@ -520,7 +529,7 @@
           <a class="btn btn-line btn-sm ft-insta" data-set-href="sns.instagram" href="https://www.instagram.com/ssople_partyroom" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-instagram"/></svg>인스타그램</a>
         </div>
       </div>
-      <div class="ft-col"><h4>지점 찾기</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/area/seoul">서울 파티룸</a><a href="/area/gyeonggi">경기 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
+      <div class="ft-col"><h4>지점 찾기</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/gallery">공간 갤러리</a><a href="/area/seoul">서울 파티룸</a><a href="/area/gyeonggi">경기 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비 · 당일</h4><a href="/planner">준비물 · N빵</a><a href="/invite">초대장 만들기</a><a href="/magazine">파티 가이드</a><a href="/games">파티게임</a><a href="/play">놀이터</a><a href="/live">온라인 파티룸</a><a href="/membership">쏘플 클럽</a></div>
       <div class="ft-col"><h4>호스트 · 쏘플</h4><a href="/host">공간 등록 · 위탁운영</a><a href="/hostcenter">호스트센터</a><a href="/startup">파티룸 창업안내</a><a href="/academy">공간 아카데미</a><a href="/partners">제휴·협업</a><a href="/about">브랜드 이야기</a><a href="/ceo">창업자 이야기</a><a href="/about#company">회사 정보</a></div>
@@ -545,7 +554,7 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261030b" defer></script>
-<script src="/assets/js/home.js?v=20261028b" defer></script>
+<script src="/assets/app.js?v=20261102a" defer></script>
+<script src="/assets/js/home.js?v=20261102a" defer></script>
 </body>
 </html>

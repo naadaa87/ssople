@@ -2,6 +2,7 @@
 import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones, shuffle, oneOf, todayKST } from './util.js';
 import { seedOf, notiStmt, notiManyStmt, getSettings } from './db.js';
 import { regionPath, areaPath } from './slugs.js';
+import { publicGallery, galleryAt, galleryRaw, photoKeys, coverOf, cleanGallery, smallOf } from './gallery.js';
 
 let cache = null;
 let cacheAt = 0;
@@ -27,12 +28,17 @@ export function photoUrl(p) {
   if (!p) return '';
   const k = typeof p === 'string' ? p : p.k;
   if (!k) return '';
-  return /^https?:\/\//.test(k) ? k : '/api/img/' + k;
+  return /^https?:\/\//.test(k) || k.startsWith('/') ? k : '/api/img/' + k;
 }
 
 export function publicSpace(s) {
-  const { aliases, visible, sort, edited, photoSrc, ...rest } = s;
-  rest.photos = (s.photos || []).map(photoUrl).filter(Boolean);
+  const { aliases, visible, sort, edited, photoSrc, gallery: _g, galleryAt: _ga, ...rest } = s;
+  // 대표 사진 — 쏘플이 보정한 실제 공간 사진이 있으면 그 사진을 앞에
+  rest.photos = photoKeys(s).map(photoUrl).filter(Boolean);
+  const g = publicGallery(s);
+  if (g.length) { rest.gallery = g; rest.galleryAt = galleryAt(s); }
+  const th = coverOf(s);
+  if (th) rest.thumb = th;
   // 지역·동네 화면 주소 — 화면 스크립트가 한글 주소(/area/건대) 대신 정식 주소(/area/gundae)로 연결하게
   rest.rp = regionPath(s.region);
   rest.ap = areaPath(s.area);
@@ -132,7 +138,7 @@ export function registerHost(route) {
     if (!codes.length && u.role !== 'admin' && u.role !== 'staff') throw new HttpError(403, '호스트 권한이 있는 회원만 쓸 수 있어요. 관리자에게 지점 연결을 요청해 주세요.');
     const list = await loadSpaces(c.db, { all: true });
     const mine = codes.length ? list.filter((s) => codes.includes(s.code)) : list;
-    return { spaces: mine.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl) })) };
+    return { spaces: mine.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl), galleryN: galleryRaw(s).length, galleryAt: galleryAt(s) })) };
   });
   route('PUT', '/api/host/spaces/:code', async (c) => {
     const u = await c.needUser();
@@ -707,7 +713,7 @@ export function registerAdmin(route) {
   route('GET', '/api/admin/spaces', async (c) => {
     await c.needAdmin();
     const list = await loadSpaces(c.db, { all: true });
-    return { spaces: list.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl) })) };
+    return { spaces: list.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl), galleryEdit: galleryRaw(s).map((it) => ({ ...it, url: smallOf(it) })), galleryAt: galleryAt(s), gallerySaved: Array.isArray(s.gallery) })) };
   });
 
   route('PUT', '/api/admin/spaces/:code', async (c) => {
@@ -717,6 +723,13 @@ export function registerAdmin(route) {
     const prev = list.find((s) => s.code === c.params.code);
     if (!prev) throw new HttpError(404, '지점을 찾을 수 없어요.');
     const next = cleanSpaceInput(b, prev);
+    // 지점 갤러리 — 관리자만 고쳐요 (호스트 화면 저장에는 이 칸이 없어요)
+    if ('gallery' in b) {
+      const g = cleanGallery(b.gallery);
+      if (!g) throw new HttpError(400, '갤러리 형식이 올바르지 않아요.');
+      next.gallery = g;
+      next.galleryAt = isYmd(b.galleryAt) ? b.galleryAt : todayKST();
+    }
     next.edited = true;   // 지점 기본 데이터가 새 판으로 바뀌어도 관리자가 고친 값은 남긴다
     const visible = 'visible' in b ? !!b.visible : prev.visible;
     const sort = 'sort' in b ? int(b.sort, { min: 0, max: 9999, def: prev.sort }) : prev.sort;
@@ -752,6 +765,7 @@ export function registerAdmin(route) {
     const { code, sort, visible, ...rest } = seed;
     rest.photos = (prev.photos && prev.photos.length) ? prev.photos : (rest.photos || []);
     if (prev.photoSrc) rest.photoSrc = prev.photoSrc;   // 아임웹 사진 가져오기 기록
+    if (Array.isArray(prev.gallery)) { rest.gallery = prev.gallery; rest.galleryAt = prev.galleryAt; }   // 갤러리는 처음 데이터로 되돌리지 않아요
     rest.intro = prev.intro || '';
     rest.notice = prev.notice || rest.notice || '';
     rest.aliases = (prev.aliases && prev.aliases.length) ? prev.aliases : (rest.aliases || []);   // 호스트 지점 이름 짝은 지키기

@@ -8,7 +8,8 @@ import { REGION_SLUGS, AREA_SLUGS, regionPath, areaPath, domainLive, canonicalHo
 import { MAGAZINE } from './magazine-index.js';
 import { GAMES } from './games-index.js';
 import { OG_ROOMS, OG_AREAS, ogImg } from './og.js';
-import { homeBlocks, roomsBlocks, locationsBlocks, areaChipsHtml, roomPriceHtml, roomBookHtml, nearRoomsHtml } from './ssr-lists.js';
+import { publicGallery, photoKeys, galleryAt, isReal, galleryRaw } from './gallery.js';
+import { homeBlocks, roomsBlocks, locationsBlocks, areaChipsHtml, roomPriceHtml, roomBookHtml, nearRoomsHtml, galleryBlocks } from './ssr-lists.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
@@ -106,9 +107,9 @@ export async function renderStatic(context) {
   let blocks = null;
   const page = url.pathname.replace(/\/+$/, '') || '/';
   try {
-    if (context.env.DB && ['/', '/index', '/rooms', '/locations'].includes(page)) {
+    if (context.env.DB && ['/', '/index', '/rooms', '/locations', '/gallery'].includes(page)) {
       const spaces = await loadSpaces(context.env.DB);
-      if (spaces.length) blocks = page === '/rooms' ? roomsBlocks(spaces) : page === '/locations' ? locationsBlocks(spaces) : homeBlocks(spaces, st);
+      if (spaces.length) blocks = page === '/rooms' ? roomsBlocks(spaces) : page === '/locations' ? locationsBlocks(spaces) : page === '/gallery' ? galleryBlocks(spaces) : homeBlocks(spaces, st);
     }
   } catch { blocks = null; }
   const base = siteBase(url, st, await domainLive(context.env));
@@ -170,6 +171,14 @@ function detailSsr(s) {
   return `<section class="prose" style="margin-top:18px"><h2 class="h3">${esc(s.name)} 공간 상세</h2>${out.join('')}${kw.length ? `<p class="muted small">${kw.map((k) => '#' + esc(k)).join(' ')}</p>` : ''}</section>`;
 }
 
+/** 지점 갤러리 — 검색 로봇이 읽는 사진 목록 (손님 화면은 room.js 가 같은 자리를 다시 그려요) */
+function gallerySsr(s) {
+  const g = publicGallery(s).filter((x) => x.c !== 'poster').slice(0, 12);
+  if (!g.length) return '';
+  const name = String(s.name).replace(/\s*파티룸$/, '');
+  return `<section class="room-sec"><h2>${esc(name)} 사진 갤러리</h2><div class="rp-grid">${g.map((x) => `<figure class="rp-cell"><img src="${esc(x.s)}" alt="${esc(`${name} 파티룸 ${x.t}${x.ai ? ' (AI 연출 이미지)' : ''}`)}" loading="lazy" decoding="async"${x.w ? ` width="${x.w}" height="${x.h}"` : ''}><figcaption class="small muted">${esc(x.t)}${x.ai ? ' · AI 연출' : ''}</figcaption></figure>`).join('')}</div></section>`;
+}
+
 export async function roomMeta(env, params, url, base = "") {
   const code = String(params.code || '').toUpperCase();
   const s = (await loadSpaces(env.DB)).find((x) => x.code === code);
@@ -196,12 +205,13 @@ ${all.length ? `<p class="muted">${all.map((f) => esc(f)).join(' · ')}</p>` : '
 ${s.intro ? String(s.intro).split(/\n\s*\n/).map((pg) => `<p style="margin-top:12px">${esc(pg.trim())}</p>`).join('') : ''}
 <section class="room-sec"><h2>예약하기</h2>${roomBookHtml(s)}</section>
 <section class="room-sec"><h2>${s.hourly && !(s.pkgs || []).length ? '시간제 요금' : '패키지와 요금'}</h2>${roomPriceHtml(s)}</section>
+${gallerySsr(s)}
 ${detailSsr(s)}
 ${s.info?.route || s.info?.parking ? `<section class="room-sec"><h2>찾아오는 길</h2>${s.info.route ? `<p>${esc(s.info.route)}</p>` : ''}${s.info.parking ? `<p>${esc(s.info.parking)}</p>` : ''}</section>` : ''}
 ${roomGuideLinks(s)}
 ${near ? `<p class="muted small" style="margin-top:10px">근처 다른 지점: ${near} · <a class="link" href="${esc(sameName ? rp : ap)}">${esc(s.area)} 파티룸 전체</a></p>` : ''}`;
   return {
-    title: `${String(s.name).replace(/\s*파티룸$/, '')} 파티룸 — ${s.region} ${s.area}`, desc, image: OG_ROOMS.has(s.code) ? ogImg(`room/${s.code}`) : (s.photos || [])[0] ? photoUrl(s.photos[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
+    title: `${String(s.name).replace(/\s*파티룸$/, '')} 파티룸 — ${s.region} ${s.area}`, desc, image: OG_ROOMS.has(s.code) ? ogImg(`room/${s.code}`) : photoKeys(s)[0] ? photoUrl(photoKeys(s)[0]) : '/assets/img/og.jpg', data: { space: publicSpace(s) },
     keywords: [...new Set([`${s.area} 파티룸`, `${s.region} 파티룸`, `${s.area} 파티룸 대여`, `${s.name}`, '쏘플파티룸', ...all.slice(0, 4).map((f) => `${f} 파티룸`), ...(s.kw || []).slice(0, 8)])].join(', '),
     jsonld: [roomJsonLd(origin, s, st), breadcrumbJsonLd(origin, [['홈', '/'], ['지역별 지점', '/locations'], [s.region, rp], ...(sameName ? [] : [[s.area, ap]]), [s.name, `/room/${s.code}`]])],
     html: { '#roomRoot': summary },
@@ -291,7 +301,7 @@ async function baseOf(env, url) {
 export async function sitemap(context) {
   const { env, request } = context;
   const origin = await baseOf(env, new URL(request.url));
-  const pages = ['/', '/rooms', '/locations', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/live', '/live/requests', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
+  const pages = ['/', '/rooms', '/locations', '/gallery', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/live', '/live/requests', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
     '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy'];
   const urls = pages.map((p) => ({ loc: origin + p }));
   urls.push({ loc: origin + '/magazine' });
@@ -305,7 +315,12 @@ export async function sitemap(context) {
       // 지역·동네 화면의 갱신일 = 그 안 지점 정보가 마지막으로 바뀐 날
       const lastOf = (list) => list.map((s) => String(s.updated_at || '').slice(0, 10)).filter(Boolean).sort().pop() || '';
       for (const a of areaPaths(spaces)) urls.push({ loc: origin + a.path, lastmod: lastOf(spaces.filter((s) => (a.kind === 'region' ? s.region : s.area) === a.name)) });
-      for (const s of spaces) urls.push({ loc: `${origin}/room/${s.code}`, lastmod: (s.updated_at || '').slice(0, 10) });
+      for (const s of spaces) {
+        const up = (s.updated_at || '').slice(0, 10), ga = galleryAt(s);
+        // 지점 사진(보정한 실제 공간 사진)도 이미지 검색에 함께 알려요
+        const imgs = galleryRaw(s).filter((it) => it && it.k && isReal(it)).slice(0, 20).map((it) => (it.k.startsWith('/') ? origin + it.k : origin + photoUrl(it.k)));
+        urls.push({ loc: `${origin}/room/${s.code}`, lastmod: ga > up ? ga : up, imgs });
+      }
       const ev = (await env.DB.prepare(`SELECT id, updated_at FROM events WHERE status IN ('open','closed') AND COALESCE(d2, d) >= ?`).bind(todayKST()).all()).results || [];
       for (const e of ev) urls.push({ loc: `${origin}/e/${e.id}`, lastmod: (e.updated_at || '').slice(0, 10) });
       const ps = (await env.DB.prepare(`SELECT id, updated_at FROM posts WHERE hidden = 0 AND board IN ('review','tip','qna','free','notice','host') ORDER BY id DESC LIMIT 300`).all()).results || [];
@@ -314,8 +329,8 @@ export async function sitemap(context) {
       for (const m of ms) urls.push({ loc: `${origin}/m/${m.id}` });
     }
   } catch { /* DB 연결 전이면 기본 페이지만 */ }
-  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    + urls.map((u) => `  <url><loc>${esc(u.loc)}</loc>${u.lastmod ? `<lastmod>${esc(u.lastmod)}</lastmod>` : ''}</url>`).join('\n')
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n'
+    + urls.map((u) => `  <url><loc>${esc(u.loc)}</loc>${u.lastmod ? `<lastmod>${esc(u.lastmod)}</lastmod>` : ''}${(u.imgs || []).map((i) => `<image:image><image:loc>${esc(i)}</image:loc></image:image>`).join('')}</url>`).join('\n')
     + '\n</urlset>\n';
   return new Response(xml, { headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=3600' } });
 }

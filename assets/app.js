@@ -38,6 +38,24 @@
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
   SP.today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
   /** 노출 존(프리미엄/플러스) — 노출 끝 날짜가 지났으면 빈 값 */
+  /* 지점 갤러리 — 쏘플이 보정·가공한 지점 사진 (서버 gallery.js 와 같은 분류) */
+  SP.GAL_CATS = { space: '공간', facility: '시설·분위기', scene: '이렇게 놀아요', poster: '홍보 이미지' };
+  SP.GAL_AI_NOTE = '「이렇게 놀아요」 사진은 실제 공간 사진에 이용 모습을 AI로 연출한 이미지예요. 인물·음식·소품은 실제와 다를 수 있어요.';
+  /** 갤러리를 새로 올린 지 60일 안이면 「새 사진」 */
+  SP.galNew = (s) => { const a = s && s.galleryAt; if (!a || !(s.gallery || []).length) return false; return (Date.parse(SP.today()) - Date.parse(a)) / 864e5 <= 60; };
+  /** 크게 보기용 목록 — 설명·AI 연출 표시, 필요하면 지점 링크까지 */
+  SP.galItems = (list, s, link) => list.map((g) => ({ src: g.u, cap: s && link ? `${g.t} · ${s.name}` : g.t, ai: !!g.ai, href: link ? `/room/${s.code}#r-photos` : '', hrefLabel: '이 지점 보기' }));
+  /** 갤러리 카드 (첫 화면) — 서버 ssr-lists.js galFeatHtml 과 같은 모양 */
+  SP.galFeat = (s) => {
+    const g = s.gallery || [];
+    const real = g.filter((x) => (x.c === 'space' || x.c === 'facility') && !x.ai);
+    const pics = [...new Set([real[0], real.find((x) => x.c === 'facility'), g.find((x) => x.c === 'scene'), real[1], real[2], ...g])].filter(Boolean).slice(0, 3);
+    const name = String(s.name).replace(/\s*파티룸$/, '');
+    return `<a class="gal-feat" href="/room/${SP.esc(s.code)}#r-photos">
+      <div class="gf-pics">${pics.map((x) => `<img src="${SP.esc(x.s)}" alt="${SP.esc(`${name} ${x.t}${x.ai ? ' (AI 연출 이미지)' : ''}`)}" loading="lazy" decoding="async">`).join('')}</div>
+      <div class="gf-body"><div class="gf-top"><span class="room-area">${SP.icon('pin', 'sm')}${SP.esc(s.region)} ${SP.esc(s.area)}</span><span class="gf-count">사진 ${g.length}장</span></div>
+        <h3>${SP.esc(s.name)}</h3><p>${SP.esc(real.slice(0, 3).map((x) => x.t).join(' · '))}</p></div></a>`;
+  };
   SP.zoneOf = (s) => { const l = (s && s.listing) || {}; if (!l.zone) return ''; if (l.until && l.until < SP.today()) return ''; return l.zone === 'premium' || l.zone === 'plus' ? l.zone : ''; };
   SP.zoneRank = (s) => { const z = SP.zoneOf(s); return z === 'premium' ? 0 : z === 'plus' ? 1 : 2; };
   /* 홍보 채널 기록 — 주소에 ?utm_source=instagram 같은 값이 있으면 30일 동안 기억해 두었다가
@@ -198,7 +216,10 @@
     m.$('[data-no]').onclick = () => { done = true; resolve(false); m.close(); };
     m.$('[data-yes]').onclick = () => { done = true; resolve(true); m.close(); };
   });
+  /** 사진 크게 보기 — urls: 주소 목록, 또는 {src, cap, ai, href, hrefLabel} 목록(설명·AI 연출 표시·지점 링크) */
   SP.lightbox = (urls, i = 0) => {
+    const items = (urls || []).map((u) => (typeof u === 'string' ? { src: u } : u)).filter((u) => u && u.src);
+    urls = items.map((u) => u.src);
     const n = urls.length;
     if (!n) return;
     const bg = document.createElement('div');
@@ -206,11 +227,19 @@
     bg.setAttribute('role', 'dialog');
     bg.setAttribute('aria-modal', 'true');
     bg.setAttribute('aria-label', '사진 크게 보기');
-    bg.innerHTML = `<img alt="">${n > 1 ? '<span class="lb-count" aria-live="polite"></span>' : ''}<button style="top:12px;right:12px" data-x aria-label="닫기">${SP.icon('x', 'lg')}</button>${n > 1 ? `<button style="left:8px;top:50%" data-p aria-label="이전 사진">${SP.icon('chev-l', 'lg')}</button><button style="right:8px;top:50%" data-n aria-label="다음 사진">${SP.icon('chev-r', 'lg')}</button>` : ''}`;
+    const capOn = items.some((u) => u.cap || u.ai || u.href);
+    bg.innerHTML = `<img alt="">${capOn ? '<div class="lb-cap" aria-live="polite"></div>' : ''}${n > 1 ? '<span class="lb-count" aria-live="polite"></span>' : ''}<button style="top:12px;right:12px" data-x aria-label="닫기">${SP.icon('x', 'lg')}</button>${n > 1 ? `<button style="left:8px;top:50%" data-p aria-label="이전 사진">${SP.icon('chev-l', 'lg')}</button><button style="right:8px;top:50%" data-n aria-label="다음 사진">${SP.icon('chev-r', 'lg')}</button>` : ''}`;
     const img = bg.querySelector('img');
     const cnt = bg.querySelector('.lb-count');
+    const cap = bg.querySelector('.lb-cap');
     const draw = () => {
       img.src = urls[i];
+      const it = items[i];
+      img.alt = it.cap || '';
+      if (cap) {
+        cap.innerHTML = `${it.cap ? `<b>${SP.esc(it.cap)}</b>` : ''}${it.ai ? '<span class="lb-ai">AI 연출 이미지</span>' : ''}${it.href ? `<a href="${SP.esc(it.href)}">${SP.esc(it.hrefLabel || '지점 보기')}${SP.icon('chev-r', 'sm')}</a>` : ''}`;
+        cap.hidden = !(it.cap || it.ai || it.href);
+      }
       if (cnt) cnt.textContent = `${i + 1} / ${n}`;
       if (n > 1) [1, -1].forEach((d) => { const im = new Image(); im.src = urls[(i + d + n) % n]; });   // 옆 사진 미리 받기
     };
@@ -220,6 +249,7 @@
     bg.addEventListener('click', (e) => {
       if (e.target.closest('[data-p]')) { go(-1); return; }
       if (e.target.closest('[data-n]')) { go(1); return; }
+      if (e.target.closest('.lb-cap a')) { close(); return; }
       if (e.target === bg || e.target.closest('[data-x]')) close();
     });
     // 휴대폰에서 옆으로 밀어 넘기기
@@ -335,7 +365,8 @@
   };
   const MEET_MOOD = { 보드게임: 'game-lounge-2', '와인·술': 'party-table', '영화·드라마': 'theater', '파티·네트워킹': 'birthday-2', '운동·러닝': 'rooftop', '노래·음악': 'neon-night', 게임: 'game-lounge', '스터디·자기계발': 'workshop', '맛집·요리': 'cups', 동네친구: 'welcome', '공간 아카데미': 'design-meeting' };
   SP.cover = (s, alt) => {
-    if (s.photos && s.photos[0]) return `<img src="${SP.esc(s.photos[0])}" alt="${SP.esc(alt || s.name)}" loading="lazy">`;
+    const src = s.thumb || (s.photos && s.photos[0]);   // 쏘플이 보정한 사진이 있으면 작은 크기로
+    if (src) return `<img src="${SP.esc(src)}" alt="${SP.esc(alt || s.name)}" loading="lazy">`;
     return `<div class="cover-art" aria-hidden="true" style="--ca:url('/assets/img/photo/${SP.moodPhoto(s)}-s.webp')"><span class="ca-note">실제 사진 준비 중</span><span class="ca-seal"></span><span class="ca-area">${SP.esc(s.area)}</span></div>`;
   };
   /** 가장 싼 요금 — 패키지 최저가와 (시간당 최저가 × 최소 시간) 중 낮은 값 (서버 seo.js minPrice 와 같은 규칙) */
@@ -397,7 +428,8 @@
     const z = SP.zoneOf(s);
     const zone = z === 'premium' ? '<span class="badge red">프리미엄</span>' : z === 'plus' ? '<span class="badge ink">플러스</span>' : '';
     const host = l.type === 'host' ? '<span class="badge mute">호스트 운영</span>' : '';
-    if (!badge && (zone || host)) badge = `<div class="room-badge">${zone}${host}</div>`;
+    const fresh = SP.galNew(s) ? `<span class="badge photo">${SP.icon('camera', 'sm')}새 사진</span>` : '';
+    if (!badge && (zone || host || fresh)) badge = `<div class="room-badge">${fresh}${zone}${host}</div>`;
     return `<a class="room" href="${href}">
       <div class="room-cover">${SP.cover(s)}${badge}${opt.rank ? `<span class="rank">${opt.rank}</span>` : ''}</div>
       <div class="room-body">

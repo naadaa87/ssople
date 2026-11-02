@@ -16,6 +16,7 @@
     "/",
     "/rooms",
     "/locations",
+    "/gallery",
     "/event",
     "/meetups",
     "/crew",

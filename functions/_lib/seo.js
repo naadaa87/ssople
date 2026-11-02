@@ -1,6 +1,7 @@
 // 검색 노출용 — 지역 페이지 주소, 구조화 데이터(JSON-LD), 검색엔진 소유 확인 태그
 import { getSettings, getMeta, setMeta } from './db.js';
 import { photoUrl } from './spaces.js';
+import { photoKeys } from './gallery.js';
 import { AREA_GUIDES } from './area-guides.js';
 import { MAGAZINE } from './magazine-index.js';
 import { REGION_SLUGS, AREA_SLUGS, regionPath, areaPath } from './slugs.js';
@@ -151,7 +152,7 @@ export function breadcrumbJsonLd(origin, items) {
 }
 export function roomJsonLd(origin, s, st = {}) {
   const from = minPrice(s);
-  const photos = (s.photos || []).slice(0, 10).map(photoUrl).filter(Boolean).map((u) => (u.startsWith('/') ? origin + u : u));
+  const photos = photoKeys(s).slice(0, 10).map(photoUrl).filter(Boolean).map((u) => (u.startsWith('/') ? origin + u : u));
   return {
     '@context': 'https://schema.org', '@type': ['LocalBusiness', 'EventVenue'], '@id': `${origin}/room/${s.code}#place`,
     name: `쏘플파티룸 ${s.name}`, alternateName: s.name, url: `${origin}/room/${s.code}`,

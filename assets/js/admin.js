@@ -1376,13 +1376,16 @@ async function run(env) {
     const f = s.feat || {}, inf = s.info || {};
     let photos = (s.photos || []).map((p, i) => ({ k: typeof p === 'string' ? p : p.k, url: (s.photoUrls || [])[i] || '' }));
     let pkgs = (s.pkgs || []).map((p) => ({ ...p }));
+    // 지점 갤러리 — 쏘플이 보정·가공한 사진 (관리자만)
+    let gal = (s.galleryEdit || []).map((g) => ({ ...g }));
+    let galDirty = false;
     const tx = (id, label, v, max, ph = '', opt = true) => `<div class="field full"><label class="label" for="${id}">${label}${opt ? ' <span class="opt">선택</span>' : ''}</label><textarea class="textarea" id="${id}" maxlength="${max}" style="min-height:76px" placeholder="${esc(ph)}">${esc(v || '')}</textarea></div>`;
     const ip = (id, label, v, max, ph = '', type = 'text', cls = '') => `<div class="field ${cls}"><label class="label" for="${id}">${label}</label><input class="input" id="${id}" type="${type}" ${type === 'text' ? `maxlength="${max}"` : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}"></div>`;
     const ft = (k, label) => `<div class="field"><label class="switch"><input type="checkbox" id="ft_${k}"${f[k] && f[k].on ? ' checked' : ''}><span>${label}</span></label><input class="input input-sm" id="fn_${k}" maxlength="80" value="${esc((f[k] && f[k].note) || '')}" placeholder="한 줄 설명 (예: 블루투스 마이크 2개)" style="margin-top:8px"></div>`;
     const ck = (k, label) => `<label class="check"><input type="checkbox" id="fb_${k}"${f[k] ? ' checked' : ''}><span>${label}</span></label>`;
     const m = SP.modal({
       title: `${s.name} 고치기`, wide: true,
-      body: `<div class="ed-tabs" id="edTabs"><button type="button" class="on" data-t="base">기본</button><button type="button" data-t="pkg">패키지 · 요금</button><button type="button" data-t="feat">시설</button><button type="button" data-t="items">비품</button><button type="button" data-t="info">이용 안내</button><button type="button" data-t="social">SNS·후기</button><button type="button" data-t="book">예약 방식 · 시간제</button><button type="button" data-t="photo">사진 ${photos.length}</button></div>
+      body: `<div class="ed-tabs" id="edTabs"><button type="button" class="on" data-t="base">기본</button><button type="button" data-t="pkg">패키지 · 요금</button><button type="button" data-t="feat">시설</button><button type="button" data-t="items">비품</button><button type="button" data-t="info">이용 안내</button><button type="button" data-t="social">SNS·후기</button><button type="button" data-t="book">예약 방식 · 시간제</button><button type="button" data-t="photo">사진 ${photos.length}</button><button type="button" data-t="gal">갤러리 ${gal.length}</button></div>
       <div data-p="base"><div class="form-grid">
         ${ip('e_name', '지점 이름', s.name, 40)}${ip('e_short', '짧은 이름 (카드에 쓰여요)', s.short, 30)}
         <div class="field"><label class="label" for="e_region">권역</label><select class="select" id="e_region">${['서울', '경기', '인천', '대전', '부산', '전주', '기타'].map((r) => `<option${r === s.region ? ' selected' : ''}>${r}</option>`).join('')}</select></div>
@@ -1425,6 +1428,10 @@ async function run(env) {
         <h3 class="h4" style="margin:18px 0 8px">사업자 정보 (호스트 운영 지점 · 손님 화면 「호스트 정보」)</h3><div id="edBiz"></div>
         <div class="field" style="margin-top:14px"><label class="switch"><input type="checkbox" id="e_paused"${s.hostPaused ? ' checked' : ''}><span>호스트가 「잠시 쉬기」로 내려 둠 (켜 두면 공개여도 손님 화면에 안 보여요)</span></label></div></div>
       <div data-p="photo" hidden><p class="a-note" style="margin-bottom:10px">첫 번째 사진이 대표 사진이에요. 가로 사진이 잘 어울려요. 사진은 한 장에 5MB까지, 40장까지 올릴 수 있어요.</p><div id="imwBox"></div><div class="ph-grid" id="phGrid"></div><input type="file" id="phFile" accept="image/*" multiple hidden></div>
+      <div data-p="gal" hidden><p class="a-note" style="margin-bottom:10px">호스트가 보낸 사진을 쏘플이 보정·가공해 올리는 곳이에요. 지점 화면 「사진 갤러리」, <a class="link" href="/gallery" target="_blank" rel="noopener">공간 갤러리</a>, 첫 화면에 보이고, 「공간」·「시설·분위기」 사진은 지점 대표 사진 앞자리와 목록 카드에도 쓰여요. 사람·음식을 AI로 연출한 사진은 꼭 「AI 연출」을 켜 주세요. 손님 화면에 표시가 붙어요.<br>여러 장을 한 번에 고르면 파일 이름 순서대로 들어가요. 파일 이름에 '전체공간·공간소개'가 있으면 공간, '시설'이면 시설·분위기, 'AI'면 이렇게 놀아요(AI 연출), '홍보·광고·표지'면 홍보 이미지로 나누고, 설명도 파일 이름에서 가져와요.</p>
+        <div class="gal-ed" id="galEd"></div>
+        <div class="row" style="margin-top:12px;gap:10px;flex-wrap:wrap;align-items:flex-end"><button class="btn btn-line btn-sm" type="button" id="galAdd">${icon('camera', 'sm')}갤러리 사진 올리기</button><div class="field" style="margin:0"><label class="label" for="galAt">갤러리 날짜 <span class="opt">60일 동안 목록 카드에 「새 사진」</span></label><input class="input input-sm" type="date" id="galAt" value="${esc(s.galleryAt || '')}"></div><span class="small muted" id="galInfo"></span></div>
+        <input type="file" id="galFile" accept="image/*" multiple hidden></div>
       <div class="form-err" id="edErr" hidden></div>`,
       foot: `${isAdmin() ? '<button class="btn btn-ghost btn-sm" type="button" id="edReset" style="margin-right:auto">처음 데이터로 되돌리기</button>' : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="edSave">저장</button>`,
     });
@@ -1500,6 +1507,63 @@ async function run(env) {
       }
     };
 
+    /* 갤러리 편집 */
+    const GALC = SP.GAL_CATS;
+    const galGuess = (name) => {
+      const b = String(name).replace(/\.[^.]+$/, '');
+      const ai = /AI/i.test(b);
+      const c = /홍보|광고|표지|포스터/.test(b) ? 'poster' : ai ? 'scene' : /전체공간|공간소개|전경|입구/.test(b) ? 'space'
+        : /시설|분위기|소품|코너|노래방|미러볼|보드게임|그릴|바베큐|장비|콘솔|만화|주방|화장실|포토/.test(b) ? 'facility' : 'space';
+      const t = b.split(/[_\-]+/).map((x) => x.trim()).filter((x) => x && !/^\d+$/.test(x) && !/파티룸$/.test(x) && !/^(AI|AI연출|AI이용연출|이용연출|최종|최종수정본|수정본|전체공간|공간소개|시설상세|시설과분위기|홍보표지|광고|표지|모임연출)$/i.test(x)).join(' ');
+      return { c, ai, t: t.slice(0, 40) };
+    };
+    const drawGal = () => {
+      P('galEd').innerHTML = gal.length ? gal.map((g, i) => `<div class="gal-row"><img src="${esc(g.url || '')}" alt="">
+        <select class="select input-sm" data-gi="${i}" data-gk="c">${Object.entries(GALC).map(([k, l]) => `<option value="${k}"${g.c === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+        <input class="input input-sm" data-gi="${i}" data-gk="t" maxlength="40" value="${esc(g.t || '')}" placeholder="사진 설명 (예: 메인 라운지)">
+        <label class="check"><input type="checkbox" data-gi="${i}" data-gk="ai"${g.ai ? ' checked' : ''}><span>AI 연출</span></label>
+        <div class="gal-acts"><button type="button" data-gmv="${i}|-1" aria-label="앞으로"${i === 0 ? ' disabled' : ''}>${icon('chev-l', 'sm')}</button><button type="button" data-gmv="${i}|1" aria-label="뒤로"${i === gal.length - 1 ? ' disabled' : ''}>${icon('chev-r', 'sm')}</button><button type="button" data-gdel="${i}" aria-label="빼기">${icon('trash', 'sm')}</button></div></div>`).join('')
+        : '<div class="a-empty small muted" style="padding:18px;text-align:center;border:1.5px dashed var(--line-2);border-radius:12px">아직 갤러리 사진이 없어요. 보정한 사진을 올려 주세요.</div>';
+      m.$('#edTabs [data-t="gal"]').textContent = `갤러리 ${gal.length}`;
+      const n = (k) => gal.filter((g) => g.c === k).length;
+      P('galInfo').textContent = gal.length ? Object.keys(GALC).filter(n).map((k) => `${GALC[k]} ${n(k)}`).join(' · ') : '';
+    };
+    drawGal();
+    P('galEd').addEventListener('input', (e) => {
+      const el = e.target.closest('[data-gi]'); if (!el) return;
+      const g = gal[Number(el.dataset.gi)]; if (!g) return;
+      if (el.dataset.gk === 'ai') g.ai = el.checked ? 1 : 0; else g[el.dataset.gk] = el.value;
+      if (el.dataset.gk === 'c' && el.value === 'scene' && !g.ai) { g.ai = 1; el.closest('.gal-row').querySelector('[data-gk="ai"]').checked = true; }
+      galDirty = true;
+    });
+    P('galEd').addEventListener('click', (e) => {
+      const mv = e.target.closest('[data-gmv]');
+      if (mv) { const [i, d] = mv.dataset.gmv.split('|').map(Number); const j = i + d; if (j < 0 || j >= gal.length) return; [gal[i], gal[j]] = [gal[j], gal[i]]; galDirty = true; drawGal(); return; }
+      const del = e.target.closest('[data-gdel]'); if (del) { gal.splice(Number(del.dataset.gdel), 1); galDirty = true; drawGal(); }
+    });
+    P('galAdd').onclick = () => { if (!BOUND.photos) { SP.toast('사진 저장소(PHOTOS)가 연결돼야 올릴 수 있어요.', true); return; } P('galFile').click(); };
+    const dims = (file) => new Promise((res) => { const im = new Image(); const u = URL.createObjectURL(file); im.onload = () => { URL.revokeObjectURL(u); res([im.naturalWidth, im.naturalHeight]); }; im.onerror = () => { URL.revokeObjectURL(u); res([0, 0]); }; im.src = u; });
+    P('galFile').onchange = async (e) => {
+      const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name, 'ko', { numeric: true })).slice(0, 60 - gal.length); e.target.value = '';
+      const btn = P('galAdd'); SP.busy(btn, true, '올리는 중…');
+      let done = 0;
+      for (const file of files) {
+        try {
+          const [w0, h0] = await dims(file);
+          const big = await SP.upload(file, 2000);
+          const small = await SP.upload(file, 720);
+          const r = w0 && h0 ? Math.min(1, 2000 / Math.max(w0, h0)) : 1;
+          const g = galGuess(file.name);
+          gal.push({ k: big.key, s: small.key, url: small.url, c: g.c, t: g.t, ai: g.ai ? 1 : 0, w: Math.round(w0 * r) || undefined, h: Math.round(h0 * r) || undefined });
+          galDirty = true; done++; drawGal();
+          btn.textContent = `올리는 중… ${done}/${files.length}`;
+        } catch (er) { SP.fail(er); }
+      }
+      SP.busy(btn, false);
+      if (done) { P('galAt').value = SP.today(); SP.toast(`사진 ${done}장을 올렸어요. 분류와 설명을 확인하고 저장해 주세요.`); }
+    };
+    P('galAt').addEventListener('input', () => { galDirty = true; });
+
     const list = (v) => v.split(',').map((x) => x.trim()).filter(Boolean);
     P('edSave').onclick = async () => {
       readPkgs();
@@ -1524,6 +1588,7 @@ async function run(env) {
         items: itemsEd.read(), social: socialEd.read(),
         booking: waysEd.read(), hourly: hourEd.read().hourly, hostBiz: bizEd.read(), hostPaused: P('e_paused').checked,
       };
+      if (galDirty) { body.gallery = gal.map((g) => ({ k: g.k, s: g.s, c: g.c, t: (g.t || '').trim(), ai: g.ai ? 1 : 0, w: g.w, h: g.h })); body.galleryAt = P('galAt').value || SP.today(); }
       if (pkgs.some((p) => p.s == null || p.e == null)) { err.textContent = '패키지 시작·끝 시각을 19:00처럼 24시간 기준으로 넣어 주세요.'; err.hidden = false; m.$('#edTabs [data-t="pkg"]').click(); return; }
       const btn = P('edSave'); SP.busy(btn, true, '저장하는 중…');
       try { await SP.put('/api/admin/spaces/' + s.code, body); m.close(); SP.toast('저장했어요. 고객 화면에는 1분 안에 바뀌어요.'); SPACES = null; if (location.hash === '#spaces') spacesView(); }

@@ -12,6 +12,7 @@
     const stR = $('#stRegions');
     if (stR && spaces.length) stR.textContent = new Set(spaces.map((x) => x.region)).size;
     popular(spaces, av);
+    gallery(spaces);
     regions(spaces);
     passes(s);
     feed();
@@ -37,6 +38,16 @@
       const c = av && av.spaces && av.spaces[sp.code];
       return SP.roomCard(sp, { avail: c, from: today, live });
     }).join('');
+  }
+
+  /* ---------- 사진으로 먼저 둘러보세요 — 쏘플이 보정한 지점 갤러리, 새로 올린 지점부터 3곳 ---------- */
+  function gallery(spaces) {
+    const sec = $('#homeGalSec');
+    if (!sec) return;
+    const list = SP.shuffle(spaces.filter((s) => (s.gallery || []).length)).sort((a, b) => String(b.galleryAt || '').localeCompare(String(a.galleryAt || ''))).slice(0, 3);
+    if (!list.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    $('#homeGallery').innerHTML = list.map(SP.galFeat).join('');
   }
 
   /* ---------- 지역 ---------- */
