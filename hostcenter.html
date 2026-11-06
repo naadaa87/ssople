@@ -30,8 +30,8 @@
 <link rel="alternate" type="application/rss+xml" title="쏘플파티룸 새 소식" href="/rss.xml">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<link rel="stylesheet" href="/assets/app.css?v=20261102b">
-<link rel="stylesheet" href="/assets/hostcenter.css?v=20261030b">
+<link rel="stylesheet" href="/assets/app.css?v=20261106a">
+<link rel="stylesheet" href="/assets/hostcenter.css?v=20261106a">
 </head>
 <body data-page="hostcenter" data-nav="hostcenter">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -267,7 +267,7 @@
       <div class="hc-gate-copy">
         <span class="hc-kicker">호스트·점주 전용</span>
         <h1 class="h1">쏘플파티룸 호스트센터</h1>
-        <p class="lead">쏘플에 등록한 호스트·점주님을 위한 안내 공간이에요. 새 홈페이지가 손님을 모으는 방법, 내 지점을 직접 관리하는 방법, 예약에 도움이 되는 운영 팁을 한곳에 모았어요.</p>
+        <p class="lead">쏘플에 공간을 등록했거나 등록하려는 호스트·점주님을 위한 안내 공간이에요. 새 홈페이지가 손님을 모으는 방법, 내 지점을 직접 관리하는 방법, 예약에 도움이 되는 운영 팁을 한곳에 모았어요.</p>
         <ul class="hc-gate-list">
           <li><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg><span><b>처음 시작하기</b>회원 가입 · 공간 등록 신청 · 검수·승인 · 지점 연결</span></li>
           <li><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg><span><b>새 홈페이지 한눈에</b>지점 화면 · 예약 버튼 · 메뉴 구성</span></li>
@@ -277,18 +277,18 @@
         </ul>
       </div>
       <form class="hc-login" id="hcLogin" novalidate>
-        <h2 class="h3">호스트센터 로그인</h2>
-        <p class="muted small" id="hcLoginNote">운영팀에서 안내받은 아이디와 비밀번호를 넣어 주세요.</p>
-        <div id="hcShared">
+        <h2 class="h3">호스트센터 들어가기</h2>
+        <p class="muted small" id="hcLoginNote">쏘플 계정으로 로그인하면 바로 볼 수 있어요. 아직 계정이 없다면 가입은 1분이면 끝나요.</p>
+        <a class="btn btn-red btn-lg btn-block" href="/login?next=%2Fhostcenter">쏘플 계정으로 로그인</a>
+        <a class="btn btn-line btn-block" href="/signup?next=%2Fhostcenter" style="margin-top:8px">가입하고 둘러보기</a>
+        <div id="hcShared" hidden>
+          <div class="hc-or"><span>운영팀에서 받은 공용 아이디가 있다면</span></div>
           <div class="field"><label class="label" for="hcId">아이디</label><input class="input" id="hcId" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="60" required></div>
           <div class="field"><label class="label" for="hcPw">비밀번호</label><input class="input" id="hcPw" name="password" type="password" autocomplete="current-password" maxlength="100" required></div>
           <p class="form-err" id="hcErr" role="alert" hidden></p>
-          <button class="btn btn-red btn-lg btn-block" type="submit" id="hcGo">호스트센터 들어가기</button>
-          <div class="hc-or"><span>또는</span></div>
+          <button class="btn btn-ink btn-block" type="submit" id="hcGo">공용 아이디로 들어가기</button>
         </div>
-        <a class="btn btn-line btn-block" href="/login?next=%2Fhostcenter">쏘플 계정으로 로그인</a>
-        <a class="btn btn-ink btn-block" href="/signup?next=%2Fmyspace%3Fnew%3D1" style="margin-top:8px">가입하고 공간 등록 신청</a>
-        <p class="tiny faint hc-login-foot">호스트 권한이 연결된 계정은 아이디 없이 바로 들어가요. 아이디를 모르면 <a class="link" href="http://pf.kakao.com/_mufLd/chat" data-kakao target="_blank" rel="noopener">쏘플 카카오톡 채널</a>로 물어봐 주세요. 새 파티룸을 올리려면 쏘플 계정으로 가입해 바로 <a class="link" href="/myspace?new=1">공간 등록 신청</a>을 할 수 있어요. 요금·방식 안내는 <a class="link" href="/host">호스트 모집</a>에 있어요.</p>
+        <p class="tiny faint hc-login-foot">로그인한 뒤 「공간 등록 신청」으로 새 파티룸을 올리거나, 이미 운영 중인 쏘플 지점이면 「지점 연결 요청」을 보낼 수 있어요. 요금과 방식은 <a class="link" href="/host">호스트 모집</a>, 등록 기준은 <a class="link" href="/host-terms">호스트 이용 안내</a>에 있어요. 궁금한 점은 <a class="link" href="http://pf.kakao.com/_mufLd/chat" data-kakao target="_blank" rel="noopener">쏘플 카카오톡 채널</a>로 물어봐 주세요.</p>
       </form>
     </div>
   </div>
@@ -310,7 +310,7 @@
       <div class="ft-col"><h4>지점 찾기</h4><a href="/rooms">지점 찾기</a><a href="/locations">지역별 지점</a><a href="/gallery">공간 갤러리</a><a href="/area/seoul">서울 파티룸</a><a href="/area/gyeonggi">경기 파티룸</a><a href="/corporate">기업·단체 행사</a><a href="/guide">이용 안내</a></div>
       <div class="ft-col"><h4>같이 놀기</h4><a href="/event">행사</a><a href="/meetups">모임</a><a href="/crew">파티팀 모집</a><a href="/community">커뮤니티</a></div>
       <div class="ft-col"><h4>파티 준비 · 당일</h4><a href="/planner">준비물 · N빵</a><a href="/invite">초대장 만들기</a><a href="/magazine">파티 가이드</a><a href="/games">파티게임</a><a href="/play">놀이터</a><a href="/live">온라인 파티룸</a><a href="/membership">쏘플 클럽</a></div>
-      <div class="ft-col"><h4>호스트 · 쏘플</h4><a href="/host">공간 등록 · 위탁운영</a><a href="/hostcenter">호스트센터</a><a href="/startup">파티룸 창업안내</a><a href="/academy">공간 아카데미</a><a href="/partners">제휴·협업</a><a href="/about">브랜드 이야기</a><a href="/ceo">창업자 이야기</a><a href="/about#company">회사 정보</a></div>
+      <div class="ft-col"><h4>호스트 · 쏘플</h4><a href="/host">공간 등록 · 위탁운영</a><a href="/hostcenter">호스트센터</a><a href="/host-terms">호스트 이용 안내</a><a href="/startup">파티룸 창업안내</a><a href="/academy">공간 아카데미</a><a href="/partners">제휴·협업</a><a href="/about">브랜드 이야기</a><a href="/ceo">창업자 이야기</a><a href="/about#company">회사 정보</a></div>
     </div>
     <div class="ft-family"><b>함께하는 공간·서비스</b><div class="ft-family-links"><a href="https://megaspot.kr" target="_blank" rel="noopener">메가스팟</a><a href="https://socialfactory.co.kr" target="_blank" rel="noopener">소셜팩토리</a><a href="https://playtion.kr" target="_blank" rel="noopener">플레이션</a><a href="https://hellomingle.kr" target="_blank" rel="noopener">밍글</a><a href="https://coremood.kr" target="_blank" rel="noopener">코어무드</a><a href="https://vacancy.co.kr" target="_blank" rel="noopener">공백 공간백서</a><a href="https://orbis-estate.com" target="_blank" rel="noopener">오르비스 부동산 중개법인</a><a href="https://choisijun.com" target="_blank" rel="noopener">최시준</a><a href="https://yeodeol.kr" target="_blank" rel="noopener">여덟글자</a></div></div>
     <div class="ft-bot">
@@ -332,7 +332,7 @@
   <a href="/mypage" data-nav="my"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>마이</a>
 </nav>
 
-<script src="/assets/app.js?v=20261102b" defer></script>
-<script src="/assets/js/hostcenter.js?v=20261030b" defer></script>
+<script src="/assets/app.js?v=20261106a" defer></script>
+<script src="/assets/js/hostcenter.js?v=20261106a" defer></script>
 </body>
 </html>

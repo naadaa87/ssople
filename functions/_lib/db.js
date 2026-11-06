@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -59,6 +59,12 @@ const SCHEMA = [
   // v8: 호스트가 지점 정보를 고친 기록 (운영팀 확인용 — 예약 링크·요금·주소처럼 손님에게 중요한 칸)
   `CREATE TABLE IF NOT EXISTS host_edits (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, uid INTEGER, nick TEXT, fields TEXT, important INTEGER NOT NULL DEFAULT 0, at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_host_edits ON host_edits(id)`,
+  // v10: 호스트 등록 요금 — 첫 등록·연장 신청과 입금 확인 (wait: 입금 대기 → paid: 입금 확인 / cancel: 취소)
+  `CREATE TABLE IF NOT EXISTS host_bills (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, uid INTEGER, kind TEXT NOT NULL DEFAULT 'new', plan TEXT, months INTEGER, amount INTEGER, start TEXT, until TEXT, status TEXT NOT NULL DEFAULT 'wait', memo TEXT, at TEXT NOT NULL, paid_at TEXT, decided_at TEXT, app_id INTEGER)`,
+  `CREATE INDEX IF NOT EXISTS idx_host_bills_code ON host_bills(code, id)`,
+  `CREATE INDEX IF NOT EXISTS idx_host_bills_status ON host_bills(status, id)`,
+  // v10: 노출 기간 알림을 보냈는지 (같은 끝 날짜에 같은 알림을 두 번 보내지 않게)
+  `CREATE TABLE IF NOT EXISTS host_marks (code TEXT NOT NULL, until TEXT NOT NULL, mark TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (code, until, mark))`,
 ];
 
 let ready = null;
@@ -351,12 +357,18 @@ export const DEFAULTS = {
   'host.price12': '100000',
   'host.managed_fee': '20',
   // 호스트센터(/hostcenter) 공용 로그인 — 아직 쏘플 계정이 없는 호스트·점주에게 안내 화면을 보여 줄 때 쓴다 (안내만 볼 수 있고 지점은 못 고친다)
-  'hc.open': '1',
+  'hc.open': '0',
   'hc.id': '1234',
   'hc.pw': '1234',
   // 호스트센터 — 공간 등록 신청 받기(1=받기, 0=잠시 멈춤), 승인된 호스트에게만 보이는 결제·연장 안내 문구
   'host.apply_open': '1',
   'host.pay_note': '',
+  // 정식 운영 — 입금 확인 전에도 손님 화면에 보이기(1) / 입금 확인 뒤에 보이기(0),
+  // 노출 기간이 끝나고 유예일이 지나면 손님 화면에서 자동으로 내리기(1) / 알림만(0), 사업자 정보 필수(1) / 선택(0)
+  'host.live_before_pay': '1',
+  'host.expire_hide': '0',
+  'host.expire_grace': '7',
+  'host.biz_required': '0',
 };
 const PRIVATE_KEYS = new Set(['community.banned', 'hc.id', 'hc.pw', 'host.pay_note']);
 
@@ -397,6 +409,7 @@ export function hostPriceTexts(s) {
     out['host.day' + p.t] = comma(p.day) + '원';
     out['host.mon' + p.t] = '월 ' + manNum(p.month) + '만원';
     out['host.opt' + p.t] = `${p.t}개월 (하루 ${comma(p.day)}원 · 월 ${manNum(p.month)}만원)`;
+    out['host.total' + p.t] = comma(p.month * p.t) + '원';
   }
   const days = ps.map((p) => p.day), months = ps.map((p) => p.month);
   out['host.from'] = '하루 ' + comma(Math.min(...days)) + '원';
@@ -445,6 +458,8 @@ export async function housekeep(db) {
     db.prepare(`DELETE FROM space_apps WHERE status = 'draft' AND updated_at < ?`).bind(ago(180)),
     db.prepare(`UPDATE space_apps SET contact = NULL WHERE status IN ('approved', 'rejected') AND decided_at < ?`).bind(ago(180)),
     db.prepare('DELETE FROM host_edits WHERE at < ?').bind(ago(365)),
+    db.prepare('DELETE FROM host_marks WHERE at < ?').bind(ago(400)),
+    db.prepare(`DELETE FROM host_bills WHERE at < ?`).bind(ago(365 * 5 + 2)),
     db.prepare('DELETE FROM live_scores WHERE d < ?').bind(ago(60).slice(0, 10)),
   ]);
   return true;

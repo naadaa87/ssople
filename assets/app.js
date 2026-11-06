@@ -566,6 +566,8 @@
         if (el.dataset.hideEmpty !== undefined) { const row = el.closest('.co-row') || el; row.hidden = !v; }
       });
       SP.$$('[data-co2]').forEach((el) => { el.hidden = !s['biz2.name']; });
+      // 설정에 따라 보이는 문단 (data-if="키=값")
+      SP.$$('[data-if]').forEach((el) => { const [k, v] = String(el.dataset.if).split('='); el.hidden = String(s[k] ?? '') !== v; });
       // 개인정보처리방침 — GA4를 켰으면 GA 사용 안내를, 아니면 '추적 도구를 쓰지 않아요' 안내를 보여 준다
       const ga = /^G-[A-Z0-9]{4,16}$/i.test(String(s['seo.ga4_id'] || '').trim());
       SP.$$('[data-ga]').forEach((el) => { el.hidden = !ga; });

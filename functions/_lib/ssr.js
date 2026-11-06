@@ -130,6 +130,8 @@ export async function renderStatic(context) {
     .on('head', { element(el) { if (extra) el.append(extra, { html: true }); } });
   for (const [sel, htmlStr] of Object.entries(blocks || {})) rw.on(sel, { element(el) { el.setInnerContent(htmlStr, { html: true }); } });
   // 개인정보처리방침 — GA4를 켰으면 서버에서부터 GA 사용 안내를 보이게 (스크립트를 안 읽는 로봇·화면에도 맞는 문구가 나가게)
+  // 설정에 따라 보이는 문단 (data-if="키=값") — 호스트 이용 안내의 노출 기간 문구처럼
+  rw.on('[data-if]', { element(el) { const [k, v] = String(el.getAttribute('data-if') || '').split('='); if (String(st[k] ?? '') === v) el.removeAttribute('hidden'); else el.setAttribute('hidden', ''); } });
   if (gaTag(st)) rw.on('[data-noga]', { element(el) { el.setAttribute('hidden', ''); } }).on('[data-ga]', { element(el) { el.removeAttribute('hidden'); } });
   return rw.transform(res);
 }
@@ -302,7 +304,7 @@ export async function sitemap(context) {
   const { env, request } = context;
   const origin = await baseOf(env, new URL(request.url));
   const pages = ['/', '/rooms', '/locations', '/gallery', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/live', '/live/requests', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
-    '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy'];
+    '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy', '/host-terms'];
   const urls = pages.map((p) => ({ loc: origin + p }));
   urls.push({ loc: origin + '/magazine' });
   for (const m of MAGAZINE) urls.push({ loc: `${origin}/magazine/${m.slug}`, lastmod: m.date });

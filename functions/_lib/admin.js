@@ -16,7 +16,7 @@ export function register(route) {
     const today = todayKST();
     const wk = addDays(today, -7) + 'T00:00:00';
     const q = (sql, ...b) => c.db.prepare(sql).bind(...b).first();
-    const [users, users7, posts7, reports, inq, evp, vis, crews, meets, clicks7, occ, diag, okAt, cronAt, liveReq, apps] = await Promise.all([
+    const [users, users7, posts7, reports, inq, evp, vis, crews, meets, clicks7, occ, diag, okAt, cronAt, liveReq, apps, bills] = await Promise.all([
       q('SELECT COUNT(*) AS n FROM users WHERE status = ?', 'active'),
       q('SELECT COUNT(*) AS n FROM users WHERE created_at >= ?', wk),
       q('SELECT COUNT(*) AS n FROM posts WHERE created_at >= ?', wk),
@@ -31,12 +31,13 @@ export function register(route) {
       getMeta(c.db, 'host_diag'), getMeta(c.db, 'host_ok_at'), getMeta(c.db, 'cron_at'),
       q(`SELECT COUNT(*) AS n FROM live_requests WHERE status = 'new' AND hidden = 0`).catch(() => ({ n: 0 })),
       q(`SELECT COUNT(*) AS n FROM space_apps WHERE status = 'submitted'`).catch(() => ({ n: 0 })),
+      q(`SELECT COUNT(*) AS n FROM host_bills WHERE status = 'wait'`).catch(() => ({ n: 0 })),
     ]);
     const allSp = await loadSpaces(c.db, { all: true });
     const nm = Object.fromEntries(allSp.map((s) => [s.code, s.name]));
     // 호스트 운영 지점 중 노출 끝 날짜가 14일 안이거나 지난 곳 (연장 안내 대상)
     const soon = addDays(today, 14);
-    const expiring = allSp.filter((s) => s.listing && s.listing.type === 'host' && s.listing.until && s.listing.until <= soon).length;
+    const expiring = allSp.filter((s) => s.listing && s.listing.type === 'host' && s.listing.until && s.listing.until <= soon && !s.closed).length;
     const d = parseJSON(diag, null);
     let season = null;
     try { season = summarize(await loadPlan(c.db, today)); } catch { season = null; }
@@ -45,7 +46,7 @@ export function register(route) {
     return {
       counts: {
         users: users.n, users7: users7.n, posts7: posts7.n, reports: reports.n, inquiries: inq.n,
-        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0, apps: apps?.n || 0, expiring,
+        eventsPending: evp.n, visitsPending: vis.n, crews: crews.n, meetups: meets.n, liveRequests: liveReq?.n || 0, apps: apps?.n || 0, bills: bills?.n || 0, expiring,
         seasonDue: (season ? season.late + season.week : 0) + (seasonPlan ? seasonPlan.late + seasonPlan.week : 0),
       },
       season,
@@ -377,6 +378,11 @@ export function register(route) {
       }
       if (k === 'hc.pw' && s.length > 60) throw new HttpError(400, '호스트센터 공용 비밀번호는 60자 안으로 정해 주세요.');
       if (k === 'hc.open') s = s === '0' ? '0' : '1';
+      if (['host.live_before_pay', 'host.expire_hide', 'host.biz_required', 'host.apply_open'].includes(k)) s = s === '1' ? '1' : '0';
+      if (k === 'host.expire_grace') {
+        s = s.replace(/\D/g, '');
+        if (s === '' || Number(s) > 60) throw new HttpError(400, '노출 끝난 뒤 유예일은 0~60일로 넣어 주세요.');
+      }
       if (/^host\.price(1|3|6|12)$/.test(k)) {
         s = s.replace(/[,\s원]/g, '');
         if (!/^\d{4,8}$/.test(s) || Number(s) < 1000) throw new HttpError(400, '공간 등록 요금은 월 요금을 원 단위 숫자로 넣어 주세요. 예) 150000');

@@ -1,7 +1,7 @@
 /* 호스트센터 · 내 공간 관리
    공간 등록 신청(6단계) · 운영 중인 지점 연결 요청 · 신청 현황 · 결제·노출 기간 안내
    손님 문의 바로 답하기 · 지점 소식 · 소개·사진·시설·비품·이용 안내·SNS 후기·요금·예약 방식·사업자 정보 고치기
-   성과 보기(조회·예약 버튼) · 마감·휴무 표시 · 노출 잠시 쉬기 */
+   성과 보기(조회·예약 버튼) · 마감·휴무 표시 · 노출 잠시 쉬기 · 노출 기간 연장 신청 · 결제 내역 */
 (function () {
   const { $, $$, esc, icon } = SP;
   const root = $('#hsRoot');
@@ -12,6 +12,9 @@
   let openQs = [];
   let payNote = '';
   let applyOpen = true;
+  let bills = [];
+  let plans = [];
+  let expire = { hide: false, grace: 0 };
   const LT = { managed: '쏘플 위탁운영', host: '호스트 운영', direct: '쏘플 직영' };
   const ZN = { premium: '프리미엄존', plus: '플러스존' };
   const AST = { draft: ['mute', '작성 중'], submitted: ['warn', '검수 중'], rejected: ['red', '보완 요청'], approved: ['ok', '승인'] };
@@ -32,6 +35,20 @@
   const isOwn = (s) => !!(s.listing && s.listing.type === 'host');
   const daysLeft = (ymd) => (ymd ? SP.dayDiff(SP.today(), ymd) : null);
   const priceText = (n, st) => { const d = st[`host.day${n}`], m = st[`host.mon${n}`]; return d && m ? `하루 ${d} · ${m}` : ''; };
+  const wonFull = (n) => (n == null ? '-' : SP.fmt(n) + '원');
+  const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const dot = (ymd) => String(ymd || '').replace(/-/g, '.');
+  /** 서버와 같은 계산 — 오늘부터 N개월 노출의 마지막 날 (10/30 + 1개월 → 11/29) */
+  const untilAfter = (from, months) => {
+    const [y, m, d] = from.split('-').map(Number);
+    const t = new Date(Date.UTC(y, m - 1 + months, 1));
+    const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    t.setUTCDate(Math.min(d, last));
+    return addDays(t.toISOString().slice(0, 10), -1);
+  };
+  /** 연장하면 늘어나는 기간 — 남은 기간이 있으면 끝나는 날 다음 날부터, 지났으면 오늘부터 */
+  const renewRange = (until, months) => { const start = until && until >= SP.today() ? addDays(until, 1) : SP.today(); return { start, until: untilAfter(start, months) }; };
+  const BST = { wait: ['warn', '입금 대기'], paid: ['ok', '입금 확인'], cancel: ['mute', '취소'] };
 
   /* ---------- 들어가기 ---------- */
   async function init() {
@@ -46,6 +63,7 @@
     if (qs.new === '1') { await startApp(); return; }
     if (!spaces.length && !apps.length) landing(); else draw();
     if (qs.link === '1') { linkModal(); return; }
+    if (location.hash === '#renew') { const b = $('#hsBills'); if (b) b.scrollIntoView({ block: 'start' }); if (spaces.some(isOwn)) renewModal(); return; }
     const h = location.hash.match(/^#(edit|items|social|price|book|biz|stats|closed)-(S-\d{4})$/);
     if (h) {
       const s = spaces.find((x) => x.code === h[2]);
@@ -54,7 +72,8 @@
   }
   async function reload() {
     try { const d = await SP.get('/api/host/apps'); apps = d.apps || []; payNote = d.payNote || ''; applyOpen = d.open !== false; } catch { apps = []; }
-    try { spaces = (await SP.get('/api/host/spaces')).spaces || []; } catch { spaces = []; }
+    try { const d = await SP.get('/api/host/spaces'); spaces = d.spaces || []; expire = d.expire || expire; } catch { spaces = []; }
+    try { const d = await SP.get('/api/host/bills'); bills = d.bills || []; plans = d.plans || []; if (!payNote) payNote = d.payNote || ''; } catch { bills = []; }
     await loadOpen();
   }
   const codes = () => spaces.slice(0, 20).map((s) => s.code).join(',');
@@ -128,11 +147,11 @@
     root.innerHTML = `
       <div class="hs-sum">
         <a class="hs-stat${nOpen ? ' hot' : ''}" href="#hsInbox"><small>답변 기다리는 문의</small><b>${nOpen}개</b><span>${nOpen ? '손님이 기다리고 있어요' : '모두 답했어요'}</span></a>
-        <a class="hs-stat" href="#hsSpaces"><small>내 지점</small><b>${spaces.length}곳</b><span>${spaces.filter((s) => s.visible && !s.hostPaused).length}곳 손님 화면에 보여요</span></a>
+        <a class="hs-stat" href="#hsSpaces"><small>내 지점</small><b>${spaces.length}곳</b><span>${spaces.filter((s) => s.visible && !s.hostPaused && !s.hidden).length}곳 손님 화면에 보여요</span></a>
         <a class="hs-stat${live.some((a) => a.status === 'rejected') ? ' hot' : ''}" href="#hsApps"><small>공간 등록 신청</small><b>${live.length}건</b><span>${live.some((a) => a.status === 'rejected') ? '보완 요청이 있어요' : live.length ? '진행 중' : '새 공간을 등록해 보세요'}</span></a>
         <a class="hs-stat" href="/write?b=host${spaces.length === 1 ? '&code=' + spaces[0].code : ''}"><small>지점 소식</small><b>${icon('megaphone')}</b><span>공지·소식·이벤트 올리기</span></a>
       </div>
-      ${payNote && (own.length || newApps.some((a) => a.status === 'approved')) ? `<div class="callout hs-pay">${icon('won')}<div><b>결제 · 노출 기간 안내</b><p class="prewrap">${esc(payNote)}</p></div></div>` : ''}
+      ${own.length || bills.length ? billsHtml(own) : payNote && newApps.some((a) => a.status === 'approved') ? `<div class="callout hs-pay">${icon('won')}<div><b>결제 안내</b><p class="prewrap">${esc(payNote)}</p></div></div>` : ''}
       <section id="hsApps" class="hs-sec">
         <div class="between" style="margin-bottom:10px;gap:8px;flex-wrap:wrap"><h2 class="h3">공간 등록 · 지점 연결</h2>
           <div class="row" style="gap:6px"><button class="btn btn-line btn-sm" type="button" id="hsLinkBtn">${icon('key', 'sm')}운영 중인 지점 연결</button><button class="btn btn-red btn-sm" type="button" id="hsNew" ${applyOpen ? '' : 'disabled'}>${icon('plus', 'sm')}새 공간 등록</button></div></div>
@@ -162,6 +181,8 @@
     $('#hsNew').onclick = newApp;
     $('#hsLinkBtn').onclick = linkModal;
     $('#hsApps').addEventListener('click', onAppClick);
+    const hb = $('#hsBills');
+    if (hb) hb.addEventListener('click', onBillClick);
     const hl = $('#hsList');
     if (hl) hl.addEventListener('click', onSpaceClick);
     const ib = root.querySelector('.hs-inbox');
@@ -218,8 +239,17 @@
     const nLinks = ((s.social && s.social.links) || []).length;
     const nWays = (s.booking && s.booking.ways || []).length;
     const left = daysLeft(l.until);
-    const exp = l.until ? (left < 0 ? `<li class="warn">노출 기간이 지났어요 (${esc(l.until)}) · 연장은 운영팀에 알려 주세요</li>` : left <= 14 ? `<li class="warn">노출 ${esc(l.until)}까지 · ${left}일 남았어요</li>` : `<li class="ok">노출 ${esc(l.until)}까지</li>`) : '';
-    const state = !s.visible ? '<span class="badge mute">운영팀 확인 중 · 비공개</span>' : s.hostPaused ? '<span class="badge warn">잠시 쉬는 중</span>' : '<span class="badge ok">손님 화면에 보여요</span>';
+    const wait = bills.find((b) => b.code === s.code && b.status === 'wait');
+    let exp = '';
+    if (l.payWait) exp = '<li class="warn">첫 등록 요금 입금을 확인하면 손님 화면에 열려요</li>';
+    else if (l.until) {
+      const hideOn = expire.hide ? addDays(l.until, expire.grace) : '';
+      exp = left < 0 ? `<li class="warn">노출 기간이 끝났어요 (${esc(dot(l.until))})${s.hidden === 'expired' ? ' · 손님 화면에서 내려갔어요' : hideOn ? ` · ${esc(dot(hideOn))}까지 연장하지 않으면 손님 화면에서 내려가요` : ''}</li>`
+        : left <= 14 ? `<li class="warn">노출 ${esc(dot(l.until))}까지 · ${left === 0 ? '오늘 끝나요' : left + '일 남았어요'}</li>` : `<li class="ok">노출 ${esc(dot(l.until))}까지</li>`;
+    }
+    if (own && wait && !l.payWait) exp += `<li class="warn">${wait.kind === 'renew' ? `기간 연장 ${wait.months}개월 신청 · 입금 확인을 기다려요` : '등록 요금 입금 확인을 기다려요'}</li>`;
+    const state = !s.visible ? '<span class="badge mute">운영팀 확인 중 · 비공개</span>' : s.hidden === 'pay' ? '<span class="badge warn">입금 확인 뒤 공개돼요</span>' : s.hidden === 'expired' ? '<span class="badge red">노출 기간이 끝나 숨겨졌어요</span>' : s.hostPaused ? '<span class="badge warn">잠시 쉬는 중</span>' : '<span class="badge ok">손님 화면에 보여요</span>';
+    const canRenew = own && !l.payWait;
     return `<div class="box hs-card">
       <div class="row between"><span class="badge ${l.zone === 'premium' ? 'red' : 'mute'}">${ZN[l.zone] || LT[l.type] || '쏘플 위탁운영'}</span><span class="tiny muted">${s.code}</span></div>
       <h3 class="h3">${esc(s.name)}</h3>
@@ -238,6 +268,7 @@
       </ul>
       <div class="hs-acts">
         <button class="btn btn-red btn-sm" type="button" data-edit="${s.code}" data-tab="base">${icon('edit', 'sm')}정보 고치기</button>
+        ${canRenew ? `<button class="btn btn-ink btn-sm" type="button" data-renew="${s.code}">${icon('calendar', 'sm')}기간 연장</button>` : ''}
         ${own ? `<button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="price">${icon('won', 'sm')}요금</button><button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="book">${icon('calendar', 'sm')}예약 방식</button><button class="btn btn-line btn-sm" type="button" data-closed="${s.code}">${icon('lock', 'sm')}마감·휴무</button>` : ''}
         <button class="btn btn-line btn-sm" type="button" data-stats="${s.code}">${icon('chart', 'sm')}성과</button>
         <button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="items">${icon('list', 'sm')}비품</button>
@@ -251,6 +282,7 @@
     const ed = e.target.closest('[data-edit]'); if (ed) { edit(spaces.find((s) => s.code === ed.dataset.edit), ed.dataset.tab); return; }
     const st = e.target.closest('[data-stats]'); if (st) { statsModal(spaces.find((s) => s.code === st.dataset.stats)); return; }
     const cl = e.target.closest('[data-closed]'); if (cl) { closedModal(spaces.find((s) => s.code === cl.dataset.closed)); return; }
+    const rn = e.target.closest('[data-renew]'); if (rn) { renewModal(rn.dataset.renew); return; }
     const pz = e.target.closest('[data-pause]');
     if (pz) {
       const s = spaces.find((x) => x.code === pz.dataset.pause);
@@ -272,6 +304,84 @@
       SP.toast('답변을 올렸어요. 손님에게 알림이 가요.');
       await loadOpen(); draw();
     } catch (er) { SP.busy(b, false); SP.fail(er); }
+  }
+
+  /* ---------- 결제 · 노출 기간 ---------- */
+  function billsHtml(own) {
+    const rows = bills.slice(0, 12);
+    const can = own.filter((s) => !(s.listing || {}).payWait);
+    return `<section id="hsBills" class="hs-sec">
+      <div class="between" style="margin-bottom:10px;gap:8px;flex-wrap:wrap"><h2 class="h3">결제 · 노출 기간</h2>${can.length ? `<button class="btn btn-ink btn-sm" type="button" data-renew="${can.length === 1 ? can[0].code : ''}">${icon('calendar', 'sm')}기간 연장 신청</button>` : ''}</div>
+      <div class="callout hs-pay">${icon('won')}<div><b>결제 안내</b><p class="prewrap">${payNote ? esc(payNote) : '입금 방법은 운영팀이 따로 안내해 드려요.'}</p></div></div>
+      ${rows.length ? `<div class="hs-bills">${rows.map(billLine).join('')}</div>` : '<p class="small muted">아직 결제 내역이 없어요.</p>'}
+      <p class="tiny faint" style="margin-top:10px">입금이 확인되면 노출 기간이 늘어나고 알림이 가요. 끝나기 14일 전과 3일 전에도 알림으로 알려 드려요. 자세한 기준은 <a class="link" href="/host-terms">호스트 이용 안내</a>에 있어요.</p>
+    </section>`;
+  }
+  function billLine(b) {
+    const [cls, label] = BST[b.status] || BST.wait;
+    return `<div class="hs-bill">
+      <div class="hs-bill-hd"><span class="badge ${cls}">${label}</span><b>${esc(b.spaceName || b.code)}</b><span class="small muted">${b.kind === 'renew' ? '기간 연장' : '첫 등록'} · ${esc(b.months)}개월</span></div>
+      <div class="hs-bill-row"><b class="hs-bill-amt">${wonFull(b.amount)}</b>${b.start && b.until ? `<span>${esc(dot(b.start))} ~ ${esc(dot(b.until))}</span>` : ''}<span class="tiny faint">${b.status === 'paid' && b.paidAt ? '입금 확인 ' + esc(SP.ago(b.paidAt)) : '신청 ' + esc(SP.ago(b.at))}</span>
+        ${b.status === 'wait' && b.kind === 'renew' ? `<button class="btn btn-ghost btn-sm" type="button" data-bcancel="${b.id}">신청 취소</button>` : ''}</div>
+      ${b.status === 'cancel' && b.memo ? `<p class="tiny muted">${esc(b.memo)}</p>` : ''}
+    </div>`;
+  }
+  async function onBillClick(e) {
+    const rn = e.target.closest('[data-renew]'); if (rn) { renewModal(rn.dataset.renew); return; }
+    const c = e.target.closest('[data-bcancel]'); if (!c) return;
+    const b = bills.find((x) => String(x.id) === c.dataset.bcancel); if (!b) return;
+    if (!(await SP.confirm(`「${b.spaceName}」 ${b.months}개월 연장 신청을 취소할까요? 이미 입금했다면 취소하지 말고 운영팀에 알려 주세요.`, { ok: '신청 취소', danger: true }))) return;
+    try { await SP.post(`/api/host/bills/${b.id}/cancel`); SP.toast('연장 신청을 취소했어요.'); await reload(); draw(); } catch (er) { SP.fail(er); }
+  }
+  /** 노출 기간 연장 — 기간을 고르면 새 기간과 금액이 바로 보이고, 신청하면 운영팀이 입금을 확인해 늘려 줘요 */
+  function renewModal(code) {
+    const can = spaces.filter(isOwn).filter((s) => !(s.listing || {}).payWait);
+    if (!can.length) { SP.toast('연장할 수 있는 호스트 운영 공간이 없어요. 위탁운영 지점은 운영팀에 문의해 주세요.', true); return; }
+    if (!plans.length) { SP.toast('요금 정보를 불러오지 못했어요. 새로고침한 뒤 다시 해 주세요.', true); return; }
+    let s = can.find((x) => x.code === code) || can[0];
+    let months = Number((s.listing || {}).plan) || 3;
+    if (!plans.some((p) => p.months === months)) months = plans[0].months;
+    const m = SP.modal({
+      title: '노출 기간 연장', wide: true,
+      body: '<div id="rnBody"></div><div class="form-err" id="rnErr" hidden></div>',
+      foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="rnGo">연장 신청</button>',
+    });
+    const body = m.el.querySelector('#rnBody');
+    const go = m.el.querySelector('#rnGo');
+    const paint = () => {
+      const l = s.listing || {};
+      const left = daysLeft(l.until);
+      const wait = bills.find((b) => b.code === s.code && b.kind === 'renew' && b.status === 'wait');
+      const p = plans.find((x) => x.months === months) || plans[0];
+      const r = renewRange(l.until, months);
+      body.innerHTML = `
+        ${can.length > 1 ? `<div class="field"><label class="label" for="rnSp">지점</label><select class="select" id="rnSp">${can.map((x) => `<option value="${esc(x.code)}"${x.code === s.code ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : `<h3 class="h4">${esc(s.name)}</h3>`}
+        <p class="small muted" style="margin-top:6px">지금 노출 기간 — ${l.until ? `${esc(dot(l.until))}까지 ${left < 0 ? '(끝났어요)' : left === 0 ? '(오늘 끝나요)' : `(${left}일 남았어요)`}` : '아직 정해지지 않았어요'}</p>
+        ${wait ? `<div class="callout small" style="margin-top:10px">${icon('info')}<div>이미 입금을 기다리는 ${wait.months}개월 연장 신청이 있어요. 기간을 바꾸려면 「결제 · 노출 기간」에서 그 신청을 취소하고 다시 해 주세요.</div></div>` : ''}
+        <div class="hs-plans hs-rn-plans" role="radiogroup" aria-label="연장할 기간">${plans.map((x) => `<button type="button" class="hs-plan${x.months === months ? ' on' : ''}" data-m="${x.months}" role="radio" aria-checked="${x.months === months}"><b>${x.months}개월</b><small>하루 ${SP.fmt(x.day)}원 · 월 ${SP.won(x.month)}</small><span class="hs-plan-sum">${wonFull(x.amount)}</span></button>`).join('')}</div>
+        <dl class="hs-rn-sum">
+          <div><dt>새 노출 기간</dt><dd>${esc(dot(r.start))} ~ ${esc(dot(r.until))}</dd></div>
+          <div><dt>결제 금액</dt><dd>${wonFull(p.amount)} <small>(월 ${SP.won(p.month)} × ${p.months}개월)</small></dd></div>
+        </dl>
+        <div class="callout hs-pay" style="margin:14px 0 0">${icon('won')}<div><b>결제 안내</b><p class="prewrap">${payNote ? esc(payNote) : '입금 방법은 신청 뒤 운영팀이 따로 안내해 드려요.'}</p></div></div>
+        <p class="tiny faint" style="margin-top:10px">신청하면 운영팀에 알림이 가요. 입금이 확인되면 노출 기간이 위 날짜까지 늘어나고 알림으로 알려 드려요. 남은 기간이 있으면 끝나는 날 다음 날부터 이어 붙어요.</p>`;
+      go.disabled = !!wait;
+      const sel = body.querySelector('#rnSp');
+      if (sel) sel.onchange = () => { s = can.find((x) => x.code === sel.value) || s; paint(); };
+    };
+    body.addEventListener('click', (e) => { const b = e.target.closest('[data-m]'); if (!b) return; months = Number(b.dataset.m); paint(); });
+    go.onclick = async () => {
+      SP.busy(go, true, '신청하는 중');
+      try {
+        await SP.post('/api/host/renew', { code: s.code, months });
+        SP.ga('host_renew', { months });
+        m.close();
+        SP.toast('연장 신청을 보냈어요. 입금이 확인되면 알림으로 알려 드려요.');
+        await reload(); draw();
+        const hb = $('#hsBills'); if (hb) hb.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } catch (er) { SP.busy(go, false); const el = m.el.querySelector('#rnErr'); el.textContent = er.message || '신청하지 못했어요.'; el.hidden = false; }
+    };
+    paint();
   }
 
   async function posts() {
@@ -633,10 +743,10 @@
       const miss = liveMiss();
       return `<div class="hs-wz-sum">
         <div class="field"><span class="label">희망 이용 기간</span><div class="hs-plans" id="a_plans">${PLANS.map(([k, l]) => `<button type="button" class="hs-plan${d.plan === k ? ' on' : ''}" data-plan="${k}"><b>${l}</b><small>${esc(priceText(k, site) || '')}</small></button>`).join('')}<button type="button" class="hs-plan${d.plan === 'ask' ? ' on' : ''}" data-plan="ask"><b>상담 뒤 결정</b><small>운영팀과 이야기해 볼게요</small></button></div>
-          <p class="help">기간이 길수록 하루 요금이 낮아지고, 월 요금 외 수수료는 없어요. 결제는 승인 뒤 안내에 따라 해요. 노출 기간은 승인한 날부터 시작해요.</p></div>
+          <p class="help">기간이 길수록 하루 요금이 낮아지고, 월 요금 외 수수료는 없어요. 결제는 승인 뒤 안내에 따라 해요. ${site['host.live_before_pay'] === '0' ? '입금이 확인되면 손님 화면에 열리고, 노출 기간도 그날부터 시작해요.' : '노출 기간은 승인한 날부터 시작해요.'}</p></div>
         <div class="form-grid" style="margin-top:6px">
           ${ip('a_hostName', '호스트 표시 이름', d.hostName, 30, '예) 성수 호스트, OO스튜디오', 'text', '', '지점 화면에 "호스트 운영 · 이름"으로 보여요.')}
-          <div class="field"><span class="label">사업자 등록</span><div class="chips" style="margin-top:6px"><button type="button" class="chip${d.biz === 'yes' ? ' on' : ''}" data-biz="yes">사업자예요</button><button type="button" class="chip${d.biz === 'no' ? ' on' : ''}" data-biz="no">아직 없어요</button></div><p class="help">세금계산서 발행과 결제 안내에 참고해요.</p></div>
+          <div class="field"><span class="label">사업자 등록</span><div class="chips" style="margin-top:6px"><button type="button" class="chip${d.biz === 'yes' ? ' on' : ''}" data-biz="yes">사업자예요</button><button type="button" class="chip${d.biz === 'no' ? ' on' : ''}" data-biz="no">아직 없어요</button></div><p class="help">${site['host.biz_required'] === '1' ? '쏘플에 공간을 등록하려면 사업자 정보가 필요해요. 상호·대표자·사업자등록번호를 적어 주세요.' : '세금계산서 발행과 결제 안내에 참고해요.'}</p></div>
           <div class="field full" id="a_bizBox" ${d.biz === 'yes' ? '' : 'hidden'}><div id="a_biz"></div></div>
           ${ip('a_contact', '운영팀이 연락할 번호 또는 이메일', contact, 60, '010-0000-0000', 'text', 'full', '손님에게는 보이지 않고 검수·승인 안내에만 써요.')}
         </div>
@@ -650,7 +760,7 @@
           </ul>
           <div id="wzMiss">${missHtml(miss)}</div>
         </div>
-        <label class="check" style="margin-top:14px;align-items:flex-start"><input type="checkbox" id="a_agree"${d.agree ? ' checked' : ''}><span>적은 정보가 실제 공간과 같고, 손님에게 보이는 내용(주소·요금·예약 방식·전화번호·사업자 정보)을 공개하는 데 동의해요. 예약·결제·환불은 손님과 호스트 사이에서 진행되고, 등록 요금과 기간은 <a class="link" href="/host#plans" target="_blank" rel="noopener">호스트 모집</a> 기준이에요.</span></label>
+        <label class="check" style="margin-top:14px;align-items:flex-start"><input type="checkbox" id="a_agree"${d.agree ? ' checked' : ''}><span>적은 정보가 실제 공간과 같고, 손님에게 보이는 내용(주소·요금·예약 방식·전화번호·사업자 정보)을 공개하는 데 동의해요. 예약·결제·환불은 손님과 호스트 사이에서 진행되고, 등록 요금과 기간은 <a class="link" href="/host#plans" target="_blank" rel="noopener">호스트 모집</a> 기준이에요. <a class="link" href="/host-terms" target="_blank" rel="noopener">호스트 이용 안내</a>를 읽었어요.</span></label>
       </div>`;
     };
     /** 빠진 항목 — 서버(appMissing)와 같은 기준을 화면에서 바로 따져요. 6단계 칸은 입력하는 대로 반영 */
@@ -667,6 +777,10 @@
       if (!hasPrice(d)) m.push('요금 (시간제 또는 패키지)');
       if (!((d.booking || {}).ways || []).length) m.push('예약 방식 1개 이상');
       if (!d.plan) m.push('희망 이용 기간');
+      if (site['host.biz_required'] === '1') {
+        const bz = d.biz === 'yes' && eds.biz ? eds.biz.read() : d.hostBiz;
+        if (d.biz !== 'yes' || !bz || !bz.name || !bz.ceo || !bz.no) m.push('사업자 정보 (상호·대표자·사업자등록번호)');
+      }
       if (!c) m.push('운영팀 연락처');
       if (!ag) m.push('등록 안내 동의');
       return m;
@@ -706,7 +820,8 @@
       if (step === 5) eds.ways = SP.waysEditor($('#a_ways'), d.booking || {});
       if (step === 6) {
         eds.biz = SP.bizEditor($('#a_biz'), d.hostBiz || {});
-        $$('[data-biz]').forEach((b) => { b.onclick = () => { d.biz = b.dataset.biz; $$('[data-biz]').forEach((x) => x.classList.toggle('on', x === b)); $('#a_bizBox').hidden = d.biz !== 'yes'; dirty = true; }; });
+        $$('[data-biz]').forEach((b) => { b.onclick = () => { d.biz = b.dataset.biz; $$('[data-biz]').forEach((x) => x.classList.toggle('on', x === b)); $('#a_bizBox').hidden = d.biz !== 'yes'; dirty = true; refreshMiss(); }; });
+        $('#a_biz').addEventListener('input', refreshMiss);
         $$('[data-plan]').forEach((b) => { b.onclick = () => { d.plan = b.dataset.plan; $$('[data-plan]').forEach((x) => x.classList.toggle('on', x === b)); dirty = true; refreshMiss(); }; });
         $('#a_contact').addEventListener('input', refreshMiss);
         $('#a_agree').addEventListener('change', refreshMiss);

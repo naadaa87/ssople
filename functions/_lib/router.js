@@ -17,6 +17,7 @@ import * as seasons from './seasons.js';
 import * as seasonPlan from './season-plan.js';
 import * as live from './live.js';
 import * as hostcenter from './hostcenter.js';
+import * as bills from './bills.js';
 
 const ROUTES = [];
 function route(method, path, fn) {
@@ -49,6 +50,7 @@ seasonPlan.register(route);
 live.register(route);
 live.registerAdmin(route);
 hostcenter.register(route);
+bills.register(route);
 
 // sendBeacon(클릭 기록)과 토큰 인증(수신 API)은 사용자 지정 헤더를 붙일 수 없어 예외
 const NO_CSRF = new Set(['/api/click', '/api/sync/push', '/api/sync/run']);
@@ -72,6 +74,8 @@ export async function handle(context) {
       await ensureSchema(c.env);
     }
     if (Math.random() < 0.02) c.wait(housekeep(c.db).catch((e) => console.error('정리 작업 실패', e && e.message)));
+    // 호스트 노출 기간 알림 — 하루 한 번 (날짜가 바뀐 뒤 처음 걸린 요청 하나만 실제로 돈다)
+    if (Math.random() < 0.05) c.wait(bills.hostDaily(c.db).catch((e) => console.error('호스트 알림 작업 실패', e && e.message)));
     for (const r of ROUTES) {
       if (r.method !== method) continue;
       const m = path.match(r.re);

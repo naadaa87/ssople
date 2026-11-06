@@ -189,6 +189,9 @@ export function register(route) {
       c.db.prepare(`UPDATE meetup_members SET status = 'left' WHERE uid = ? AND role != 'owner'`).bind(u.id),
       c.db.prepare(`UPDATE crew_apps SET status = 'canceled' WHERE uid = ? AND status IN ('pending','accepted')`).bind(u.id),
       c.db.prepare(`UPDATE event_rsvps SET status = 'canceled' WHERE uid = ? AND status IN ('going','wait')`).bind(u.id),
+      // 호스트 — 승인되지 않은 공간 등록 신청서·지점 연결 요청은 지우고, 승인된 신청서의 운영팀 연락처도 지운다 (개인정보처리방침 3번)
+      c.db.prepare(`DELETE FROM space_apps WHERE uid = ? AND status != 'approved'`).bind(u.id),
+      c.db.prepare('UPDATE space_apps SET contact = NULL WHERE uid = ?').bind(u.id),
     ]);
     await c.endSession();
     return { ok: true };

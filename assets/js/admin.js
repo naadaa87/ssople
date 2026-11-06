@@ -21,6 +21,7 @@
     ['data', '데이터 연결', 'refresh'],
     ['spaces', '지점 관리', 'building'],
     ['apps', '공간 등록 신청', 'flag'],
+    ['bills', '결제 · 연장', 'won'],
     ['g', '같이 놀기'],
     ['events', '행사', 'ticket'],
     ['community', '커뮤니티 · 신고', 'chat'],
@@ -63,7 +64,7 @@
 
   /* ---------------- 들어가기 · 메뉴 ---------------- */
   function drawNav() {
-    const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue, live: COUNTS.liveRequests, apps: COUNTS.apps };
+    const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue, live: COUNTS.liveRequests, apps: COUNTS.apps, bills: COUNTS.bills };
     const cur = (location.hash.slice(1) || 'overview');
     $('#admNav').innerHTML = NAV.map((n) => (n[0] === 'g' ? `<div class="grp">${n[1]}</div>`
       : `<button type="button" data-v="${n[0]}" class="${n[0] === cur ? 'on' : ''}">${icon(n[2])}<span>${n[1]}</span>${cnt[n[0]] ? `<span class="cnt">${cnt[n[0]] > 99 ? '99+' : cnt[n[0]]}</span>` : ''}</button>`)).join('');
@@ -128,7 +129,8 @@
       ['community', '처리할 신고', c.reports, '신고가 쌓인 글·모임'],
       ['inquiries', '새 문의', c.inquiries, '제휴·단체·입점 상담'],
       ['apps', '검수할 공간 등록 · 지점 연결', c.apps || 0, '호스트가 직접 보낸 신청'],
-      ['spaces', '노출 기간 끝나 가는 호스트 지점', c.expiring || 0, '14일 안에 끝나거나 지난 곳 · 연장 안내'],
+      ['bills', '입금 확인할 등록 요금 · 연장', c.bills || 0, '호스트가 보낸 연장 신청과 첫 등록 요금'],
+      ['bills', '노출 기간 끝나 가는 호스트 지점', c.expiring || 0, '14일 안에 끝나거나 지난 곳 · 연장 안내'],
       ['events', '승인 기다리는 행사', c.eventsPending, '회원이 제안한 행사'],
       ['visits', '확인할 방문 인증', c.visitsPending, '예약번호 대조가 필요해요'],
     ];
@@ -1263,7 +1265,7 @@ async function run(env) {
       isAdmin() ? `<button class="btn btn-line btn-sm" type="button" data-imweb>${icon('download', 'sm')}아임웹 사진 가져오기</button><button class="btn btn-red btn-sm" type="button" data-new>${icon('plus', 'sm')}새 지점</button>` : '')
       + `<div class="a-tools"><input class="input" id="spQ" placeholder="지점 이름·코드로 찾기" value="${esc(SPF.q)}"><select class="select" id="spRegion"><option value="">모든 권역</option>${regions.map((r) => `<option${r === SPF.region ? ' selected' : ''}>${esc(r)}</option>`).join('')}</select><span class="small muted">${rows.length}곳 · 공개 ${list.filter((s) => s.visible && !s.closed).length}곳</span>${nClosed ? `<label class="check small"><input type="checkbox" id="spClosed"${SPF.closed ? ' checked' : ''}><span>영업 종료 ${nClosed}곳도 보기</span></label>` : ''}</div>
       <div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>지점</th><th>권역 · 동네</th><th class="r">인원</th><th>패키지</th><th class="r">사진</th><th>네이버</th><th>공개</th><th></th></tr></thead><tbody>
-      ${rows.map((s) => `<tr${s.closed ? ' style="opacity:.55"' : ''}><td><b>${esc(s.name)}</b>${s.closed ? ' ' + B('mute', `영업 종료 ${Number(s.closed.slice(5, 7))}.${Number(s.closed.slice(8, 10))}`) : ''}${s.hostPaused ? ' ' + B('warn', '잠시 쉼') : ''}${s.listing && s.listing.type === 'host' && s.listing.until ? ' ' + (s.listing.until < SP.today() ? B('red', '노출 기간 지남') : SP.dayDiff(SP.today(), s.listing.until) <= 14 ? B('warn', '노출 ' + SP.dayDiff(SP.today(), s.listing.until) + '일 남음') : '') : ''}<span class="sub mono">${esc(s.code)}${s.listing && s.listing.type === 'host' ? ' · 호스트 운영' + (s.listing.until ? ' ~' + esc(s.listing.until) : '') : ''}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
+      ${rows.map((s) => `<tr${s.closed ? ' style="opacity:.55"' : ''}><td><b>${esc(s.name)}</b>${s.closed ? ' ' + B('mute', `영업 종료 ${Number(s.closed.slice(5, 7))}.${Number(s.closed.slice(8, 10))}`) : ''}${s.hostPaused ? ' ' + B('warn', '잠시 쉼') : ''}${s.listing && s.listing.payWait ? ' ' + B('warn', '입금 대기 · 숨김') : ''}${s.listing && s.listing.type === 'host' && s.listing.until ? ' ' + (s.listing.until < SP.today() ? B('red', '노출 기간 지남') : SP.dayDiff(SP.today(), s.listing.until) <= 14 ? B('warn', '노출 ' + SP.dayDiff(SP.today(), s.listing.until) + '일 남음') : '') : ''}<span class="sub mono">${esc(s.code)}${s.listing && s.listing.type === 'host' ? ' · 호스트 운영' + (s.listing.until ? ' ~' + esc(s.listing.until) : '') : ''}</span></td><td>${esc(s.region)} ${esc(s.area)}</td><td class="r nw">${s.base || '-'} / ${s.max || '-'}명</td>
         <td>${(s.pkgs || []).map((p) => `<span class="tag">${esc(p.label || PKG[p.k] || p.k)}</span>`).join(' ') || '<span class="red small">없음</span>'}</td><td class="r">${(s.photos || []).length}</td>
         <td>${(s.pkgs || []).length && (s.pkgs || []).every((p) => p.url) ? B('ok', '상품별 연결') : (s.pkgs || []).some((p) => p.url) || s.book ? B('ok', '예약 연결') : B('warn', '주소 없음')}</td>
         <td><label class="switch"><input type="checkbox" data-vis="${s.code}"${s.visible && !s.closed ? ' checked' : ''}${s.closed ? ' disabled' : ''} aria-label="${esc(s.name)} 공개"></label></td>
@@ -1408,6 +1410,7 @@ async function run(env) {
         <div class="field"><label class="label" for="e_ltype">운영 방식</label><select class="select" id="e_ltype">${[['managed', '쏘플 위탁운영'], ['host', '호스트 운영 (공간 등록)'], ['direct', '쏘플 직영']].map(([k, l]) => `<option value="${k}"${(s.listing && s.listing.type) === k || (!s.listing && k === 'managed') ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
         <div class="field"><label class="label" for="e_lzone">노출 존</label><select class="select" id="e_lzone">${[['', '없음'], ['plus', '플러스존'], ['premium', '프리미엄존']].map(([k, l]) => `<option value="${k}"${(s.listing && s.listing.zone || '') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
         ${ip('e_luntil', '노출 끝 날짜 (결제 기간 끝)', s.listing && s.listing.until, 0, '', 'date')}${ip('e_lhost', '호스트 표시 이름 (선택)', s.listing && s.listing.hostName, 30, '예) 건대 호스트 김OO')}
+        ${s.listing && s.listing.type === 'host' ? `<div class="field full"><label class="switch"><input type="checkbox" id="e_lpay"${s.listing.payWait ? ' checked' : ''}><span>입금 확인 전이라 손님 화면에서 숨기기</span></label><p class="help">「결제 · 연장」에서 입금 확인을 누르면 저절로 꺼져요. 요금을 받지 않기로 했다면 여기서 꺼 주세요.</p></div>` : ''}
       </div></div>
       <div data-p="pkg" hidden><p class="a-note" style="margin-bottom:10px">요금은 네이버 예약 화면과 같게 맞춰 주세요. 끝 시각이 시작보다 이르면 다음 날로 계산해요. 칸을 비우면 그 요일엔 팔지 않는 걸로 보여요.</p><div class="pkg-ed" id="pkgEd"></div>
         <button class="btn btn-soft btn-sm" type="button" id="pkgAdd" style="margin-top:10px">${icon('plus', 'sm')}패키지 추가</button></div>
@@ -1577,7 +1580,7 @@ async function run(env) {
         place: P('e_place').value.trim(), book: P('e_book').value.trim(), tags: list(P('e_tags').value), aliases: list(P('e_aliases').value), intro: P('e_intro').value.trim(), notice: P('e_notice').value.trim(),
         detail: P('e_detail').value.trim(), care: P('e_care').value.trim(), facs: P('e_facs').value.trim(), kw: list(P('e_kw').value),
         visible: P('e_visible').checked, sort: P('e_sort').value, closed: P('e_closed').checked ? (s.closed || SP.today()) : '',
-        listing: { type: P('e_ltype').value, zone: P('e_lzone').value, until: P('e_luntil').value, hostName: P('e_lhost').value.trim() },
+        listing: { type: P('e_ltype').value, zone: P('e_lzone').value, until: P('e_luntil').value, hostName: P('e_lhost').value.trim(), ...(P('e_lpay') ? { payWait: P('e_lpay').checked } : {}) },
         pkgs: pkgs.map((p) => ({ k: p.k, label: p.label, s: p.s, e: p.e, p: p.p, url: p.url })),
         feat: {
           karaoke: { on: P('ft_karaoke').checked, note: P('fn_karaoke').value.trim() }, bbq: { on: P('ft_bbq').checked, note: P('fn_bbq').value.trim() }, pet: { on: P('ft_pet').checked, note: P('fn_pet').value.trim() },
@@ -1872,8 +1875,10 @@ async function run(env) {
   const ROLEK = { owner: '대표 · 점주', manager: '매니저', staff: '직원' };
   /** 승인일부터 N개월 노출 — 마지막 날 (서버 untilAfter 와 같은 규칙) */
   const untilAfter = (from, months) => { const [y, mo, d] = from.split('-').map(Number); const t = new Date(Date.UTC(y, mo - 1 + months, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(d, last)); return SP.addDays(t.toISOString().slice(0, 10), -1); };
+  const ST_HOST = { livePay: '1' };
   async function apps() {
     if (AP.status === 'edits') return hostEdits();
+    try { const st = (await SP.site()).settings || {}; ST_HOST.livePay = st['host.live_before_pay'] === '0' ? '0' : '1'; } catch { /* 기본값 */ }
     const d = await SP.get('/api/admin/apps?status=' + AP.status);
     main.innerHTML = hd('공간 등록 신청', '호스트가 호스트센터에서 직접 보낸 「새 공간 등록 신청」과 「운영 중인 지점 연결 요청」이에요. 승인하면 지점이 만들어지거나 회원 계정에 지점이 연결돼요. 승인은 대표 관리자만 할 수 있어요.')
       + `<div class="a-tools">${seg('apSt', [['submitted', '검수 중'], ['rejected', '보완 요청'], ['approved', '승인'], ['draft', '작성 중'], ['all', '전체'], ['edits', '호스트 변경 기록']], AP.status)}</div>
@@ -1958,9 +1963,10 @@ async function run(env) {
         </dl>
         <div class="field" style="margin-top:14px"><label class="label" for="apMemo">운영팀 메모 (호스트에게 안 보여요)</label><textarea class="textarea" id="apMemo" maxlength="1000" style="min-height:60px">${esc(a.memo || '')}</textarea></div>
         ${canDecide ? `<div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">보완 요청 (반려)</h3><div class="field"><textarea class="textarea" id="apNote" maxlength="600" style="min-height:70px" placeholder="예) 사진을 5장 이상 올려 주세요. 주소에 건물명을 넣어 주세요.">${esc(a.status === 'rejected' ? a.note || '' : '')}</textarea></div><button class="btn btn-line btn-sm" type="button" id="apReject">보완 요청 보내기</button></div>
-        <div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">승인</h3><p class="a-note" style="margin:4px 0 10px">지점 코드가 새로 만들어지고 운영 방식은 「호스트 운영」, 호스트 계정에 지점이 연결돼요(권한이 회원이면 호스트로 바뀌어요). 노출 끝 날짜를 비우면 호스트가 고른 기간(${esc(PLANK[x.plan] || '없음')})으로 오늘부터 계산해요${autoUntil ? ` → ${autoUntil}` : ''}. 결제는 설정의 「결제 · 연장 안내」 문구로 안내돼요.</p>
+        <div class="a-card" style="margin-top:12px;padding:14px"><h3 class="h4">승인</h3><p class="a-note" style="margin:4px 0 10px">지점 코드가 새로 만들어지고 운영 방식은 「호스트 운영」, 호스트 계정에 지점이 연결돼요(권한이 회원이면 호스트로 바뀌어요). 노출 끝 날짜를 비우면 호스트가 고른 기간(${esc(PLANK[x.plan] || '없음')})으로 오늘부터 계산해요${autoUntil ? ` → ${autoUntil}` : ''}. 결제는 설정의 「결제 · 연장 안내」 문구로 안내돼요.${autoUntil ? ` 고른 기간의 등록 요금이 「결제 · 연장」에 입금 대기로 올라가요${ST_HOST.livePay === '0' ? '. 설정이 「입금 확인 뒤 공개」라서 입금을 확인할 때까지 손님 화면에 안 보이고, 노출 기간은 입금 확인한 날부터 다시 계산돼요' : ''}.` : ''}</p>
           <div class="form-grid">${ip('apName', '지점 이름 (바꾸려면)', x.name, 40)}${ip('apArea', '동네 (바꾸려면)', x.area, 20)}${ip('apUntil', '노출 끝 날짜 (비우면 이용 기간으로 자동)', '', 0, '', 'date')}
-          <div class="field"><span class="label">공개</span><label class="switch"><input type="checkbox" id="apVisible" checked><span>승인하자마자 손님 화면에 보여요 (끄면 비공개로 만들고 나중에 지점 관리에서 공개)</span></label></div></div>
+          <div class="field"><span class="label">공개</span><label class="switch"><input type="checkbox" id="apVisible" checked><span>승인하자마자 손님 화면에 보여요 (끄면 비공개로 만들고 나중에 지점 관리에서 공개)</span></label></div>
+          ${autoUntil ? '<div class="field"><span class="label">등록 요금</span><label class="switch"><input type="checkbox" id="apBill" checked><span>고른 기간으로 「입금 대기」 결제 내역 만들기 (무료 체험처럼 요금을 받지 않으면 끄세요)</span></label></div>' : ''}</div>
           ${isAdmin() ? '<button class="btn btn-red" type="button" id="apApprove" style="margin-top:10px">승인하고 지점 만들기</button>' : '<p class="a-note">승인은 대표 관리자만 할 수 있어요.</p>'}</div>` : ''}
         <div class="form-err" id="apErr" hidden></div>`,
       foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-ink" type="button" id="apMemoGo">메모 저장</button>',
@@ -1975,10 +1981,70 @@ async function run(env) {
       if (!(await SP.confirm(`「${m.$('#apName').value.trim() || x.name}」 지점을 만들고 ${a.nick} 님 계정에 연결할까요?`, { ok: '승인' }))) return;
       SP.busy(ap, true, '만드는 중');
       try {
-        const r = await SP.post(`/api/admin/apps/${a.id}/approve`, { name: m.$('#apName').value.trim(), area: m.$('#apArea').value.trim(), until: m.$('#apUntil').value, visible: m.$('#apVisible').checked });
+        const bill = m.$('#apBill');
+        const r = await SP.post(`/api/admin/apps/${a.id}/approve`, { name: m.$('#apName').value.trim(), area: m.$('#apArea').value.trim(), until: m.$('#apUntil').value, visible: m.$('#apVisible').checked, bill: bill ? bill.checked : false });
         await SP.post('/api/admin/apps/' + a.id, { memo: m.$('#apMemo').value.trim() });
-        m.close(); SP.toast(`승인했어요. 지점 코드 ${r.code}${r.until ? ` · 노출 ${r.until}까지` : ''}`); SPACES = null; refreshCounts(); apps();
+        m.close(); SP.toast(`승인했어요. 지점 코드 ${r.code}${r.until ? ` · 노출 ${r.until}까지` : ''}${r.bill ? ' · 등록 요금 입금 대기' : ''}${r.payWait ? ' (입금 확인 뒤 공개)' : ''}`); SPACES = null; refreshCounts(); apps();
       } catch (er) { SP.busy(ap, false); err(er); }
+    };
+  }
+
+  /* ================= 결제 · 연장 ================= */
+  const BL = { status: 'wait' };
+  const BLST = { wait: ['warn', '입금 대기'], paid: ['ok', '입금 확인'], cancel: ['mute', '취소'] };
+  async function billsView() {
+    const d = await SP.get('/api/admin/bills?status=' + BL.status);
+    const n = d.counts || {};
+    const wonF = (v) => (v == null ? '-' : SP.fmt(v) + '원');
+    const dot = (v) => String(v || '').replace(/-/g, '.');
+    main.innerHTML = hd('결제 · 연장', '호스트 등록 공간의 등록 요금과 노출 기간 연장 신청이에요. 통장에서 입금을 확인한 뒤 「입금 확인」을 누르면 노출 기간이 늘어나고 호스트에게 알림이 가요. 입금 확인과 취소는 운영진 누구나 할 수 있어요.')
+      + `<div class="a-tools">${seg('blSt', [['wait', `입금 대기 ${n.wait || 0}`], ['paid', `입금 확인 ${n.paid || 0}`], ['cancel', `취소 ${n.cancel || 0}`], ['all', '전체']], BL.status)}</div>
+      <div class="a-card"><table class="a-tbl"><thead><tr><th>상태</th><th>지점</th><th>종류 · 기간</th><th class="r">금액</th><th>노출 기간</th><th>신청 · 확인</th><th></th></tr></thead><tbody>
+      ${d.bills.map((b) => `<tr><td>${B(BLST[b.status][0], BLST[b.status][1])}</td>
+        <td><b>${esc(b.spaceName)}</b><span class="sub mono">${esc(b.code)}${b.nick ? ' · ' + esc(b.nick) : ''}</span></td>
+        <td>${b.kind === 'renew' ? '기간 연장' : '첫 등록'} · ${esc(b.months)}개월</td>
+        <td class="r nw"><b>${wonF(b.amount)}</b></td>
+        <td class="nw">${b.start ? esc(dot(b.start)) + ' ~ ' + esc(dot(b.until)) : '-'}</td>
+        <td class="nw">${when(b.at)}${b.paidAt ? `<span class="sub">확인 ${when(b.paidAt)}</span>` : ''}${b.memo ? `<span class="sub">${esc(b.memo)}</span>` : ''}</td>
+        <td class="nw">${b.status === 'wait' ? `<button class="btn btn-red btn-sm" type="button" data-bpaid="${b.id}">입금 확인</button> <button class="btn btn-ghost btn-sm" type="button" data-bcancel="${b.id}">취소</button>` : ''}</td></tr>`).join('') || emptyRow(7, BL.status === 'wait' ? '입금을 기다리는 내역이 없어요.' : '내역이 없어요.')}</tbody></table></div>
+      <div class="a-card" style="margin-top:14px"><div class="a-card-hd"><h2>노출 기간이 끝나 가는 호스트 지점</h2><span class="small muted">30일 안에 끝나거나 이미 끝난 곳</span></div>
+        <table class="a-tbl"><thead><tr><th>지점</th><th>노출 끝</th><th>남은 날</th><th>연장 신청</th></tr></thead><tbody>
+        ${(d.ending || []).map((x) => { const w = d.bills.find((b) => b.code === x.code && b.status === 'wait' && b.kind === 'renew'); return `<tr><td><b>${esc(x.name)}</b><span class="sub mono">${esc(x.code)}</span></td><td class="nw">${esc(dot(x.until))}</td><td>${x.left < 0 ? B('red', `${-x.left}일 지남`) : x.left <= 3 ? B('red', x.left === 0 ? '오늘' : `${x.left}일`) : x.left <= 14 ? B('warn', `${x.left}일`) : `${x.left}일`}</td><td>${w ? B('warn', `${w.months}개월 신청 · 입금 대기`) : x.payWait ? B('warn', '첫 입금 대기') : '<span class="small muted">아직 없음</span>'}</td></tr>`; }).join('') || emptyRow(4, '30일 안에 끝나는 호스트 지점이 없어요.')}</tbody></table>
+        <p class="a-note" style="margin-top:10px">호스트에게는 끝나기 14일 전 · 3일 전 · 끝난 날에 알림이 자동으로 가요. 끝난 뒤 손님 화면에서 내릴지는 설정 → 호스트 정식 운영에서 정해요. 끝 날짜를 직접 바꾸려면 지점 관리 → 고치기 → 기본에서 「노출 끝 날짜」를 고쳐요.</p></div>`;
+    onSeg(main, 'blSt', (v) => { BL.status = v; billsView(); });
+    main.onclick = async (e) => {
+      const pd = e.target.closest('[data-bpaid]');
+      if (pd) {
+        const b = d.bills.find((x) => String(x.id) === pd.dataset.bpaid); if (!b) return;
+        const m = SP.modal({
+          title: '입금 확인',
+          body: `<p><b>${esc(b.spaceName)}</b> · ${b.kind === 'renew' ? '기간 연장' : '첫 등록'} ${esc(b.months)}개월 · <b>${wonF(b.amount)}</b></p>
+            <p class="small muted" style="margin-top:6px">확인하면 노출 기간이 ${b.start ? esc(dot(b.until)) + '까지' : '고른 기간만큼'} 늘어나고 호스트에게 알림이 가요. 입금 확인 전이라 숨겨 둔 공간이면 손님 화면에 열려요.</p>
+            <div class="field" style="margin-top:12px"><label class="label" for="bpMemo">메모 (선택 · 호스트에게 안 보여요)</label><input class="input" id="bpMemo" maxlength="200" placeholder="예) 입금자 홍길동 · 11/06 국민은행" value="${esc(b.memo || '')}"></div><div class="form-err" id="bpErr" hidden></div>`,
+          foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="bpGo">입금 확인</button>',
+        });
+        m.$('#bpGo').onclick = async () => {
+          const go = m.$('#bpGo'); SP.busy(go, true, '확인하는 중');
+          try { const r = await SP.post(`/api/admin/bills/${b.id}/paid`, { memo: m.$('#bpMemo').value.trim() }); m.close(); SP.toast(`입금을 확인했어요. 노출 ${r.until || '-'}까지`); SPACES = null; refreshCounts(); billsView(); }
+          catch (er) { SP.busy(go, false); const el = m.$('#bpErr'); el.textContent = er.message; el.hidden = false; }
+        };
+        return;
+      }
+      const cc = e.target.closest('[data-bcancel]');
+      if (cc) {
+        const b = d.bills.find((x) => String(x.id) === cc.dataset.bcancel); if (!b) return;
+        const m = SP.modal({
+          title: '결제 내역 취소',
+          body: `<p><b>${esc(b.spaceName)}</b> · ${b.kind === 'renew' ? '기간 연장' : '첫 등록'} ${esc(b.months)}개월</p>
+            <div class="field" style="margin-top:12px"><label class="label" for="bcMemo">취소 사유 (호스트에게 알림으로 가요)</label><input class="input" id="bcMemo" maxlength="200" placeholder="예) 기간을 6개월로 바꿔 다시 신청하기로 했어요"></div>
+            <p class="a-note" style="margin-top:8px">첫 등록 요금을 취소해도 「입금 확인 전 숨김」은 그대로예요. 요금을 받지 않고 공개하려면 지점 관리 → 고치기에서 그 표시를 꺼 주세요.</p><div class="form-err" id="bcErr" hidden></div>`,
+          foot: '<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-line" type="button" id="bcGo">취소하기</button>',
+        });
+        m.$('#bcGo').onclick = async () => {
+          try { await SP.post(`/api/admin/bills/${b.id}/cancel`, { memo: m.$('#bcMemo').value.trim() }); m.close(); SP.toast('취소했어요. 호스트에게 알림이 갔어요.'); refreshCounts(); billsView(); }
+          catch (er) { const el = m.$('#bcErr'); el.textContent = er.message; el.hidden = false; }
+        };
+      }
     };
   }
 
@@ -2151,7 +2217,12 @@ async function run(env) {
         + I('link.host', '호스트 센터 주소', 'https://host.jssystems.kr', '비워 두면 바닥글에서 숨겨요. 지금은 호스트 센터를 쓰지 않으니 비워 두세요.') + I('link.play', '쏘플 파티게임(폰 연결 버전) 주소', '', '배포한 ssople-play 주소(https://…)를 넣으면 파티게임 화면에 \'객실 TV로 방 열기\' 버튼과 놀이터 연결 카드가 보여요. 아직 없으면 비워 두세요.') + I('link.live', '온라인 파티룸 주소', '/live', '비워 두면 홈페이지 안의 온라인 파티룸(/live)으로 연결돼요. 실시간 서버 주소는 「온라인 파티룸」 메뉴에서 넣어요.'))
       + sec('SNS', I('sns.instagram', '인스타그램', 'https://instagram.com/...') + I('sns.blog', '블로그', 'https://blog.naver.com/...') + I('sns.youtube', '유튜브', 'https://youtube.com/...'), '적어 두면 검색엔진에 공식 채널로 같이 알려져요.')
       + sec('호스트 프로그램', `<div class="field full"><span class="label">공간 등록 신청</span><label class="switch"><input type="checkbox" id="st_host.apply_open" data-key="host.apply_open" data-bool${s['host.apply_open'] !== '0' ? ' checked' : ''}><span>호스트센터에서 새 공간 등록 신청 받기 (끄면 「새 공간 등록」 버튼이 잠겨요)</span></label></div>` + T('host.pay_note', '승인된 호스트에게 보이는 결제 · 연장 안내', '예) 승인 뒤 3일 안에 아래 계좌로 입금해 주세요. 입금 확인 뒤 세금계산서를 보내 드려요.\n연장은 노출 끝나기 7일 전까지 카카오톡 채널로 알려 주세요.', '내 공간 관리 맨 위에 승인된 호스트에게만 보여요(손님·일반 회원에게는 안 보여요). 입금 계좌, 결제 기한, 세금계산서, 연장 방법을 적어 두세요.') + I('host.price1', '공간 등록 1개월 — 월 요금 (원)', '150000', '', 'number') + I('host.price3', '공간 등록 3개월 — 월 요금 (원)', '135000', '', 'number') + I('host.price6', '공간 등록 6개월 — 월 요금 (원)', '120000', '', 'number') + I('host.price12', '공간 등록 12개월 — 월 요금 (원)', '100000', '', 'number') + I('host.managed_fee', '위탁운영 수수료 (매출의 %)', '20', '결제 수수료를 포함한 비율이에요.', 'number'), '호스트 모집 화면의 공간 등록 요금표와 첫 화면·창업안내의 요금 문구에 그대로 보여요. 하루 요금은 월 요금을 30일로 나눠 100원 단위로 내려서 보여 줘요 (월 10만원 → 하루 3,300원).')
-      + sec('호스트센터 공용 로그인', `<div class="field"><span class="label">공용 로그인</span><label class="switch"><input type="checkbox" id="st_hc.open" data-key="hc.open" data-bool${s['hc.open'] !== '0' ? ' checked' : ''}><span>공용 아이디로 들어가기 허용</span></label></div>` + I('hc.id', '공용 아이디', '1234') + I('hc.pw', '공용 비밀번호', '1234', '바꾸면 예전 비밀번호로 들어와 있던 사람은 다시 로그인해야 해요.'), '호스트·점주 안내 화면 <a class="link" href="/hostcenter" target="_blank" rel="noopener">ssople.com/hostcenter</a>에 들어갈 때 쓰는 공용 아이디예요. 공용 아이디로는 안내만 볼 수 있고 지점 정보는 고칠 수 없어요. 호스트 권한이 있는 회원과 관리자는 이 아이디 없이 바로 들어가요.')
+      + sec('호스트 정식 운영', `<div class="field full"><span class="label">입금 전 노출</span><label class="switch"><input type="checkbox" id="st_host.live_before_pay" data-key="host.live_before_pay" data-bool${s['host.live_before_pay'] !== '0' ? ' checked' : ''}><span>승인하면 입금 확인 전에도 손님 화면에 바로 보이기 (끄면 「결제 · 연장」에서 입금 확인을 눌러야 공개되고, 노출 기간도 그날부터 시작해요)</span></label></div>`
+        + `<div class="field full"><span class="label">노출 기간이 끝나면</span><label class="switch"><input type="checkbox" id="st_host.expire_hide" data-key="host.expire_hide" data-bool${s['host.expire_hide'] === '1' ? ' checked' : ''}><span>유예일이 지나면 손님 화면에서 자동으로 내리기 (끄면 알림만 가고 계속 보여요)</span></label></div>`
+        + I('host.expire_grace', '끝난 뒤 유예일 (일)', '7', '0~60일. 예) 7이면 노출 끝 날짜 7일 뒤까지는 보이고 그다음 날 내려가요. 연장 입금을 확인하면 바로 다시 보여요.', 'number')
+        + `<div class="field full"><span class="label">사업자 정보</span><label class="switch"><input type="checkbox" id="st_host.biz_required" data-key="host.biz_required" data-bool${s['host.biz_required'] === '1' ? ' checked' : ''}><span>공간 등록 신청에 사업자 정보(상호 · 대표자 · 사업자등록번호)를 꼭 받기</span></label></div>`, '호스트에게는 노출 끝나기 14일 전 · 3일 전 · 끝난 날에 알림이 자동으로 가고, 연장은 내 공간 관리의 「기간 연장」으로 신청받아요. 기준은 <a class="link" href="/host-terms" target="_blank" rel="noopener">호스트 이용 안내</a>에도 그대로 보여요.')
+      + (s['hc.open'] !== '0' && s['hc.id'] === '1234' && s['hc.pw'] === '1234' ? '<div class="callout red small" style="margin:0 0 14px"><div><b>호스트센터 공용 아이디가 1234 / 1234 그대로 켜져 있어요.</b><br>이제 쏘플 회원이면 누구나 로그인만으로 호스트센터를 볼 수 있어요. 정식 오픈 전에 아래 「공용 로그인」을 끄거나 아이디·비밀번호를 바꿔 주세요.</div></div>' : '')
+      + sec('호스트센터 공용 로그인', `<div class="field"><span class="label">공용 로그인</span><label class="switch"><input type="checkbox" id="st_hc.open" data-key="hc.open" data-bool${s['hc.open'] !== '0' ? ' checked' : ''}><span>공용 아이디로 들어가기 허용</span></label></div>` + I('hc.id', '공용 아이디', '1234') + I('hc.pw', '공용 비밀번호', '1234', '바꾸면 예전 비밀번호로 들어와 있던 사람은 다시 로그인해야 해요.'), '호스트·점주 안내 화면 <a class="link" href="/hostcenter" target="_blank" rel="noopener">ssople.com/hostcenter</a>에 들어갈 때 쓰는 공용 아이디예요. 공용 아이디로는 안내만 볼 수 있고 지점 정보는 고칠 수 없어요. 쏘플 회원과 관리자는 로그인만 하면 이 아이디 없이 바로 들어가요. 쓰지 않으면 꺼 두세요.')
       + sec('검색 등록 (소유 확인)', I('seo.canonical_host', '대표 주소 (도메인)', '비워 두세요 — 자동으로 ssople.com', '비워 두면 돼요. ssople.com 을 Cloudflare Pages(ssople)의 사용자 지정 도메인으로 연결하면, ssople.com 으로 처음 들어온 순간부터 자동으로 대표 주소가 ssople.com 이 돼요. 그때부터 ssople.pages.dev·www.ssople.com 접속은 ssople.com 으로 넘어가고, 정식 주소·사이트맵·RSS도 ssople.com 기준이 돼요. 연결에 문제가 생겨 되돌려야 하면 여기에 ssople.pages.dev 를 적고 저장하세요.', 'text', true) + I('seo.naver_verify', '네이버 서치어드바이저 확인 코드', '비워 두세요 — 기본 코드가 이미 들어가 있어요', 'https://ssople.com 의 네이버 확인 코드(2b4906…)는 홈페이지에 이미 넣어 뒀어요. 확인 파일(naverbbbed…html)도 함께 준비돼 있어요. 네이버에서 다른 코드를 새로 받았을 때만 "HTML 태그"의 content 값을 붙여 넣으세요.') + I('seo.google_verify', '구글 서치 콘솔 확인 코드', '예) AbCdEf...', 'search.google.com/search-console → 속성 추가(URL 접두어) → "HTML 태그" 방식의 content 값만.') + I('seo.bing_verify', '빙 웹마스터 확인 코드 (선택)', '', '안 쓰면 비워 두세요.') + I('seo.ga4_id', '구글 애널리틱스(GA4) 측정 ID (선택)', 'G-XXXXXXXXXX', 'analytics.google.com → 관리 → 데이터 스트림 → 웹에서 보이는 G-로 시작하는 값. 넣으면 방문 통계와 네이버 예약·지도·카카오톡 버튼 클릭이 GA4에 이벤트로 쌓여요. 개인정보처리방침의 쿠키 안내도 자동으로 GA 사용 문구로 바뀌어요. 비우면 GA를 쓰지 않아요.'), '저장하면 홈페이지 머리 부분에 확인용 태그가 들어가요. 그다음 각 서비스에서 "소유 확인"을 누르면 돼요. 사이트맵 주소는 /sitemap.xml, RSS 주소는 /rss.xml 이에요.')
       + sec('사업자 정보', I('biz.name', '상호', '브이픽서(주)') + I('biz.role', '회사 설명 (상호 옆 한 줄)', '쏘플파티룸 브랜드 플랫폼', '바닥글과 회사 정보에 상호 옆에 붙어요. 비우면 상호만 보여요.') + I('biz.ceo', '대표자', '') + I('biz.no', '사업자등록번호', '000-00-00000') + I('biz.mailorder', '통신판매업 신고번호', '', '신고했다면 적어 주세요.') + I('biz.addr', '사업장 주소', '', '', 'text', true) + I('biz.email', '대표 이메일') + I('biz.privacy_officer', '개인정보 보호책임자', '', '개인정보처리방침에 이름이 들어가요.'), '바닥글, 브랜드 이야기의 회사 정보, 이용약관, 개인정보처리방침에 그대로 들어가요.')
       + sec('함께 표시하는 회사', I('biz2.name', '상호', '제이에스시스템즈(주)', '비우면 바닥글과 회사 정보에서 빠져요.') + I('biz2.role', '회사 설명 (상호 옆 한 줄)', '고객관리 및 예약시스템 운영전문기업') + I('biz2.ceo', '대표자', '') + I('biz2.no', '사업자등록번호', '000-00-00000') + I('biz2.email', '이메일') + I('biz2.addr', '사업장 주소', '', '', 'text', true), '바닥글과 회사 정보에 운영 회사 다음 줄로 보여요.')
@@ -2186,6 +2257,6 @@ async function run(env) {
     };
   }
 
-  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, events, community, groups, live, users, visits, inquiries, partners, settings };
+  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, bills: billsView, events, community, groups, live, users, visits, inquiries, partners, settings };
   boot();
 })();

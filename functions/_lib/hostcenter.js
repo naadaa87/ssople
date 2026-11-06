@@ -1,6 +1,6 @@
 // 쏘플파티룸 호스트센터 — 호스트·점주 안내 화면(/hostcenter)의 출입 확인
-//  · 호스트 권한(연결된 지점)이 있는 회원, 관리자는 바로 들어온다
-//  · 아직 계정이 없는 호스트를 위해 공용 아이디·비밀번호(관리자 → 설정 → 호스트센터)로도 들어올 수 있다
+//  · 로그인한 쏘플 회원은 누구나 들어온다 (호스트 권한이 있으면 내 지점 칸이 함께 보인다), 관리자도 바로 들어온다
+//  · 공용 아이디·비밀번호(관리자 → 설정 → 호스트센터)는 기본으로 꺼 두고, 켜면 계정 없이도 안내를 볼 수 있다
 //    공용 로그인은 안내 화면을 보는 데만 쓰이고, 지점 정보를 고치는 권한은 없다
 //  · 공용 로그인은 sessions 표에 admin = 2 로 남긴다 (회원 세션 0, 관리자 세션 1 과 섞이지 않는다)
 import { HttpError, getCookie, setCookie, sha256hex, nowSec, nowIso, randToken, safeEqual } from './util.js';
@@ -11,7 +11,7 @@ export const HC_COOKIE = 'sp_h';
 const HC_TTL = 30 * 24 * 3600;
 const GUEST = 2;
 
-/** 이 요청이 호스트센터를 볼 수 있는지 — { kind: 'admin' | 'host' | 'guest', codes } 또는 null */
+/** 이 요청이 호스트센터를 볼 수 있는지 — { kind: 'admin' | 'host' | 'member' | 'guest', codes } 또는 null */
 export async function hcAccess(c) {
   const u = await c.rawUser();
   if (u) {
@@ -21,6 +21,8 @@ export async function hcAccess(c) {
     // 공간 등록 신청서를 쓰기 시작한 회원도 안내를 볼 수 있게
     const app = await c.db.prepare('SELECT 1 AS x FROM space_apps WHERE uid = ? LIMIT 1').bind(u.id).first().catch(() => null);
     if (app) return { kind: 'host', codes };
+    // 그 밖의 회원 — 호스트가 되기 전에 안내를 먼저 읽어 볼 수 있게
+    return { kind: 'member', codes: [] };
   }
   if (await c.adminLevel()) return { kind: 'admin', codes: [] };
   const tok = getCookie(c.req, HC_COOKIE);

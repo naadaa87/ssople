@@ -40,14 +40,12 @@
       if (!tried) { location.reload(); return; }
     }
     try { sessionStorage.removeItem('hc.reload'); } catch { /* 무시 */ }
-    if (me && me.open === false) {
-      $('#hcShared').hidden = true;
-      $('#hcLoginNote').textContent = '지금은 호스트 권한이 연결된 쏘플 계정으로만 들어갈 수 있어요.';
-    }
+    // 공용 아이디 칸은 관리자 설정에서 켰을 때만
+    if (me && me.open) $('#hcShared').hidden = false;
     if (me && me.user && !me.access) {
       const p = document.createElement('div');
       p.className = 'callout hc-gate-note';
-      p.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><div><b>${esc(me.user.nick)}님 계정은 아직 지점과 연결되지 않았어요.</b><br>새 파티룸을 올리려면 <a class="link" href="/myspace?new=1">공간 등록 신청</a>을, 이미 운영 중인 쏘플 지점이면 <a class="link" href="/myspace?link=1">지점 연결 요청</a>을 보내 주세요. 그동안은 공용 아이디로 안내를 볼 수 있어요.</div>`;
+      p.innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-info"/></svg><div><b>${esc(me.user.nick)}님 계정은 아직 지점과 연결되지 않았어요.</b><br>새 파티룸을 올리려면 <a class="link" href="/myspace?new=1">공간 등록 신청</a>을, 이미 운영 중인 쏘플 지점이면 <a class="link" href="/myspace?link=1">지점 연결 요청</a>을 보내 주세요.</div>`;
       $('#hcLoginNote').after(p);
       const acc = form.querySelector('a[href^="/login"]');
       if (acc) acc.hidden = true;
@@ -89,6 +87,12 @@
         <p>${sp.length ? `연결된 지점 ${sp.length}곳이에요. 지점 이름을 누르면 손님이 보는 화면이 열려요.` : '아직 연결된 지점이 없어요. 새 공간은 「공간 등록 신청」으로, 이미 운영 중인 쏘플 지점은 카카오톡 채널로 연결을 요청해 주세요.'}</p>
         ${sp.length ? `<div class="hc-acct-sp">${sp.map((s) => `<a href="/room/${encodeURIComponent(s.code)}" target="_blank" rel="noopener"><span>${esc(s.name)}</span>${s.visible ? '<svg class="ic sm" aria-hidden="true"><use href="#i-ext"/></svg>' : '<span class="badge mute">비공개</span>'}</a>`).join('')}</div>` : ''}
         <div class="hc-acct-act"><a class="btn btn-red btn-sm" href="/myspace"><svg class="ic sm" aria-hidden="true"><use href="#i-edit"/></svg>내 공간 관리</a><a class="btn btn-line btn-sm" href="/myspace?new=1"><svg class="ic sm" aria-hidden="true"><use href="#i-plus"/></svg>공간 등록 신청</a></div>`;
+    } else if (kind === 'member') {
+      const u = (me && me.user) || {};
+      box.innerHTML = `<span class="hc-acct-k">쏘플 회원</span>
+        <b class="hc-acct-name">${esc(u.nick || '회원')}님, 반가워요</b>
+        <p>아직 연결된 지점이 없어요. 새 파티룸을 올리려면 「공간 등록 신청」을, 이미 운영 중인 쏘플 지점이면 「지점 연결 요청」을 보내 주세요. 순서는 아래 「처음 시작하기」에 있어요.</p>
+        <div class="hc-acct-act"><a class="btn btn-red btn-sm" href="/myspace?new=1"><svg class="ic sm" aria-hidden="true"><use href="#i-plus"/></svg>공간 등록 신청</a><a class="btn btn-ink btn-sm" href="/myspace?link=1">운영 중인 지점 연결</a><a class="btn btn-line btn-sm" href="/host-terms">호스트 이용 안내</a></div>`;
     } else if (kind === 'admin') {
       box.innerHTML = `<span class="hc-acct-k">관리자</span>
         <b class="hc-acct-name">관리자 계정으로 보고 있어요</b>

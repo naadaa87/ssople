@@ -1,6 +1,6 @@
 // 지점 — 목록·상세, 관리자 수정
 import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones, shuffle, oneOf, todayKST } from './util.js';
-import { seedOf, notiStmt, notiManyStmt, getSettings } from './db.js';
+import { seedOf, notiStmt, notiManyStmt, getSettings, hostPrices } from './db.js';
 import { regionPath, areaPath } from './slugs.js';
 import { publicGallery, galleryAt, galleryRaw, photoKeys, coverOf, cleanGallery, smallOf } from './gallery.js';
 
@@ -20,8 +20,22 @@ export async function loadSpaces(db, { all = false } = {}) {
     }));
     cacheAt = Date.now();
   }
-  // 손님 화면 — 공개 지점 중 호스트가 「잠시 쉬기」로 둔 지점, 영업을 마친 지점은 뺀다
-  return all ? cache : cache.filter((s) => s.visible && !s.hostPaused && !s.closed);
+  if (all) return cache;
+  // 손님 화면 — 공개 지점 중 호스트가 「잠시 쉬기」로 둔 지점, 영업을 마친 지점,
+  // 입금 확인을 기다리는 호스트 공간(설정), 노출 기간이 끝나고 유예일도 지난 호스트 공간(설정)은 뺀다
+  const st = await getSettings(db);
+  const today = todayKST();
+  return cache.filter((s) => s.visible && !s.hostPaused && !s.closed && !hostHidden(s, st, today));
+}
+
+/** 호스트 공간이 손님 화면에서 내려가는 까닭 — 'pay' 입금 확인 전, 'expired' 노출 기간 끝남, '' 보임 */
+export function hostHidden(s, st, today = todayKST()) {
+  const l = s.listing || {};
+  if (l.type !== 'host') return '';
+  if (l.payWait) return 'pay';
+  if (!l.until || st['host.expire_hide'] !== '1') return '';
+  const grace = Math.max(0, Math.min(60, Number(st['host.expire_grace']) || 0));
+  return today > addDaysYmd(l.until, grace) ? 'expired' : '';
 }
 
 /** 영업을 마친 지점의 옛 주소가 갈 곳 — 같은 동네 → 같은 권역 → 지역별 지점 (?closed=지점명 으로 안내 문구) */
@@ -146,7 +160,13 @@ export function registerHost(route) {
     if (!codes.length && u.role !== 'admin' && u.role !== 'staff') throw new HttpError(403, '호스트 권한이 있는 회원만 쓸 수 있어요. 관리자에게 지점 연결을 요청해 주세요.');
     const list = await loadSpaces(c.db, { all: true });
     const mine = codes.length ? list.filter((s) => codes.includes(s.code)) : list;
-    return { spaces: mine.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl), galleryN: galleryRaw(s).length, galleryAt: galleryAt(s) })) };
+    const st = await getSettings(c.db);
+    const today = todayKST();
+    const grace = Math.max(0, Math.min(60, Number(st['host.expire_grace']) || 0));
+    return {
+      spaces: mine.map((s) => ({ ...s, photoUrls: (s.photos || []).map(photoUrl), galleryN: galleryRaw(s).length, galleryAt: galleryAt(s), hidden: hostHidden(s, st, today) })),
+      expire: { hide: st['host.expire_hide'] === '1', grace },
+    };
   });
   route('PUT', '/api/host/spaces/:code', async (c) => {
     const u = await c.needUser();
@@ -200,6 +220,7 @@ export function registerHost(route) {
 /* ---------------- 호스트센터: 공간 등록 신청 (작성 중 → 검수 중 → 승인·반려) ---------------- */
 export const APP_STATUS = { draft: '작성 중', submitted: '검수 중', approved: '승인', rejected: '반려' };
 export const APP_PLANS = { 1: '1개월', 3: '3개월', 6: '6개월', 12: '12개월', ask: '상담 뒤 결정' };
+const BILL_MONTHS = [1, 3, 6, 12];
 /** 신청서에 들어가는 지점 정보 — 지점 data 와 같은 칸만 (이름·주소·인원은 신청서에서만 적고, 승인 뒤엔 운영팀이 고쳐요) */
 const APP_FIELDS = ['name', 'region', 'area', 'addr', 'base', 'max', 'addFee', 'addFeeLabel', 'depositLabel', 'place', 'intro', 'detail', 'care', 'facs', 'tags', 'photos', 'feat', 'info', 'items', 'pkgs', 'hourly', 'booking', 'hostBiz'];
 const APP_MAX = 5;
@@ -214,8 +235,8 @@ export function cleanAppData(b, prev = {}) {
   if ('agree' in b) { out.agree = !!b.agree; out.agreedAt = b.agree ? (prev.agreedAt || nowIso()) : null; }
   return out;
 }
-/** 제출 전 꼭 있어야 하는 것 — 빠진 항목 목록(비면 제출 가능) */
-export function appMissing(d, contact) {
+/** 제출 전 꼭 있어야 하는 것 — 빠진 항목 목록(비면 제출 가능). 사업자 정보는 관리자 설정 「사업자 정보 필수」일 때만 */
+export function appMissing(d, contact, { bizRequired = false } = {}) {
   const miss = [];
   if (!d.name) miss.push('공간 이름');
   if (!d.region || !d.area) miss.push('지역·동네');
@@ -229,6 +250,10 @@ export function appMissing(d, contact) {
   if (!hasPkg && !hasHour) miss.push('요금 (시간제 또는 패키지)');
   if (!((d.booking || {}).ways || []).length) miss.push('예약 방식 1개 이상');
   if (!d.plan) miss.push('희망 이용 기간');
+  if (bizRequired) {
+    const b = d.hostBiz || {};
+    if (d.biz !== 'yes' || !b.name || !b.ceo || !b.no) miss.push('사업자 정보 (상호·대표자·사업자등록번호)');
+  }
   if (!contact) miss.push('운영팀 연락처');
   if (!d.agree) miss.push('등록 안내 동의');
   return miss;
@@ -317,14 +342,16 @@ export function registerApps(route) {
     }
     await c.db.prepare('UPDATE space_apps SET step = ?, name = ?, region = ?, area = ?, data = ?, contact = ?, updated_at = ? WHERE id = ?')
       .bind(step, data.name || null, data.region || null, data.area || null, JSON.stringify(data), contact || null, nowIso(), r.id).run();
-    return { ok: true, missing: appMissing(data, contact) };
+    const st = await getSettings(c.db);
+    return { ok: true, missing: appMissing(data, contact, { bizRequired: st['host.biz_required'] === '1' }) };
   });
   route('POST', '/api/host/apps/:id/submit', async (c) => {
     const { u, r } = await myApp(c, c.params.id);
     if (r.status === 'submitted') return { ok: true, status: 'submitted' };
     if (r.status === 'approved') throw new HttpError(400, '이미 승인된 신청서예요.');
     const data = parseJSON(r.data, {});
-    const miss = appMissing(data, r.contact);
+    const st = await getSettings(c.db);
+    const miss = appMissing(data, r.contact, { bizRequired: st['host.biz_required'] === '1' });
     if (miss.length) throw new HttpError(400, '아직 빠진 항목이 있어요: ' + miss.join(', '), { missing: miss });
     const at = nowIso();
     await c.db.prepare(`UPDATE space_apps SET status = 'submitted', note = NULL, submitted_at = ?, updated_at = ? WHERE id = ?`).bind(at, at, r.id).run();
@@ -424,7 +451,8 @@ export function registerApps(route) {
       ]);
       return { ok: true, codes: pick };
     }
-    const miss = appMissing(d, r.contact);
+    const st = await getSettings(c.db);
+    const miss = appMissing(d, r.contact, { bizRequired: st['host.biz_required'] === '1' });
     if (miss.length) throw new HttpError(400, '신청서에 빠진 항목이 있어요: ' + miss.join(', '));
     const { hostName, biz, agree, agreedAt, plan, ref, ...spaceData } = d;
     const list = await loadSpaces(c.db, { all: true });
@@ -437,6 +465,9 @@ export function registerApps(route) {
     let until = /^\d{4}-\d{2}-\d{2}$/.test(String(b.until || '')) ? b.until : '';
     if (!until && APP_PLANS[plan] && plan !== 'ask' && b.autoUntil !== false) until = untilAfter(todayKST(), Number(plan));
     next.listing = { type: 'host', zone: '', until, hostName: hostName || '', plan: plan || '', since: todayKST() };
+    // 등록 요금 — 고른 기간으로 「입금 대기」 내역을 만들고, 설정이 「입금 확인 뒤 공개」면 확인 전까지 손님 화면에서 뺀다
+    const firstBill = b.bill !== false && BILL_MONTHS.includes(Number(plan));
+    if (firstBill && st['host.live_before_pay'] === '0') next.listing.payWait = true;
     if (biz !== 'yes') delete next.hostBiz;
     next.edited = true;
     next.hostEditedAt = nowIso();
@@ -444,12 +475,19 @@ export function registerApps(route) {
     if (u && !codes.includes(code)) codes.push(code);
     await saveSpace(c.db, code, next, { visible: !!b.visible, sort: max + 1 });
     const stmts = [c.db.prepare(`UPDATE space_apps SET status = 'approved', code = ?, note = NULL, decided_at = ?, updated_at = ? WHERE id = ?`).bind(code, at, at, r.id)];
+    if (firstBill) {
+      const months = Number(plan);
+      const amount = (hostPrices(st).find((p) => p.t === months) || {}).month * months || null;
+      stmts.push(c.db.prepare(`INSERT INTO host_bills (code, uid, kind, plan, months, amount, start, until, status, at, app_id) VALUES (?, ?, 'new', ?, ?, ?, ?, ?, 'wait', ?, ?)`)
+        .bind(code, u ? u.id : null, String(months), months, amount, todayKST(), until || null, at, r.id));
+    }
     if (u) {
       stmts.push(c.db.prepare(`UPDATE users SET host_codes = ?, role = CASE WHEN role = 'member' THEN 'host' ELSE role END WHERE id = ?`).bind(JSON.stringify(codes), u.id));
-      stmts.push(notiStmt(c.db, u.id, 'host', `「${next.name}」 공간 등록이 승인됐어요. ${b.visible ? '손님 화면에 바로 보여요.' : '내용을 다듬으면 운영팀이 공개해 드려요.'} 결제·노출 기간 안내는 내 공간 관리에서 확인해 주세요.`, '/myspace'));
+      const shown = b.visible && !next.listing.payWait;
+      stmts.push(notiStmt(c.db, u.id, 'host', `「${next.name}」 공간 등록이 승인됐어요. ${shown ? '손님 화면에 바로 보여요.' : next.listing.payWait ? '입금이 확인되면 손님 화면에 보여요.' : '내용을 다듬으면 운영팀이 공개해 드려요.'} 결제 안내는 내 공간 관리에서 확인해 주세요.`, '/myspace'));
     }
     await c.db.batch(stmts);
-    return { ok: true, code, until };
+    return { ok: true, code, until, bill: firstBill, payWait: !!next.listing.payWait };
   });
   /* 호스트가 고친 기록 — 예약 링크·요금·주소처럼 손님에게 중요한 칸은 따로 표시 */
   route('GET', '/api/admin/host-edits', async (c) => {
@@ -552,6 +590,7 @@ export function cleanSpaceInput(b, prev = {}) {
     if ('zone' in b.listing) l.zone = ['premium', 'plus'].includes(b.listing.zone) ? b.listing.zone : '';
     if ('until' in b.listing) l.until = /^\d{4}-\d{2}-\d{2}$/.test(String(b.listing.until || '')) ? b.listing.until : '';
     if ('hostName' in b.listing) l.hostName = str(b.listing.hostName, { max: 30, name: '호스트 표시 이름' });
+    if ('payWait' in b.listing) { if (b.listing.payWait) l.payWait = true; else delete l.payWait; }
     out.listing = l;
   }
   return out;

@@ -1972,6 +1972,23 @@ a.hs-stat:hover { border-color: var(--ink); }
 .hs-plan.on { border-color: var(--red); background: var(--red-tint); box-shadow: 0 0 0 2px var(--red-tint); }
 .hs-plan.on b { color: var(--red-deep); }
 .hs-plan:disabled { opacity: .7; }
+/* 결제 · 노출 기간 — 연장 신청, 결제 내역 */
+.hs-rn-plans { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 14px; }
+.hs-plan-sum { margin-top: 4px; font-size: 14px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hs-plan.on .hs-plan-sum { color: var(--red-deep); }
+.hs-rn-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--fog); }
+.hs-rn-sum dt { font-size: 12.5px; color: var(--graphite); font-weight: 700; }
+.hs-rn-sum dd { margin: 3px 0 0; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hs-rn-sum dd small { font-size: 12.5px; font-weight: 600; color: var(--graphite); }
+.hs-bills { display: grid; border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
+.hs-bill { display: grid; gap: 6px; padding: 12px 16px; }
+.hs-bill + .hs-bill { border-top: 1px solid var(--line); }
+.hs-bill-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hs-bill-hd b { font-size: 15px; }
+.hs-bill-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 14px; color: var(--graphite); font-variant-numeric: tabular-nums; }
+.hs-bill-amt { color: var(--ink); font-size: 15px; }
+.hs-bill-row .btn { margin-left: auto; }
+#hsBills .hs-pay { margin-bottom: 14px; }
 .chip.sm { height: 30px; padding: 0 11px; font-size: 13px; }
 .hs-areas { margin-top: 8px; gap: 6px; }
 .hs-areas:empty { display: none; }
@@ -1984,6 +2001,7 @@ a.hs-stat:hover { border-color: var(--ink); }
 @media (max-width: 720px) {
   .hs-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hs-plans { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hs-rn-sum { grid-template-columns: 1fr; }
   .hs-pv { grid-template-columns: 1fr; }
   .hs-cd { min-height: 50px; } .hs-cd em { font-size: 10px; padding: 1px 3px; }
   .hs-way-opt { flex-direction: column; }
