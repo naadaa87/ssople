@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -108,6 +108,17 @@ export function ensureSchema(env) {
             if (!r) continue;
             const d = parseJSON(r.data, {});
             d.closed = d.closed || '2026-11-02';
+            d.edited = true;
+            await env.DB.prepare('UPDATE spaces SET visible = 0, data = ?, updated_at = ? WHERE code = ?').bind(JSON.stringify(d), nowIso(), code).run();
+          }
+        }
+        if (v && v < 11) {
+          // v11: 2026-11-11 영업 종료 — 선유도 루프탑(S-0007)
+          for (const code of ['S-0007']) {
+            const r = await env.DB.prepare('SELECT data FROM spaces WHERE code = ?').bind(code).first();
+            if (!r) continue;
+            const d = parseJSON(r.data, {});
+            d.closed = d.closed || '2026-11-11';
             d.edited = true;
             await env.DB.prepare('UPDATE spaces SET visible = 0, data = ?, updated_at = ? WHERE code = ?').bind(JSON.stringify(d), nowIso(), code).run();
           }
