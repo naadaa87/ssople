@@ -402,6 +402,17 @@
     }
     return out;
   };
+  /* 구독형 지점의 「호스트에게 문의」 — 호스트가 정한 문의 연락처, 없으면 예약 방식 중 연락할 수 있는 것 (서버 ssr-lists.js 와 같은 규칙) */
+  SP.contactWays = (s) => {
+    const c = s.contact || {};
+    const src = (c.ways || []).length ? c.ways : ((s.booking || {}).ways || []).filter((w) => ['phone', 'sms', 'kakao', 'talk', 'insta'].includes(w.k));
+    const L = { phone: ['전화로 문의', 'phone', 'btn-red'], sms: ['문자로 문의', 'chat', 'btn-ink'], kakao: ['카카오톡으로 문의', 'kakao', 'btn-kakao'], talk: ['네이버 톡톡으로 문의', 'chat', 'btn-naver'], insta: ['인스타그램 DM으로 문의', 'instagram', 'btn-ink'], link: ['문의 페이지 열기', 'ext', 'btn-line'] };
+    return src.filter((w) => w && w.v && L[w.k]).map((w) => {
+      const [label, ic, cls] = L[w.k];
+      const tel = w.k === 'phone' || w.k === 'sms';
+      return { k: w.k, href: tel ? `${w.k === 'phone' ? 'tel' : 'sms'}:${String(w.v).replace(/[^\d]/g, '')}` : w.v, label, sub: tel ? w.v : '', ic, cls, ext: !tel };
+    });
+  };
   SP.featTags = (s, max = 4) => {
     const t = [];
     const f = s.feat || {};
@@ -605,7 +616,7 @@
           : '<a class="btn btn-ink btn-sm" href="/login">로그인</a>';
       }
       const dslot = SP.$('#drawerUser');
-      if (dslot) dslot.innerHTML = u ? `<a href="/mypage">${SP.avatar(u.avatar, 'sm')} ${SP.esc(u.nick)}님</a>${(u.hostCodes || []).length ? '<a href="/myspace" class="sub">내 공간 관리 (호스트)</a>' : ''}${u.admin ? '<a href="/admin" class="sub">관리자 화면</a>' : ''}<a href="#" class="sub" data-logout>로그아웃</a>` : '<a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a>';
+      if (dslot) dslot.innerHTML = u ? `<a href="/mypage">${SP.avatar(u.avatar, 'sm')} ${SP.esc(u.nick)}님</a>${(u.hostCodes || []).length ? '<a href="/myspace" class="sub">호스트센터 (예약·고객·공간)</a>' : ''}${u.admin ? '<a href="/admin" class="sub">관리자 화면</a>' : ''}<a href="#" class="sub" data-logout>로그아웃</a>` : '<a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a>';
       if (bell) {
         bell.hidden = !u;
         if (u && m.unread) bell.insertAdjacentHTML('beforeend', `<span class="dot">${m.unread > 9 ? '9+' : m.unread}</span>`);

@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -65,6 +65,13 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_host_bills_status ON host_bills(status, id)`,
   // v10: 노출 기간 알림을 보냈는지 (같은 끝 날짜에 같은 알림을 두 번 보내지 않게)
   `CREATE TABLE IF NOT EXISTS host_marks (code TEXT NOT NULL, until TEXT NOT NULL, mark TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (code, until, mark))`,
+  // v12: 호스트센터 예약 장부 · 손님 (구독형 공간 — 그 지점 호스트만 봐요. 이름·연락처는 이용일 1년 뒤 지워요)
+  `CREATE TABLE IF NOT EXISTS host_books (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, d TEXT NOT NULL, s INTEGER NOT NULL, e INTEGER NOT NULL, slot TEXT, slot_label TEXT, src TEXT NOT NULL DEFAULT 'etc', ext_no TEXT, status TEXT NOT NULL DEFAULT 'ok', guest_id INTEGER, name TEXT, phone TEXT, people INTEGER, purpose TEXT, amount INTEGER, paid TEXT, deposit INTEGER, dep_st TEXT, memo TEXT, block INTEGER NOT NULL DEFAULT 1, uid INTEGER, at TEXT NOT NULL, updated_at TEXT, wiped INTEGER NOT NULL DEFAULT 0)`,
+  `CREATE INDEX IF NOT EXISTS idx_host_books_code_d ON host_books(code, d)`,
+  `CREATE INDEX IF NOT EXISTS idx_host_books_guest ON host_books(guest_id)`,
+  `CREATE TABLE IF NOT EXISTS host_guests (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, name TEXT, phone TEXT, phone_key TEXT, memo TEXT, tags TEXT, last_d TEXT, at TEXT NOT NULL, updated_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_host_guests_code ON host_guests(code, phone_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_occ_ref ON occ(src, ref)`,
 ];
 
 let ready = null;
@@ -472,6 +479,12 @@ export async function housekeep(db) {
     db.prepare('DELETE FROM host_marks WHERE at < ?').bind(ago(400)),
     db.prepare(`DELETE FROM host_bills WHERE at < ?`).bind(ago(365 * 5 + 2)),
     db.prepare('DELETE FROM live_scores WHERE d < ?').bind(ago(60).slice(0, 10)),
+    // 호스트 예약 장부 — 이용일 1년 지난 예약의 이름·연락처, 1년 넘게 오지 않은 손님, 3년 지난 예약 (hostdesk.js 와 같은 기준)
+    db.prepare('UPDATE host_books SET name = NULL, phone = NULL, wiped = 1 WHERE d < ? AND wiped = 0').bind(y1),
+    db.prepare(`DELETE FROM host_guests WHERE COALESCE(last_d, substr(at, 1, 10)) < ?`).bind(y1),
+    db.prepare('UPDATE host_books SET guest_id = NULL WHERE guest_id IS NOT NULL AND guest_id NOT IN (SELECT id FROM host_guests)'),
+    db.prepare('DELETE FROM host_books WHERE d < ?').bind(ago(365 * 3).slice(0, 10)),
+    db.prepare(`DELETE FROM occ WHERE src = 'hbook' AND d < ?`).bind(ago(40).slice(0, 10)),
   ]);
   return true;
 }

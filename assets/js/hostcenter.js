@@ -86,7 +86,7 @@
         <b class="hc-acct-name">${esc((me.user && me.user.nick) || '호스트')}님, 반가워요</b>
         <p>${sp.length ? `연결된 지점 ${sp.length}곳이에요. 지점 이름을 누르면 손님이 보는 화면이 열려요.` : '아직 연결된 지점이 없어요. 새 공간은 「공간 등록 신청」으로, 이미 운영 중인 쏘플 지점은 카카오톡 채널로 연결을 요청해 주세요.'}</p>
         ${sp.length ? `<div class="hc-acct-sp">${sp.map((s) => `<a href="/room/${encodeURIComponent(s.code)}" target="_blank" rel="noopener"><span>${esc(s.name)}</span>${s.visible ? '<svg class="ic sm" aria-hidden="true"><use href="#i-ext"/></svg>' : '<span class="badge mute">비공개</span>'}</a>`).join('')}</div>` : ''}
-        <div class="hc-acct-act"><a class="btn btn-red btn-sm" href="/myspace"><svg class="ic sm" aria-hidden="true"><use href="#i-edit"/></svg>내 공간 관리</a><a class="btn btn-line btn-sm" href="/myspace?new=1"><svg class="ic sm" aria-hidden="true"><use href="#i-plus"/></svg>공간 등록 신청</a></div>`;
+        <div class="hc-acct-act"><a class="btn btn-red btn-sm" href="/myspace"><svg class="ic sm" aria-hidden="true"><use href="#i-edit"/></svg>관리 화면 열기</a><a class="btn btn-line btn-sm" href="/myspace?new=1"><svg class="ic sm" aria-hidden="true"><use href="#i-plus"/></svg>공간 등록 신청</a></div>`;
     } else if (kind === 'member') {
       const u = (me && me.user) || {};
       box.innerHTML = `<span class="hc-acct-k">쏘플 회원</span>
@@ -97,7 +97,7 @@
       box.innerHTML = `<span class="hc-acct-k">관리자</span>
         <b class="hc-acct-name">관리자 계정으로 보고 있어요</b>
         <p>호스트센터 공용 아이디·비밀번호는 관리자 → 설정 → 「호스트센터 공용 로그인」에서 바꿀 수 있어요.</p>
-        <div class="hc-acct-act"><a class="btn btn-ink btn-sm" href="/admin">관리자 화면</a><a class="btn btn-line btn-sm" href="/myspace">내 공간 관리</a></div>`;
+        <div class="hc-acct-act"><a class="btn btn-ink btn-sm" href="/admin">관리자 화면</a><a class="btn btn-line btn-sm" href="/myspace">관리 화면</a></div>`;
     } else {
       const u = me && me.user;
       box.innerHTML = `<span class="hc-acct-k">공용 아이디</span>

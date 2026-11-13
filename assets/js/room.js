@@ -62,7 +62,8 @@
           <section class="room-sec" id="r-rules"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
           <section class="room-sec" id="r-route"><h2>찾아오는 길</h2>${route(s)}</section>
           ${isHost(s) ? `<section class="room-sec" id="r-host"><h2>호스트 정보</h2>${hostInfo(s)}</section>` : ''}
-          <section class="room-sec" id="r-qna"><div class="between" style="margin-bottom:6px"><h2 style="margin:0">지점에 물어보기</h2><a class="btn btn-ink btn-sm" href="/write?b=qna&code=${s.code}">${icon('chat', 'sm')}문의 남기기</a></div><p class="small muted" style="margin-bottom:12px">비품, 꾸미기, 반입, 주차처럼 궁금한 걸 남기면 ${isHost(s) ? '호스트가' : '지점 담당자가'} 답해요. 모두가 보는 공개 질문이라 예약번호·연락처는 적지 마세요. 급한 일은 카카오톡 상담이 빨라요.</p><div id="qaList"><div class="skel" style="height:60px"></div></div></section>
+          <section class="room-sec" id="r-qna"><h2>문의하기</h2>${askCard(s)}
+            <div class="between" style="margin:22px 0 6px"><h3 class="h4" style="margin:0">지점에 물어보기</h3><a class="btn btn-ink btn-sm" href="/write?b=qna&code=${s.code}">${icon('chat', 'sm')}질문 남기기</a></div><p class="small muted" style="margin-bottom:12px">비품, 꾸미기, 반입, 주차처럼 궁금한 걸 남기면 ${isHost(s) ? '호스트가' : '지점 담당자가'} 답해요. 모두가 보는 공개 질문이라 예약번호·연락처는 적지 마세요.</p><div id="qaList"><div class="skel" style="height:60px"></div></div></section>
           <section class="room-sec" id="reviews"><div class="between" style="margin-bottom:12px"><h2 style="margin:0" id="rvHead">이용후기</h2><a class="btn btn-line btn-sm" href="/write?b=review&code=${s.code}">${icon('edit', 'sm')}후기 쓰기</a></div><div id="rvList"><div class="skel" style="height:80px"></div></div></section>
           <section class="room-sec" id="r-social"><h2>네이버·인스타그램 후기</h2><p class="small muted" style="margin-bottom:12px">다녀간 분들이 네이버와 인스타그램에 남긴 글과 사진도 함께 보세요.</p><div id="socialBox">${SP.socialView ? SP.socialView(s, SP.settings) : ''}</div></section>
         </div>
@@ -73,7 +74,7 @@
           <div id="pkgArea"></div>
           <div class="callout" style="margin-top:16px;font-size:13.5px">${icon('info', 'sm')}<span>${bookNote(s)}</span></div>
           <div class="row" style="margin-top:12px;flex-wrap:wrap">
-            ${hostKakao(s) ? `<a class="btn btn-kakao btn-sm" href="${esc(hostKakao(s))}" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}호스트 카카오톡</a>` : isHost(s) ? `<a class="btn btn-line btn-sm" href="#r-qna">${icon('chat', 'sm')}지점에 물어보기</a>` : `<a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>`}
+            ${isHost(s) ? `<a class="btn btn-line btn-sm" href="#r-qna" data-ask>${icon('chat', 'sm')}호스트에게 문의</a>` : `<a class="btn btn-kakao btn-sm" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a>`}
             <a class="btn btn-soft btn-sm" href="/planner?code=${s.code}#cost">${icon('won', 'sm')}예상 비용 계산</a>
           </div>
         </aside>
@@ -91,11 +92,85 @@
       if (pw.ext) { mb.target = '_blank'; mb.rel = 'noopener'; }
       mb.setAttribute('data-track', `${s.code}|${pw.k}`);
     }
-    SP.site().then(({ settings }) => { const k = settings && settings['kakao.url']; if (k) $$('[data-kakao]').forEach((a) => { a.href = k; }); });
+    askFab(s);
+    SP.site().then(({ settings }) => {
+      const k = settings && settings['kakao.url'];
+      if (k) $$('[data-kakao]').forEach((a) => { a.href = k; });
+      const h = settings && settings['cs.hours'];
+      if (h) $$('[data-cs-hours]').forEach((el) => { el.textContent = '상담 시간 ' + h; });
+    });
     bind();
+    stickyBook();
   }
 
   function isHost(s) { return !!(s.listing && s.listing.type === 'host'); }
+  /* 문의하기 — 위탁형은 쏘플 카카오톡, 구독형은 호스트가 정한 연락처 (쏘플 본사 카카오톡은 보이지 않아요) */
+  function askCard(s) {
+    if (!isHost(s)) {
+      return `<div class="ask-card"><div class="ask-copy"><b>쏘플이 운영하는 지점이에요</b><p>예약 변경, 입실 안내, 보증금, 이용 중 생긴 일은 쏘플 카카오톡으로 물어봐 주세요. <span data-cs-hours></span></p></div>
+        <div class="ask-ways"><a class="btn btn-kakao" data-kakao href="http://pf.kakao.com/_mufLd/chat" target="_blank" rel="noopener" data-track="${s.code}|kakao">${icon('kakao', 'fill sm')}카카오톡 문의</a></div></div>`;
+    }
+    const c = s.contact || {};
+    const list = SP.contactWays(s);
+    const host = (s.listing && s.listing.hostName) || '호스트';
+    return `<div class="ask-card host"><div class="ask-copy"><b>${esc(host)}가 직접 운영하는 지점이에요</b><p>예약·결제·환불·이용 문의는 호스트에게 바로 해 주세요. 쏘플 고객센터에서는 이 지점의 예약을 확인할 수 없어요.</p>${c.hours || c.note ? `<p class="ask-note">${c.hours ? `${icon('clock', 'sm')}문의 받는 시간 ${esc(c.hours)}` : ''}${c.hours && c.note ? '<br>' : ''}${c.note ? esc(c.note) : ''}</p>` : ''}</div>
+      <div class="ask-ways">${list.length ? list.map((w) => `<a class="btn ${w.cls}" href="${esc(w.href)}"${w.ext ? ' target="_blank" rel="noopener"' : ''} data-track="${s.code}|${w.k === 'sms' ? 'sms' : w.k === 'phone' ? 'call' : w.k}">${icon(w.ic, w.k === 'kakao' ? 'fill sm' : 'sm')}${esc(w.label)}${w.sub ? `<small>${esc(w.sub)}</small>` : ''}</a>`).join('') : '<p class="small muted">호스트 연락처가 아직 없어요. 아래 「지점에 물어보기」에 남겨 주시면 호스트가 답해요.</p>'}</div></div>`;
+  }
+  /** 떠 있는 문의 버튼 — 위탁형은 쏘플 카카오톡, 구독형은 「호스트에게 문의」 칸으로 */
+  function askFab(s) {
+    const old = document.querySelector('.fab'); if (old) old.remove();
+    const host = isHost(s);
+    const a = document.createElement('a');
+    a.className = 'fab' + (host ? ' fab-host' : '');
+    if (host) { a.href = '#r-qna'; a.setAttribute('aria-label', '호스트에게 문의'); a.innerHTML = `${icon('chat')}<span>호스트에게 문의</span>`; }
+    else { a.href = 'http://pf.kakao.com/_mufLd/chat'; a.target = '_blank'; a.rel = 'noopener'; a.dataset.kakao = ''; a.setAttribute('data-track', `${s.code}|kakao`); a.setAttribute('aria-label', '카카오톡 문의'); a.innerHTML = `${icon('kakao', 'fill')}<span>카카오톡 문의</span>`; }
+    document.body.appendChild(a);
+    // 예약 칸이나 「문의하기」의 문의 버튼이 화면에 보이면 떠 있는 버튼은 잠시 숨겨요 (겹침 방지)
+    if ('IntersectionObserver' in window) {
+      const seen = new Set();
+      const io = new IntersectionObserver((es) => {
+        es.forEach((e) => (e.isIntersecting ? seen.add(e.target) : seen.delete(e.target)));
+        a.classList.toggle('fab-off', seen.size > 0);
+      });
+      document.querySelectorAll('#book [data-ask], #book [data-kakao], #r-qna .ask-ways').forEach((t) => io.observe(t));
+    }
+    // 휴대폰 아래 막대 — 예약 버튼 옆 작은 문의 버튼
+    const mb = $('#mobileBook');
+    if (mb && !mb.querySelector('.mb-ask')) {
+      const b = document.createElement('a');
+      b.className = 'btn mb-ask ' + (host ? 'btn-line' : 'btn-kakao');
+      if (host) { b.href = '#r-qna'; b.innerHTML = `${icon('chat', 'sm')}문의`; }
+      else { b.href = a.href; b.target = '_blank'; b.rel = 'noopener'; b.dataset.kakao = ''; b.setAttribute('data-track', `${s.code}|kakao`); b.innerHTML = `${icon('kakao', 'fill sm')}문의`; }
+      b.setAttribute('aria-label', host ? '호스트에게 문의' : '카카오톡 문의');
+      mb.insertBefore(b, $('#mbBtn'));
+    }
+  }
+  /** 날짜 고르고 예약 칸 — 화면보다 길면 페이지와 함께 움직이다가 아래 끝까지 보이면 멈추고, 위로 올리면 다시 위 끝까지 보여요 */
+  function stickyBook() {
+    const el = $('#book');
+    if (!el || el.dataset.sticky) return;
+    el.dataset.sticky = '1';
+    const mq = window.matchMedia('(min-width: 961px)');
+    const gap = 16;
+    const hdH = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hd')) || 64;
+    let top = null;
+    let last = window.scrollY;
+    const update = () => {
+      const y = window.scrollY;
+      const dy = y - last;
+      last = y;
+      if (!mq.matches) { el.style.top = ''; top = null; return; }
+      const max = hdH() + gap;
+      const min = Math.min(max, window.innerHeight - el.offsetHeight - gap);
+      if (top == null) top = max;
+      top = Math.max(min, Math.min(max, top - dy));
+      el.style.top = Math.round(top) + 'px';
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    if (window.ResizeObserver) new ResizeObserver(update).observe(el);
+    update();
+  }
   /* 호스트 운영 지점 — 누가 운영하는지와 쏘플의 역할을 분명하게 */
   function hostInfo(s) {
     const l = s.listing || {}, b = s.hostBiz || {};
@@ -110,7 +185,6 @@
   /* 호스트가 정한 예약 방식 — 첫 번째가 대표 버튼. 없으면 예전 방식(패키지별 네이버 예약 → 지점 네이버 예약 페이지 → 네이버 지도) */
   const ways = (s, date) => SP.bookWays(s, date);
   const primaryWay = (s, date) => ways(s, date)[0] || null;
-  const hostKakao = (s) => { const w = (s.booking && s.booking.ways || []).find((x) => x.k === 'kakao' && x.v); return w ? w.v : ''; };
   function bookNote(s) {
     const b = s.booking || {};
     if (ways(s).length) {

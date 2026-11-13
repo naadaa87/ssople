@@ -150,7 +150,7 @@ async function ownSpace(c, code, { own = false } = {}) {
   if (!adm && !codes.includes(code)) throw new HttpError(403, '이 지점을 볼 권한이 없어요.');
   const s = (await loadSpaces(c.db, { all: true })).find((x) => x.code === code);
   if (!s) throw new HttpError(404, '지점을 찾을 수 없어요.');
-  if (own && !adm && !(s.listing && s.listing.type === 'host')) throw new HttpError(403, '호스트가 직접 운영하는 지점만 쓸 수 있어요. 쏘플 위탁운영 지점은 운영팀이 관리해요.');
+  if (own && !adm && !(s.listing && s.listing.type === 'host')) throw new HttpError(403, '호스트가 직접 운영하는 지점만 쓸 수 있어요. 쏘플 위탁형 지점은 운영팀이 관리해요.');
   return { u, s, adm };
 }
 export function registerHost(route) {
@@ -584,6 +584,7 @@ export function cleanSpaceInput(b, prev = {}) {
   if ('hourly' in b) out.hourly = cleanHourly(b.hourly);
   if ('hostPaused' in b) out.hostPaused = !!b.hostPaused;
   if ('hostBiz' in b) out.hostBiz = cleanBiz(b.hostBiz);
+  if ('contact' in b) out.contact = cleanContact(b.contact);
   if ('listing' in b && b.listing && typeof b.listing === 'object') {
     const l = { ...(prev.listing || {}) };
     if ('type' in b.listing) l.type = LISTING_TYPES[b.listing.type] ? b.listing.type : 'managed';
@@ -639,6 +640,16 @@ export function cleanBooking(v) {
     cancel: maskPhones(str(v.cancel, { max: 600, multiline: true, name: '취소·환불 규정' }) || ''),
     hours: str(v.hours, { max: 60, name: '예약 받는 시간' }) || '',
   };
+}
+/** 손님 문의 연락처 (구독형) — 지점 화면 「호스트에게 문의」에 보여요. 비우면 예약 방식의 전화·카카오톡·톡톡·인스타그램·문자를 대신 보여 줘요 */
+export const CONTACT_KINDS = ['phone', 'sms', 'kakao', 'talk', 'insta', 'link'];
+export function cleanContact(v) {
+  if (v == null || typeof v !== 'object') return null;
+  const ways = (cleanBooking({ ways: (Array.isArray(v.ways) ? v.ways : []).filter((w) => w && CONTACT_KINDS.includes(w.k)) }) || {}).ways || [];
+  const hours = str(v.hours, { max: 60, name: '문의 받는 시간' }) || '';
+  const note = maskPhones(str(v.note, { max: 120, name: '문의 안내' }) || '');
+  if (!ways.length && !hours && !note) return null;
+  return { ways, hours, note };
 }
 /** 사업자 정보 — 손님 화면 「호스트 정보」에 보여요 (상호·대표자·사업자등록번호·통신판매업 신고번호) */
 export function cleanBiz(v) {
@@ -719,8 +730,8 @@ export function cleanSocial(v) {
   return out;
 }
 
-/** 지점 운영 방식 — managed: 쏘플 위탁운영, host: 호스트가 직접 운영(등록 공간), direct: 쏘플 직영 */
-export const LISTING_TYPES = { managed: '쏘플 위탁운영', host: '호스트 운영', direct: '쏘플 직영' };
+/** 지점 운영 방식 — managed: 쏘플 위탁형, host: 호스트가 직접 운영(등록 공간), direct: 쏘플 직영 */
+export const LISTING_TYPES = { managed: '위탁형 (쏘플 운영)', host: '구독형 (호스트 직접 운영)', direct: '쏘플 직영' };
 export const LISTING_ZONES = { premium: '프리미엄존', plus: '플러스존' };
 /** 노출 존이 기간을 넘겼으면 빈 값으로 본다 */
 export function zoneOf(s, today) {
@@ -732,7 +743,7 @@ export function zoneOf(s, today) {
 
 /* ---------- 호스트(매장 운영자)가 자기 지점을 고치는 범위 ---------- */
 const HOST_FIELDS = ['intro', 'notice', 'detail', 'care', 'facs', 'tags', 'photos', 'feat', 'info', 'addFeeLabel', 'depositLabel', 'place', 'items', 'social'];
-const HOST_FIELDS_OWN = ['pkgs', 'book', 'base', 'max', 'addFee', 'booking', 'hourly', 'addr', 'hostPaused', 'hostBiz'];   // 호스트 운영 공간이면 요금·예약 방식·주소까지
+const HOST_FIELDS_OWN = ['pkgs', 'book', 'base', 'max', 'addFee', 'booking', 'hourly', 'addr', 'hostPaused', 'hostBiz', 'contact'];   // 호스트 운영 공간이면 요금·예약 방식·주소까지
 export function cleanHostInput(b, prev) {
   const allow = new Set(HOST_FIELDS.concat(prev.listing && prev.listing.type === 'host' ? HOST_FIELDS_OWN : []));
   const picked = {};

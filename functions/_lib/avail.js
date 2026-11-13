@@ -190,7 +190,7 @@ async function hostOwn(c, code) {
   if (!adm && !hostCodes(u).includes(code)) throw new HttpError(403, '이 지점을 고칠 권한이 없어요.');
   const s = (await loadSpaces(c.db, { all: true })).find((x) => x.code === code);
   if (!s) throw new HttpError(404, '지점을 찾을 수 없어요.');
-  if (!adm && !(s.listing && s.listing.type === 'host')) throw new HttpError(403, '호스트가 직접 운영하는 지점만 마감을 표시할 수 있어요. 쏘플 위탁운영 지점은 예약 시스템과 자동으로 맞춰져요.');
+  if (!adm && !(s.listing && s.listing.type === 'host')) throw new HttpError(403, '호스트가 직접 운영하는 지점만 마감을 표시할 수 있어요. 쏘플 위탁형 지점은 예약 시스템과 자동으로 맞춰져요.');
   return { u, s };
 }
 export function registerHostOcc(route) {

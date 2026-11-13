@@ -74,7 +74,7 @@ async function ownHostSpace(c, code) {
   if (!hostCodes(u).includes(code)) throw new HttpError(403, '내가 관리하는 지점이 아니에요.');
   const s = (await loadSpaces(c.db, { all: true })).find((x) => x.code === code);
   if (!s) throw new HttpError(404, '지점을 찾을 수 없어요.');
-  if ((s.listing || {}).type !== 'host') throw new HttpError(400, '호스트 등록 공간만 기간을 연장할 수 있어요. 위탁운영 지점은 운영팀에 문의해 주세요.');
+  if ((s.listing || {}).type !== 'host') throw new HttpError(400, '호스트 등록 공간만 기간을 연장할 수 있어요. 위탁형 지점은 운영팀에 문의해 주세요.');
   if (s.closed) throw new HttpError(400, '영업을 마친 지점이에요.');
   return { u, s };
 }

@@ -15,7 +15,7 @@
   let bills = [];
   let plans = [];
   let expire = { hide: false, grace: 0 };
-  const LT = { managed: '쏘플 위탁운영', host: '호스트 운영', direct: '쏘플 직영' };
+  const LT = { managed: '위탁형 · 쏘플 운영', host: '구독형 · 직접 운영', direct: '쏘플 직영' };
   const ZN = { premium: '프리미엄존', plus: '플러스존' };
   const AST = { draft: ['mute', '작성 중'], submitted: ['warn', '검수 중'], rejected: ['red', '보완 요청'], approved: ['ok', '승인'] };
   const LST = { submitted: ['warn', '확인 중'], rejected: ['red', '확인 못 함'], approved: ['ok', '연결 완료'], draft: ['mute', '확인 중'] };
@@ -61,10 +61,15 @@
       if (a && a.kind === 'new' && a.status === 'submitted') { wizard(a, { readOnly: true }); return; }
     }
     if (qs.new === '1') { await startApp(); return; }
-    if (!spaces.length && !apps.length) landing(); else draw();
+    if (!spaces.length && !apps.length) { landing(); if (qs.link === '1') linkModal(); return; }
+    // 구독형 공간이 있으면 호스트센터 탭(홈 · 예약 · 고객 · 내 공간)을 붙여요
+    const special = qs.link === '1' || location.hash === '#renew' || /^#(edit|items|social|price|book|biz|stats|closed|contact)-S-\d{4}$/.test(location.hash) || /^#hs/.test(location.hash);
+    const tabHash = (location.hash.match(/^#(home|books|guests|spaces)$/) || [])[1];
+    const mounted = window.HostDesk ? await window.HostDesk.mount({ spaces, openQs, onSpaces: () => draw(), tab: special ? 'spaces' : tabHash || 'home' }) : false;
+    if (!mounted) draw();
     if (qs.link === '1') { linkModal(); return; }
     if (location.hash === '#renew') { const b = $('#hsBills'); if (b) b.scrollIntoView({ block: 'start' }); if (spaces.some(isOwn)) renewModal(); return; }
-    const h = location.hash.match(/^#(edit|items|social|price|book|biz|stats|closed)-(S-\d{4})$/);
+    const h = location.hash.match(/^#(edit|items|social|price|book|biz|stats|closed|contact)-(S-\d{4})$/);
     if (h) {
       const s = spaces.find((x) => x.code === h[2]);
       if (s) { if (h[1] === 'stats') statsModal(s); else if (h[1] === 'closed') closedModal(s); else edit(s, h[1] === 'edit' ? 'base' : h[1]); }
@@ -75,6 +80,7 @@
     try { const d = await SP.get('/api/host/spaces'); spaces = d.spaces || []; expire = d.expire || expire; } catch { spaces = []; }
     try { const d = await SP.get('/api/host/bills'); bills = d.bills || []; plans = d.plans || []; if (!payNote) payNote = d.payNote || ''; } catch { bills = []; }
     await loadOpen();
+    if (window.HostDesk) window.HostDesk.update({ spaces, openQs });
   }
   const codes = () => spaces.slice(0, 20).map((s) => s.code).join(',');
   async function loadOpen() {
@@ -174,6 +180,9 @@
         <li>운영 중인 지점 연결 — 이미 쏘플에 있는 지점이면 화면에서 바로 연결을 요청해요</li>
         <li>예약 방식 — 네이버 예약 · 전화 · 카카오톡 · 네이버 톡톡 · 인스타그램 DM · 문자 · 다른 예약 링크 · 쏘플 문의 중 골라서, 첫 번째가 대표 버튼이 돼요</li>
         <li>요금 — 시간제(요일별 1시간 요금 · 최소 시간 · 운영 시간)와 패키지(낮·밤·올데이 등) 중 하나 또는 둘 다</li>
+        <li>예약 장부 — 네이버 예약·스페이스클라우드·전화 등 어디서 받은 예약이든 적거나 엑셀에서 한 번에 가져오고, 달력으로 봐요. 확정 예약은 손님 화면 달력에 마감으로 자동 표시돼요</li>
+        <li>고객 관리 — 예약을 넣으면 손님별 방문 횟수·누적 금액·메모가 쌓이고, 다시 온 손님을 바로 알아봐요</li>
+        <li>문의 연락처 — 손님 문의를 받을 전화·카카오톡·톡톡·인스타그램을 따로 정해요. 지점 화면에는 쏘플 본사 대신 이 연락처가 보여요</li>
         <li>마감·휴무 표시 · 노출 잠시 쉬기 · 성과 보기(지점 화면 조회와 예약 버튼 누른 수)</li>
         <li>손님 문의에 바로 답하기 · 지점 소식(공지·소식·이벤트) 올리기 · 소개·사진(40장)·시설·비품·이용 안내·SNS 후기 고치기</li></ul>
         <p class="tiny faint" style="margin-top:10px">도어락 번호, 와이파이 비밀번호, 계좌번호는 손님 화면에 그대로 보이니 절대 적지 마세요. 입실 안내는 예약 확정 뒤 문자로만 보내 주세요. 예약 방식에 넣은 전화번호만 손님에게 보여요.</p></div>
@@ -251,7 +260,7 @@
     const state = !s.visible ? '<span class="badge mute">운영팀 확인 중 · 비공개</span>' : s.hidden === 'pay' ? '<span class="badge warn">입금 확인 뒤 공개돼요</span>' : s.hidden === 'expired' ? '<span class="badge red">노출 기간이 끝나 숨겨졌어요</span>' : s.hostPaused ? '<span class="badge warn">잠시 쉬는 중</span>' : '<span class="badge ok">손님 화면에 보여요</span>';
     const canRenew = own && !l.payWait;
     return `<div class="box hs-card">
-      <div class="row between"><span class="badge ${l.zone === 'premium' ? 'red' : 'mute'}">${ZN[l.zone] || LT[l.type] || '쏘플 위탁운영'}</span><span class="tiny muted">${s.code}</span></div>
+      <div class="row between"><span class="badge ${l.zone === 'premium' ? 'red' : 'mute'}">${ZN[l.zone] || LT[l.type] || '쏘플 위탁형'}</span><span class="tiny muted">${s.code}</span></div>
       <h3 class="h3">${esc(s.name)}</h3>
       <p class="small muted">${esc(s.addr || `${s.region} ${s.area}`)}</p>
       <div>${state}</div>
@@ -269,7 +278,8 @@
       <div class="hs-acts">
         <button class="btn btn-red btn-sm" type="button" data-edit="${s.code}" data-tab="base">${icon('edit', 'sm')}정보 고치기</button>
         ${canRenew ? `<button class="btn btn-ink btn-sm" type="button" data-renew="${s.code}">${icon('calendar', 'sm')}기간 연장</button>` : ''}
-        ${own ? `<button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="price">${icon('won', 'sm')}요금</button><button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="book">${icon('calendar', 'sm')}예약 방식</button><button class="btn btn-line btn-sm" type="button" data-closed="${s.code}">${icon('lock', 'sm')}마감·휴무</button>` : ''}
+        ${own && window.HostDesk && window.HostDesk.tab() ? `<button class="btn btn-ink btn-sm" type="button" data-desk="books">${icon('list', 'sm')}예약 장부</button>` : ''}
+        ${own ? `<button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="price">${icon('won', 'sm')}요금</button><button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="book">${icon('calendar', 'sm')}예약 방식</button><button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="contact">${icon('chat', 'sm')}문의 연락처</button><button class="btn btn-line btn-sm" type="button" data-closed="${s.code}">${icon('lock', 'sm')}마감·휴무</button>` : ''}
         <button class="btn btn-line btn-sm" type="button" data-stats="${s.code}">${icon('chart', 'sm')}성과</button>
         <button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="items">${icon('list', 'sm')}비품</button>
         <button class="btn btn-line btn-sm" type="button" data-edit="${s.code}" data-tab="social">${icon('instagram', 'sm')}후기 연결</button>
@@ -283,6 +293,7 @@
     const st = e.target.closest('[data-stats]'); if (st) { statsModal(spaces.find((s) => s.code === st.dataset.stats)); return; }
     const cl = e.target.closest('[data-closed]'); if (cl) { closedModal(spaces.find((s) => s.code === cl.dataset.closed)); return; }
     const rn = e.target.closest('[data-renew]'); if (rn) { renewModal(rn.dataset.renew); return; }
+    const dk = e.target.closest('[data-desk]'); if (dk && window.HostDesk) { window.HostDesk.setTab(dk.dataset.desk); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     const pz = e.target.closest('[data-pause]');
     if (pz) {
       const s = spaces.find((x) => x.code === pz.dataset.pause);
@@ -336,7 +347,7 @@
   /** 노출 기간 연장 — 기간을 고르면 새 기간과 금액이 바로 보이고, 신청하면 운영팀이 입금을 확인해 늘려 줘요 */
   function renewModal(code) {
     const can = spaces.filter(isOwn).filter((s) => !(s.listing || {}).payWait);
-    if (!can.length) { SP.toast('연장할 수 있는 호스트 운영 공간이 없어요. 위탁운영 지점은 운영팀에 문의해 주세요.', true); return; }
+    if (!can.length) { SP.toast('연장할 수 있는 호스트 운영 공간이 없어요. 위탁형 지점은 운영팀에 문의해 주세요.', true); return; }
     if (!plans.length) { SP.toast('요금 정보를 불러오지 못했어요. 새로고침한 뒤 다시 해 주세요.', true); return; }
     let s = can.find((x) => x.code === code) || can[0];
     let months = Number((s.listing || {}).plan) || 3;
@@ -571,7 +582,7 @@
     if (!s) return;
     const inf = s.info || {};
     const own = isOwn(s);
-    const TABS = [['base', '소개·공지'], ['photo', '사진'], ['feat', '시설'], ['items', '비품'], ['info', '이용 안내'], ['social', 'SNS·후기']].concat(own ? [['price', '요금'], ['book', '예약 방식'], ['biz', '사업자 정보']] : []);
+    const TABS = [['base', '소개·공지'], ['photo', '사진'], ['feat', '시설'], ['items', '비품'], ['info', '이용 안내'], ['social', 'SNS·후기']].concat(own ? [['price', '요금'], ['book', '예약 방식'], ['contact', '문의 연락처'], ['biz', '사업자 정보']] : []);
     if (!TABS.some((t) => t[0] === tab)) tab = 'base';
     const m = SP.modal({
       title: `${s.name} 정보 고치기`, wide: true,
@@ -592,6 +603,7 @@
       <div data-p="social" hidden><div id="hsSocial"></div></div>
       ${own ? `<div data-p="price" hidden><div class="form-grid" style="margin-bottom:14px">${ip('h_base', '기준 인원', s.base, 0, '', 'number')}${ip('h_max', '최대 인원', s.max, 0, '', 'number')}${ip('h_addFee', '인원 추가 요금 (원, 계산용)', s.addFee, 0, '10000', 'number')}</div><div id="hsPrice"></div></div>
       <div data-p="book" hidden><div id="hsWays"></div></div>
+      <div data-p="contact" hidden><div id="hsContact"></div></div>
       <div data-p="biz" hidden><div id="hsBiz"></div></div>` : ''}
       <div class="form-err" id="hsErr" hidden></div>`,
       foot: `<a class="btn btn-ghost" href="/room/${s.code}" target="_blank" rel="noopener" style="margin-right:auto">${icon('ext', 'sm')}고객 화면</a><button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="hsSave">저장</button>`,
@@ -607,6 +619,7 @@
     const priceEd = own ? SP.priceEditor(P('hsPrice'), s) : null;
     const waysEd = own ? SP.waysEditor(P('hsWays'), s.booking || {}, { legacyBook: s.book || '' }) : null;
     const bizEd = own ? SP.bizEditor(P('hsBiz'), s.hostBiz || {}) : null;
+    const contactEd = own ? contactEditor(P('hsContact'), s.contact || {}, s.booking || {}) : null;
     P('hsSave').onclick = async () => {
       const err = P('hsErr'); err.hidden = true;
       if (photosEd.busy()) { err.textContent = '사진을 올리는 중이에요. 조금만 기다렸다가 저장해 주세요.'; err.hidden = false; return; }
@@ -623,7 +636,7 @@
           const pr = priceEd.read();
           const bk = waysEd.read();
           const naver = bk.ways.find((w) => w.k === 'naver');
-          Object.assign(body, { base: P('h_base').value, max: P('h_max').value, addFee: P('h_addFee').value, addr: P('h_addr').value.trim(), hourly: pr.hourly, pkgs: pr.pkgs, booking: bk, book: naver ? naver.v : '', hostBiz: bizEd.read() });
+          Object.assign(body, { base: P('h_base').value, max: P('h_max').value, addFee: P('h_addFee').value, addr: P('h_addr').value.trim(), hourly: pr.hourly, pkgs: pr.pkgs, booking: bk, book: naver ? naver.v : '', hostBiz: bizEd.read(), contact: contactEd.read() });
         } catch (e) { err.textContent = e.message; err.hidden = false; showTab('price'); return; }
       }
       const btn = P('hsSave'); SP.busy(btn, true, '저장하는 중');
@@ -632,6 +645,38 @@
         m.close(); SP.toast('저장했어요. 고객 화면에는 1분 안에 바뀌어요.');
         await reload(); draw();
       } catch (e) { err.textContent = e.message; err.hidden = false; SP.busy(btn, false); }
+    };
+  }
+
+  /* ---------- 문의 연락처 (구독형) — 지점 화면 「호스트에게 문의」 ---------- */
+  const CK = [['phone', '전화', '010-1234-5678', 'tel'], ['sms', '문자', '010-1234-5678', 'tel'], ['kakao', '카카오톡', 'https://open.kakao.com/o/... 또는 pf.kakao.com/...', 'url'], ['talk', '네이버 톡톡', 'https://talk.naver.com/...', 'url'], ['insta', '인스타그램 DM', 'https://ig.me/m/아이디', 'url'], ['link', '다른 문의 링크', 'https://...', 'url']];
+  function contactEditor(host, c = {}, booking = {}) {
+    let rows = (c.ways || []).map((w) => ({ k: w.k, v: w.v || '' }));
+    const fromBook = (booking.ways || []).filter((w) => CK.some((x) => x[0] === w.k) && w.v);
+    const draw = () => {
+      host.innerHTML = `<p class="small muted" style="margin-bottom:12px">손님이 지점 화면에서 「호스트에게 문의」를 누르면 여기 넣은 연락처가 보여요. 쏘플 본사 카카오톡은 보이지 않아요. 비워 두면 예약 방식에 넣은 전화·카카오톡·톡톡·인스타그램·문자가 대신 보여요.</p>
+        <div class="hs-ct">${rows.map((r, i) => { const k = CK.find((x) => x[0] === r.k) || CK[0]; return `<div class="hs-ct-row"><select class="select" data-ck="${i}" aria-label="연락 방법">${CK.map(([v, l]) => `<option value="${v}"${v === r.k ? ' selected' : ''}>${l}</option>`).join('')}</select><input class="input" data-cv="${i}" value="${esc(r.v)}" placeholder="${esc(k[2])}" inputmode="${k[3] === 'tel' ? 'tel' : 'url'}" aria-label="${esc(k[1])} 연락처"><button type="button" class="ibtn" data-cx="${i}" aria-label="빼기">${icon('x', 'sm')}</button></div>`; }).join('')}</div>
+        <div class="row" style="gap:6px;margin:10px 0 14px;flex-wrap:wrap">${rows.length < 6 ? `<button type="button" class="btn btn-line btn-sm" data-cadd>${icon('plus', 'sm')}연락처 더하기</button>` : ''}${fromBook.length && !rows.length ? `<button type="button" class="btn btn-soft btn-sm" data-cbook>${icon('copy', 'sm')}예약 방식에서 가져오기</button>` : ''}</div>
+        <div class="form-grid">
+          <div class="field"><label class="label" for="ctHours">문의 받는 시간</label><input class="input" id="ctHours" maxlength="60" value="${esc(c.hours || '')}" placeholder="예) 매일 10:00~22:00"></div>
+          <div class="field"><label class="label" for="ctNote">한 줄 안내 <span class="opt">선택</span></label><input class="input" id="ctNote" maxlength="120" value="${esc(c.note || '')}" placeholder="예) 예약 문의는 카카오톡이 가장 빨라요"></div>
+        </div>`;
+    };
+    const sync = () => { host.querySelectorAll('[data-cv]').forEach((el) => { rows[Number(el.dataset.cv)].v = el.value; }); c.hours = (host.querySelector('#ctHours') || {}).value || c.hours; c.note = (host.querySelector('#ctNote') || {}).value || c.note; };
+    host.addEventListener('click', (e) => {
+      if (e.target.closest('[data-cadd]')) { sync(); rows.push({ k: CK.find((x) => !rows.some((r) => r.k === x[0]))?.[0] || 'phone', v: '' }); draw(); return; }
+      if (e.target.closest('[data-cbook]')) { rows = fromBook.map((w) => ({ k: w.k, v: w.v })); draw(); return; }
+      const x = e.target.closest('[data-cx]'); if (x) { sync(); rows.splice(Number(x.dataset.cx), 1); draw(); }
+    });
+    host.addEventListener('change', (e) => { const k = e.target.closest('[data-ck]'); if (k) { sync(); rows[Number(k.dataset.ck)].k = k.value; draw(); } });
+    draw();
+    return {
+      read() {
+        sync();
+        const seen = new Set();
+        const ways = rows.filter((r) => r.v.trim() && !seen.has(r.k) && seen.add(r.k)).map((r) => ({ k: r.k, v: r.v.trim() }));
+        return { ways, hours: (host.querySelector('#ctHours') || {}).value || '', note: (host.querySelector('#ctNote') || {}).value || '' };
+      },
     };
   }
 
@@ -789,7 +834,7 @@
     const refreshMiss = () => { const el = $('#wzMiss'); if (el && !readOnly) el.innerHTML = missHtml(liveMiss()); };
     const render = () => {
       root.innerHTML = `<div class="hs-wz">
-        <div class="between" style="margin-bottom:14px"><div><span class="eyebrow">공간 등록 신청${readOnly ? ' · 검수 중' : ''}</span><h2 class="h2">${esc(d.name || '새 공간')}</h2></div><button class="btn btn-ghost btn-sm" type="button" id="wzBack">${icon('chev-l', 'sm')}내 공간 관리로</button></div>
+        <div class="between" style="margin-bottom:14px"><div><span class="eyebrow">공간 등록 신청${readOnly ? ' · 검수 중' : ''}</span><h2 class="h2">${esc(d.name || '새 공간')}</h2></div><button class="btn btn-ghost btn-sm" type="button" id="wzBack">${icon('chev-l', 'sm')}호스트센터로</button></div>
         ${a.status === 'rejected' && a.note ? `<div class="callout red" style="margin-bottom:14px">${icon('alert')}<div><b>운영팀 보완 요청</b><br>${esc(a.note)}</div></div>` : ''}
         ${bar()}
         <div class="box hs-wz-body"><h3 class="h3" style="margin-bottom:4px">${step}. ${STEPS[step - 1][0]}</h3><p class="small muted" style="margin-bottom:16px">${STEPS[step - 1][1]}</p>${body()}<div class="form-err" id="wzErr" hidden></div></div>

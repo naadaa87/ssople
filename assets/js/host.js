@@ -1,4 +1,4 @@
-/* 호스트 모집 — 공간 등록·위탁운영·창업 신청 폼 */
+/* 호스트 모집 — 구독형·위탁형·창업 신청 폼 */
 (function () {
   const { $, $$ } = SP;
   let kind = 'host_listing';
@@ -31,7 +31,7 @@
     if (!f.name || !f.contact) { err.textContent = '이름과 연락처를 적어 주세요.'; err.hidden = false; return; }
     if (kind !== 'startup' && !f.space) { err.textContent = '공간 이름을 적어 주세요.'; err.hidden = false; return; }
     if (!f.agree) { err.textContent = '개인정보 수집·이용에 동의해 주세요.'; err.hidden = false; return; }
-    const L = { host_listing: '01 공간 등록', host_managed: '02 위탁운영', startup: '03 창업 상담' };
+    const L = { host_listing: '01 구독형', host_managed: '02 위탁형', startup: '03 파티룸 신규창업' };
     const lines = [`[신청 종류] ${L[kind]}`, f.space ? `[공간 이름] ${f.space}` : '', f.addr ? `[주소·지역] ${f.addr}` : ''];
     if (kind !== 'startup') {
       lines.push(`[운영 상태] ${f.state}`);

@@ -18,6 +18,7 @@ import * as seasonPlan from './season-plan.js';
 import * as live from './live.js';
 import * as hostcenter from './hostcenter.js';
 import * as bills from './bills.js';
+import * as hostdesk from './hostdesk.js';
 
 const ROUTES = [];
 function route(method, path, fn) {
@@ -51,6 +52,7 @@ live.register(route);
 live.registerAdmin(route);
 hostcenter.register(route);
 bills.register(route);
+hostdesk.register(route);
 
 // sendBeacon(클릭 기록)과 토큰 인증(수신 API)은 사용자 지정 헤더를 붙일 수 없어 예외
 const NO_CSRF = new Set(['/api/click', '/api/sync/push', '/api/sync/run']);
