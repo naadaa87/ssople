@@ -22,6 +22,7 @@
     ['spaces', '지점 관리', 'building'],
     ['apps', '공간 등록 신청', 'flag'],
     ['bills', '결제 · 연장', 'won'],
+    ['hostdesk', '호스트 예약 · 손님', 'list', 'admin'],
     ['g', '같이 놀기'],
     ['events', '행사', 'ticket'],
     ['community', '커뮤니티 · 신고', 'chat'],
@@ -66,7 +67,7 @@
   function drawNav() {
     const cnt = { community: COUNTS.reports, inquiries: COUNTS.inquiries, events: COUNTS.eventsPending, visits: COUNTS.visitsPending, season: COUNTS.seasonDue, live: COUNTS.liveRequests, apps: COUNTS.apps, bills: COUNTS.bills };
     const cur = (location.hash.slice(1) || 'overview');
-    $('#admNav').innerHTML = NAV.map((n) => (n[0] === 'g' ? `<div class="grp">${n[1]}</div>`
+    $('#admNav').innerHTML = NAV.filter((n) => n[3] !== 'admin' || isAdmin()).map((n) => (n[0] === 'g' ? `<div class="grp">${n[1]}</div>`
       : `<button type="button" data-v="${n[0]}" class="${n[0] === cur ? 'on' : ''}">${icon(n[2])}<span>${n[1]}</span>${cnt[n[0]] ? `<span class="cnt">${cnt[n[0]] > 99 ? '99+' : cnt[n[0]]}</span>` : ''}</button>`)).join('');
   }
   async function refreshCounts() {
@@ -2048,6 +2049,120 @@ async function run(env) {
     };
   }
 
+  /* ================= 호스트 예약 · 손님 (대표 관리자만 · 열람 기록) ================= */
+  const HK = { tab: 'sum', code: '', month: null, q: '', status: '', gq: '', sum: null };
+  const HK_ST = { ok: 'ok', wait: 'warn', done: 'ink', cancel: 'faint', noshow: 'red' };
+  const ymAdd = (ym, n) => { const d = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+  const ymEnd = (ym) => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).toISOString().slice(0, 10);
+  const hkTime = (b) => `${m2t(b.s)}~${b.e > 1440 ? '익일 ' : ''}${m2t(b.e)}`;
+  const hkDay = (d) => { const w = '일월화수목금토'[new Date(d + 'T00:00:00Z').getUTCDay()]; return `${String(d).slice(2).replace(/-/g, '.')} (${w})`; };
+  async function hostdeskView() {
+    if (!isAdmin()) { main.innerHTML = hd('호스트 예약 · 손님', '손님 이름·연락처가 들어 있어서 대표 관리자만 볼 수 있어요.'); return; }
+    if (!HK.month) HK.month = SP.today().slice(0, 7);
+    HK.sum = await SP.get('/api/admin/hostdesk');
+    main.innerHTML = hd('호스트 예약 · 손님', '구독형 호스트가 호스트센터 예약 장부에 적은 예약과 손님이에요. 손님 문의 대응, 분쟁 확인, 손님의 삭제 요청 처리에 써 주세요. 대표 관리자만 볼 수 있고, 예약·손님 목록과 손님 상세를 열 때마다 열람 기록이 남아요.')
+      + `<div class="a-tools">${seg('hkTab', [['sum', '지점별 요약'], ['books', '예약'], ['guests', '손님'], ['log', '열람 기록']], HK.tab)}</div><div id="hkBody"><div class="a-empty">불러오는 중…</div></div>`;
+    onSeg(main, 'hkTab', (v) => { HK.tab = v; hkDraw(); });
+    main.onclick = (e) => {
+      const go2 = e.target.closest('[data-hkgo]');
+      if (go2) { HK.tab = go2.dataset.hkgo; HK.code = go2.dataset.code || ''; HK.q = ''; HK.gq = ''; $$('#hkTab button').forEach((x) => x.classList.toggle('on', x.dataset.v === HK.tab)); hkDraw(); return; }
+      const mv = e.target.closest('[data-hkmv]'); if (mv) { HK.month = ymAdd(HK.month, Number(mv.dataset.hkmv)); hkDraw(); return; }
+      const clr = e.target.closest('[data-hkclr]'); if (clr) { HK.q = ''; hkDraw(); return; }
+      const g = e.target.closest('[data-hkg]'); if (g) { hkGuest(g.dataset.hkg); return; }
+    };
+    main.onchange = (e) => {
+      if (e.target.id === 'hkCode') { HK.code = e.target.value; hkDraw(); }
+      else if (e.target.id === 'hkSt') { HK.status = e.target.value; hkDraw(); }
+    };
+    main.onsubmit = (e) => {
+      if (e.target.id === 'hkFind') { e.preventDefault(); HK.q = $('#hkQ').value.trim(); hkDraw(); }
+      else if (e.target.id === 'hkGFind') { e.preventDefault(); HK.gq = $('#hkGQ').value.trim(); hkDraw(); }
+    };
+    await hkDraw();
+  }
+  const hkCodeSel = () => `<select class="select" id="hkCode" aria-label="지점"><option value="">모든 지점</option>${(HK.sum.spaces || []).map((x) => `<option value="${esc(x.code)}"${x.code === HK.code ? ' selected' : ''}>${esc(x.name)} (${esc(x.code)})</option>`).join('')}</select>`;
+  async function hkDraw() {
+    const el = $('#hkBody'); if (!el) return;
+    el.innerHTML = '<div class="a-empty">불러오는 중…</div>';
+    try {
+      if (HK.tab === 'books') await hkBooks(el);
+      else if (HK.tab === 'guests') await hkGuests(el);
+      else if (HK.tab === 'log') await hkLog(el);
+      else hkSum(el);
+    } catch (er) { el.innerHTML = errBox(er); }
+  }
+  function hkSum(el) {
+    const d = HK.sum;
+    const mm = Number(d.ym.slice(5, 7));
+    el.innerHTML = `<div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>지점</th><th>호스트</th><th class="r">${mm}월 예약</th><th class="r">${mm}월 매출</th><th class="r">앞으로 7일</th><th class="r">손님</th><th class="r">전체 예약</th><th>마지막 입력</th><th></th></tr></thead><tbody>
+      ${d.spaces.map((x) => `<tr><td><b>${esc(x.name)}</b><span class="sub mono">${esc(x.code)}${x.closed ? ' · 영업 종료' : x.type && x.type !== 'host' ? ' · 지금은 구독형 아님' : ''}</span></td><td>${esc(x.hostName || '-')}</td>
+        <td class="r">${x.month}</td><td class="r nw">${SP.fmt(x.sales)}원</td><td class="r">${x.soon}</td><td class="r">${x.guests}</td><td class="r">${x.total}</td><td class="nw">${x.last ? when(x.last) : '<span class="small muted">아직 없음</span>'}</td>
+        <td class="nw">${x.total ? `<button class="btn btn-line btn-sm" type="button" data-hkgo="books" data-code="${esc(x.code)}">예약</button> <button class="btn btn-ghost btn-sm" type="button" data-hkgo="guests" data-code="${esc(x.code)}">손님</button>` : ''}</td></tr>`).join('') || emptyRow(9, '아직 구독형 지점이 없어요. 구독형 지점이 승인되고 호스트가 예약 장부를 쓰기 시작하면 여기에 보여요.')}</tbody></table></div>
+      <p class="a-note" style="margin-top:10px">숫자만 보여 주는 화면이라 열람 기록이 남지 않아요. 손님 연락처로 예약을 찾으려면 「예약」에서 검색해 주세요. 쏘플로 문의한 손님의 예약이 어느 지점인지 확인하고, 호스트 연락처를 안내할 때 쓰면 돼요.</p>`;
+  }
+  async function hkBooks(el) {
+    const p = new URLSearchParams();
+    if (HK.code) p.set('code', HK.code);
+    if (HK.status) p.set('status', HK.status);
+    if (HK.q) p.set('q', HK.q); else { p.set('from', HK.month + '-01'); p.set('to', ymEnd(HK.month)); }
+    const d = await SP.get('/api/admin/hostdesk/books?' + p);
+    const sum = d.items.filter((b) => b.status !== 'cancel' && b.status !== 'noshow').reduce((a, b) => a + (b.amount || 0), 0);
+    el.innerHTML = `<div class="a-tools">
+        ${HK.q ? `<span class="badge warn">검색 「${esc(HK.q)}」 · 모든 기간</span><button class="btn btn-ghost btn-sm" type="button" data-hkclr>검색 지우기</button>` : `<button class="ibtn" type="button" data-hkmv="-1" aria-label="이전 달">${icon('chev-l')}</button><b class="nw">${HK.month.replace('-', '년 ')}월</b><button class="ibtn" type="button" data-hkmv="1" aria-label="다음 달">${icon('chev-r')}</button>`}
+        ${hkCodeSel()}
+        <select class="select" id="hkSt" aria-label="상태"><option value="">모든 상태</option>${Object.entries(HK.sum.statuses || {}).map(([k, l]) => `<option value="${k}"${HK.status === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>
+        <form id="hkFind" class="row" style="gap:6px"><input class="input" id="hkQ" type="search" placeholder="이름·연락처·예약 번호" value="${esc(HK.q)}" style="width:220px"><button class="btn btn-ink btn-sm" type="submit">찾기</button></form>
+      </div>
+      <p class="small" style="margin-bottom:8px">${d.items.length}건${d.more ? ' (500건까지만 보여요. 지점이나 기간을 좁혀 주세요)' : ''} · 취소·노쇼 빼고 합계 ${SP.fmt(sum)}원</p>
+      <div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>이용일 · 시간</th><th>지점</th><th>예약자 · 연락처</th><th class="r">인원</th><th>경로 · 예약 번호</th><th>상태</th><th class="r">금액 · 결제</th><th>메모</th></tr></thead><tbody>
+      ${d.items.map((b) => `<tr><td class="nw"><b>${esc(hkDay(b.d))}</b><span class="sub">${esc(hkTime(b))}${b.slotLabel && b.slotLabel !== '직접 입력' ? ' · ' + esc(b.slotLabel) : ''}</span></td>
+        <td><b>${esc(b.spaceName)}</b><span class="sub mono">${esc(b.code)}</span></td>
+        <td>${b.name ? `<b>${esc(b.name)}</b>` : `<span class="small muted">${b.wiped ? '지워짐' : '이름 없음'}</span>`}${b.guestId ? ` <button class="btn btn-ghost btn-sm" type="button" data-hkg="${b.guestId}">손님</button>` : ''}<span class="sub mono">${esc(b.phone || '')}</span></td>
+        <td class="r">${b.people ?? ''}</td><td>${esc(b.srcLabel)}<span class="sub mono">${esc(b.extNo || '')}</span></td>
+        <td>${B(HK_ST[b.status] || 'ink', b.statusLabel)}</td>
+        <td class="r nw">${b.amount != null ? `<b>${SP.fmt(b.amount)}원</b>` : ''}<span class="sub">${esc(b.paidLabel || '')}${b.deposit ? ` · 보증금 ${SP.fmt(b.deposit)}원 ${esc(b.depLabel)}` : ''}</span></td>
+        <td style="max-width:220px">${esc(b.memo || '')}${b.purpose ? `<span class="sub">${esc(b.purpose)}</span>` : ''}</td></tr>`).join('') || emptyRow(8, HK.q ? '찾는 예약이 없어요. 연락처는 숫자 일부(뒤 4자리 등)로도 찾을 수 있어요.' : '이 달에 적힌 예약이 없어요.')}</tbody></table></div>`;
+  }
+  async function hkGuests(el) {
+    const p = new URLSearchParams();
+    if (HK.code) p.set('code', HK.code);
+    if (HK.gq) p.set('q', HK.gq);
+    const d = await SP.get('/api/admin/hostdesk/guests?' + p);
+    el.innerHTML = `<div class="a-tools">${hkCodeSel()}
+        <form id="hkGFind" class="row" style="gap:6px"><input class="input" id="hkGQ" type="search" placeholder="이름·연락처·메모" value="${esc(HK.gq)}" style="width:220px"><button class="btn btn-ink btn-sm" type="submit">찾기</button></form></div>
+      <p class="small" style="margin-bottom:8px">손님 ${d.items.length}명${d.more ? ' (500명까지만 보여요)' : ''}</p>
+      <div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>손님</th><th>지점</th><th class="r">이용</th><th class="r">누적 금액</th><th>마지막 · 다음</th><th>표시 · 메모</th><th></th></tr></thead><tbody>
+      ${d.items.map((g) => `<tr><td><b>${esc(g.name || '이름 없음')}</b><span class="sub mono">${esc(g.phone || '연락처 없음')}</span></td><td>${esc(g.spaceName)}<span class="sub mono">${esc(g.code)}</span></td>
+        <td class="r">${g.visits}회${g.noshow ? `<span class="sub">노쇼 ${g.noshow}</span>` : ''}</td><td class="r nw">${SP.fmt(g.total)}원</td>
+        <td class="nw">${g.lastVisit ? esc(day(g.lastVisit)) : '-'}${g.nextVisit ? `<span class="sub">다음 ${esc(day(g.nextVisit))}</span>` : ''}</td>
+        <td style="max-width:240px">${g.tags.map((t) => B(t === '주의' ? 'red' : 'ink', t)).join(' ')}${g.memo ? `<span class="sub">${esc(g.memo)}</span>` : ''}</td>
+        <td><button class="btn btn-line btn-sm" type="button" data-hkg="${g.id}">자세히</button></td></tr>`).join('') || emptyRow(7, HK.gq ? '찾는 손님이 없어요.' : '아직 적힌 손님이 없어요.')}</tbody></table></div>`;
+  }
+  async function hkGuest(id) {
+    const m = SP.modal({ title: '손님', wide: true, body: '<div class="a-empty">불러오는 중…</div>', foot: '<button class="btn btn-ghost btn-sm" type="button" id="hkDel" style="margin-right:auto">손님 정보 지우기</button><button class="btn btn-soft" data-x>닫기</button>' });
+    let d;
+    try { d = await SP.get('/api/admin/hostdesk/guests/' + id); } catch (er) { m.$('.modal-body').innerHTML = `<p class="a-note">${esc(er.message)}</p>`; m.$('#hkDel').hidden = true; return; }
+    const g = d.guest;
+    const act = d.books.filter((b) => b.status === 'ok' || b.status === 'done');
+    m.$('.modal-body').innerHTML = `<dl class="kv2"><dt>이름</dt><dd><b>${esc(g.name || '이름 없음')}</b></dd><dt>연락처</dt><dd class="mono">${esc(g.phone || '-')}</dd><dt>지점</dt><dd>${esc(g.spaceName)} <span class="mono small muted">${esc(g.code)}</span></dd>
+        <dt>이용</dt><dd>${act.length}회 · ${SP.fmt(act.reduce((a, b) => a + (b.amount || 0), 0))}원</dd>${g.tags.length ? `<dt>표시</dt><dd>${g.tags.map((t) => B(t === '주의' ? 'red' : 'ink', t)).join(' ')}</dd>` : ''}${g.memo ? `<dt>호스트 메모</dt><dd>${esc(g.memo)}</dd>` : ''}<dt>처음 적힌 날</dt><dd>${when(g.at)}</dd></dl>
+      <h3 class="h4" style="margin:16px 0 8px">예약 기록</h3>
+      <div class="a-tbl-wrap" style="max-height:320px"><table class="a-tbl"><thead><tr><th>이용일 · 시간</th><th>경로</th><th>상태</th><th class="r">금액</th><th>메모</th></tr></thead><tbody>
+      ${d.books.map((b) => `<tr><td class="nw"><b>${esc(hkDay(b.d))}</b><span class="sub">${esc(hkTime(b))}</span></td><td>${esc(b.srcLabel)}<span class="sub mono">${esc(b.extNo || '')}</span></td><td>${B(HK_ST[b.status] || 'ink', b.statusLabel)}</td><td class="r nw">${b.amount != null ? SP.fmt(b.amount) + '원' : ''}<span class="sub">${esc(b.paidLabel || '')}</span></td><td>${esc(b.memo || '')}</td></tr>`).join('') || emptyRow(5, '예약 기록이 없어요.')}</tbody></table></div>
+      <p class="a-note" style="margin-top:10px">손님이 쏘플에 직접 삭제를 요청했을 때만 「손님 정보 지우기」를 눌러 주세요. 모든 예약에서 이 손님의 이름·연락처가 지워지고, 예약 기록(날짜·금액)은 호스트 장부에 남아요. 되돌릴 수 없어요.</p>`;
+    m.$('#hkDel').onclick = async () => {
+      if (!(await SP.confirm(`${g.name || '이 손님'}의 이름·연락처를 모든 예약에서 지울까요? 되돌릴 수 없어요.`, { ok: '지우기', danger: true }))) return;
+      try { await SP.del('/api/admin/hostdesk/guests/' + g.id); m.close(); SP.toast('손님 정보를 지웠어요.'); HK.sum = await SP.get('/api/admin/hostdesk'); hkDraw(); }
+      catch (er) { SP.fail(er); }
+    };
+  }
+  async function hkLog(el) {
+    const d = await SP.get('/api/admin/hostdesk/log');
+    el.innerHTML = `<div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>언제</th><th>누가</th><th>무엇을</th><th>지점</th><th class="r">건수</th><th>조건</th></tr></thead><tbody>
+      ${d.items.map((x) => `<tr><td class="nw">${when(x.at)}</td><td>${esc(x.who)}</td><td>${x.act === 'guest_del' ? B('red', x.actLabel) : esc(x.actLabel)}${x.target ? `<span class="sub mono">${esc(x.target)}</span>` : ''}</td><td>${x.code ? `${esc(x.spaceName)}<span class="sub mono">${esc(x.code)}</span>` : '<span class="small muted">모든 지점</span>'}</td><td class="r">${x.n ?? ''}</td><td>${esc(x.q || '')}</td></tr>`).join('') || emptyRow(6, '아직 열람 기록이 없어요.')}</tbody></table></div>
+      <p class="a-note" style="margin-top:10px">손님 이름·연락처가 보이는 화면을 열 때마다 자동으로 남는 기록이에요. 최근 300건을 보여 주고, 2년이 지나면 자동으로 지워져요. 검색한 연락처는 뒤 4자리만 남겨요.</p>`;
+  }
+
   /* ================= 문의함 ================= */
   const IQ = { status: 'all' };
   async function inquiries() {
@@ -2257,6 +2372,6 @@ async function run(env) {
     };
   }
 
-  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, bills: billsView, events, community, groups, live, users, visits, inquiries, partners, settings };
+  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, bills: billsView, hostdesk: hostdeskView, events, community, groups, live, users, visits, inquiries, partners, settings };
   boot();
 })();

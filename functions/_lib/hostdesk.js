@@ -1,7 +1,7 @@
 // 호스트센터 — 예약 장부 · 고객 관리 (구독형: 호스트가 직접 운영하는 공간)
 //  · 네이버 예약·스페이스클라우드·전화 등 어디서 받은 예약이든 한곳에 적고, 달력으로 본다
 //  · 확정·대기 예약은 손님 화면 날짜 달력에 「마감」으로 자동 표시 (occ 표, src = 'hbook')
-//  · 손님(이름·연락처·메모)은 그 지점 호스트만 본다. 운영팀 화면에도 나오지 않는다
+//  · 손님(이름·연락처·메모)은 그 지점 호스트와 쏘플 대표 관리자만 본다. 관리자가 볼 때마다 pii_log 에 열람 기록을 남긴다 (2년 보관)
 //  · 보관 기간: 이용일로부터 1년이 지나면 예약의 이름·연락처를 지우고, 1년 넘게 오지 않은 손님 기록은 지운다. 예약 기록은 3년 보관
 import { HttpError, nowIso, int, str, oneOf, todayKST, isYmd, addDays, dayDiff, weekdayOf } from './util.js';
 import { loadSpaces, hostCodes } from './spaces.js';
@@ -433,5 +433,143 @@ export function register(route) {
       c.db.prepare('DELETE FROM host_guests WHERE id = ?').bind(g.id),
     ]);
     return { ok: true };
+  });
+
+  /* ================= 쏘플 관리자 — 호스트 예약 장부·손님 보기 =================
+     대표 관리자만 볼 수 있어요. 예약·손님 목록과 손님 상세를 열 때마다 열람 기록(pii_log)을 남겨요.
+     손님 문의 대응, 분쟁 확인, 손님의 삭제 요청 처리에 쓰는 화면이라 고치기는 없고 「손님 정보 지우기」만 있어요. */
+  async function piiAdmin(c) {
+    await c.needAdmin('admin');
+    let u = null;
+    try { u = await c.rawUser(); } catch { u = null; }
+    const member = u && u.role === 'admin';
+    return { uid: member ? u.id : null, who: member ? `${u.nick} (회원 #${u.id})` : '관리자 비밀번호 접속' };
+  }
+  const maskQ = (q) => String(q || '').replace(/\d[\d\s-]{5,}\d/g, (m) => { const d = m.replace(/\D/g, ''); return d.length >= 7 ? '*'.repeat(d.length - 4) + d.slice(-4) : m; });
+  const piiLog = (c, a, act, { code = null, target = null, n = null, q = null } = {}) =>
+    c.db.prepare('INSERT INTO pii_log (at, uid, who, act, code, target, n, q) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(nowIso(), a.uid, a.who, act, code, target, n, q ? String(q).slice(0, 200) : null).run();
+  async function spaceIndex(c) {
+    const all = await loadSpaces(c.db, { all: true });
+    const by = new Map(all.map((s) => [s.code, s]));
+    return { all, by, nameOf: (code) => (by.get(code) || {}).name || code };
+  }
+
+  /** 지점별 요약 — 숫자만 (손님 이름·연락처 없음) */
+  route('GET', '/api/admin/hostdesk', async (c) => {
+    await c.needAdmin('admin');
+    const today = todayKST();
+    const month = today.slice(0, 7);
+    const [m, soon, guests, tot] = await c.db.batch([
+      c.db.prepare(`SELECT code, COUNT(*) AS n, SUM(CASE WHEN status != 'noshow' THEN COALESCE(amount, 0) ELSE 0 END) AS sales FROM host_books WHERE d >= ? AND d <= ? AND status != 'cancel' GROUP BY code`).bind(month + '-01', month + '-31'),
+      c.db.prepare(`SELECT code, COUNT(*) AS n FROM host_books WHERE d >= ? AND d <= ? AND status IN ('ok', 'wait') GROUP BY code`).bind(today, addDays(today, 6)),
+      c.db.prepare('SELECT code, COUNT(*) AS n FROM host_guests GROUP BY code'),
+      c.db.prepare('SELECT code, COUNT(*) AS n, MAX(COALESCE(updated_at, at)) AS last FROM host_books GROUP BY code'),
+    ]);
+    const map = (r) => new Map((r.results || []).map((x) => [x.code, x]));
+    const M = map(m), S = map(soon), G = map(guests), T = map(tot);
+    const sp = await spaceIndex(c);
+    const codes = new Set([...sp.all.filter((s) => s.listing && s.listing.type === 'host').map((s) => s.code), ...T.keys()]);
+    const rows = [...codes].map((code) => {
+      const s = sp.by.get(code) || {};
+      return {
+        code, name: s.name || code, hostName: (s.listing && s.listing.hostName) || '', type: (s.listing && s.listing.type) || '', closed: !!s.closed,
+        month: (M.get(code) || {}).n || 0, sales: (M.get(code) || {}).sales || 0, soon: (S.get(code) || {}).n || 0,
+        guests: (G.get(code) || {}).n || 0, total: (T.get(code) || {}).n || 0, last: (T.get(code) || {}).last || '',
+      };
+    }).sort((a, b) => (b.last || '').localeCompare(a.last || '') || a.code.localeCompare(b.code));
+    return { ym: month, today, spaces: rows, sources: SRC, statuses: STATUS };
+  });
+
+  /** 예약 목록 — 검색어가 있으면 모든 기간에서 찾아요 (손님이 쏘플로 문의했을 때 연락처로 찾기) */
+  route('GET', '/api/admin/hostdesk/books', async (c) => {
+    const a = await piiAdmin(c);
+    const today = todayKST();
+    const q = str(c.q.get('q'), { max: 30 });
+    const where = [];
+    const binds = [];
+    let from = isYmd(c.q.get('from')) ? c.q.get('from') : today.slice(0, 7) + '-01';
+    let to = isYmd(c.q.get('to')) ? c.q.get('to') : addDays(from, 30);
+    if (!q) {
+      if (dayDiff(from, to) > 400 || dayDiff(from, to) < 0) throw new HttpError(400, '기간은 400일 안으로 골라 주세요.');
+      where.push('d >= ?', 'd <= ?'); binds.push(from, to);
+    }
+    const code = String(c.q.get('code') || '').toUpperCase();
+    if (/^S-\d{4}$/.test(code)) { where.push('code = ?'); binds.push(code); }
+    const st = c.q.get('status');
+    if (st && STATUS[st]) { where.push('status = ?'); binds.push(st); }
+    const src = c.q.get('src');
+    if (src && SRC[src]) { where.push('src = ?'); binds.push(src); }
+    if (q) {
+      const dq = q.replace(/\D/g, '');
+      where.push(`(name LIKE ? OR ext_no LIKE ? OR memo LIKE ?${dq.length >= 3 ? ` OR REPLACE(phone, '-', '') LIKE ?` : ''})`);
+      binds.push(`%${q}%`, `%${q}%`, `%${q}%`, ...(dq.length >= 3 ? [`%${dq}%`] : []));
+    }
+    const rows = (await c.db.prepare(`SELECT * FROM host_books ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY d ${q ? 'DESC' : 'ASC'}, s LIMIT 501`).bind(...binds).all()).results || [];
+    const more = rows.length > 500;
+    const sp = await spaceIndex(c);
+    const items = rows.slice(0, 500).map((r) => ({ ...bookRow(r), spaceName: sp.nameOf(r.code) }));
+    await piiLog(c, a, 'books', { code: /^S-\d{4}$/.test(code) ? code : null, n: items.length, q: q ? `검색 「${maskQ(q)}」 · 모든 기간` : `${from} ~ ${to}` });
+    return { items, more, from: q ? null : from, to: q ? null : to };
+  });
+
+  /** 손님 목록 */
+  route('GET', '/api/admin/hostdesk/guests', async (c) => {
+    const a = await piiAdmin(c);
+    const where = ['1 = 1'];
+    const binds = [];
+    const code = String(c.q.get('code') || '').toUpperCase();
+    if (/^S-\d{4}$/.test(code)) { where.push('g.code = ?'); binds.push(code); }
+    const q = str(c.q.get('q'), { max: 30 });
+    if (q) {
+      const dq = q.replace(/\D/g, '');
+      where.push(`(g.name LIKE ? OR g.memo LIKE ?${dq.length >= 3 ? ' OR g.phone_key LIKE ?' : ''})`);
+      binds.push(`%${q}%`, `%${q}%`, ...(dq.length >= 3 ? [`%${dq}%`] : []));
+    }
+    const rows = (await c.db.prepare(`SELECT g.*,
+        SUM(CASE WHEN b.status IN ('ok', 'done') THEN 1 ELSE 0 END) AS visits,
+        SUM(CASE WHEN b.status = 'noshow' THEN 1 ELSE 0 END) AS noshow,
+        SUM(CASE WHEN b.status IN ('ok', 'done') THEN COALESCE(b.amount, 0) ELSE 0 END) AS total,
+        MAX(CASE WHEN b.status IN ('ok', 'done') THEN b.d END) AS lastVisit,
+        MIN(CASE WHEN b.status IN ('ok', 'wait') AND b.d >= ? THEN b.d END) AS nextVisit
+      FROM host_guests g LEFT JOIN host_books b ON b.guest_id = g.id
+      WHERE ${where.join(' AND ')} GROUP BY g.id ORDER BY COALESCE(g.last_d, '') DESC, g.id DESC LIMIT 501`).bind(todayKST(), ...binds).all()).results || [];
+    const more = rows.length > 500;
+    const sp = await spaceIndex(c);
+    const items = rows.slice(0, 500).map((g) => ({ id: g.id, code: g.code, spaceName: sp.nameOf(g.code), name: g.name || '', phone: g.phone || '', memo: g.memo || '', tags: String(g.tags || '').split(',').filter(Boolean), visits: g.visits || 0, noshow: g.noshow || 0, total: g.total || 0, lastVisit: g.lastVisit || '', nextVisit: g.nextVisit || '', at: g.at }));
+    await piiLog(c, a, 'guests', { code: /^S-\d{4}$/.test(code) ? code : null, n: items.length, q: q ? `검색 「${maskQ(q)}」` : null });
+    return { items, more };
+  });
+
+  route('GET', '/api/admin/hostdesk/guests/:id', async (c) => {
+    const a = await piiAdmin(c);
+    const g = await c.db.prepare('SELECT * FROM host_guests WHERE id = ?').bind(int(c.params.id, { min: 1 })).first();
+    if (!g) throw new HttpError(404, '손님을 찾을 수 없어요. 이미 지워졌을 수 있어요.');
+    const books = (await c.db.prepare('SELECT * FROM host_books WHERE guest_id = ? ORDER BY d DESC, s DESC LIMIT 100').bind(g.id).all()).results || [];
+    const sp = await spaceIndex(c);
+    await piiLog(c, a, 'guest', { code: g.code, target: 'g:' + g.id, n: books.length });
+    return { guest: { id: g.id, code: g.code, spaceName: sp.nameOf(g.code), name: g.name || '', phone: g.phone || '', memo: g.memo || '', tags: String(g.tags || '').split(',').filter(Boolean), at: g.at, lastD: g.last_d || '' }, books: books.map(bookRow) };
+  });
+
+  /** 손님 정보 지우기 — 손님이 쏘플에 직접 삭제를 요청했을 때. 호스트 화면과 같은 방식(예약 기록은 남기고 이름·연락처만) */
+  route('DELETE', '/api/admin/hostdesk/guests/:id', async (c) => {
+    const a = await piiAdmin(c);
+    const g = await c.db.prepare('SELECT id, code FROM host_guests WHERE id = ?').bind(int(c.params.id, { min: 1 })).first();
+    if (!g) throw new HttpError(404, '손님을 찾을 수 없어요. 이미 지워졌을 수 있어요.');
+    await c.db.batch([
+      c.db.prepare('UPDATE host_books SET guest_id = NULL, name = NULL, phone = NULL, wiped = 1, updated_at = ? WHERE guest_id = ?').bind(nowIso(), g.id),
+      c.db.prepare('DELETE FROM host_guests WHERE id = ?').bind(g.id),
+    ]);
+    await piiLog(c, a, 'guest_del', { code: g.code, target: 'g:' + g.id });
+    return { ok: true };
+  });
+
+  /** 열람 기록 */
+  route('GET', '/api/admin/hostdesk/log', async (c) => {
+    await c.needAdmin('admin');
+    const rows = (await c.db.prepare('SELECT * FROM pii_log ORDER BY id DESC LIMIT 300').all()).results || [];
+    const sp = await spaceIndex(c);
+    const ACT = { books: '예약 목록', guests: '손님 목록', guest: '손님 상세', guest_del: '손님 정보 지우기' };
+    return { items: rows.map((r) => ({ id: r.id, at: r.at, who: r.who || '', act: r.act, actLabel: ACT[r.act] || r.act, code: r.code || '', spaceName: r.code ? sp.nameOf(r.code) : '', target: r.target || '', n: r.n, q: r.q || '' })) };
   });
 }

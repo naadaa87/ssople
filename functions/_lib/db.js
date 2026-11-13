@@ -2,7 +2,7 @@
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -65,13 +65,16 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_host_bills_status ON host_bills(status, id)`,
   // v10: 노출 기간 알림을 보냈는지 (같은 끝 날짜에 같은 알림을 두 번 보내지 않게)
   `CREATE TABLE IF NOT EXISTS host_marks (code TEXT NOT NULL, until TEXT NOT NULL, mark TEXT NOT NULL, at TEXT NOT NULL, PRIMARY KEY (code, until, mark))`,
-  // v12: 호스트센터 예약 장부 · 손님 (구독형 공간 — 그 지점 호스트만 봐요. 이름·연락처는 이용일 1년 뒤 지워요)
+  // v12: 호스트센터 예약 장부 · 손님 (구독형 공간 — 그 지점 호스트와 쏘플 대표 관리자만 봐요. 이름·연락처는 이용일 1년 뒤 지워요)
   `CREATE TABLE IF NOT EXISTS host_books (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, d TEXT NOT NULL, s INTEGER NOT NULL, e INTEGER NOT NULL, slot TEXT, slot_label TEXT, src TEXT NOT NULL DEFAULT 'etc', ext_no TEXT, status TEXT NOT NULL DEFAULT 'ok', guest_id INTEGER, name TEXT, phone TEXT, people INTEGER, purpose TEXT, amount INTEGER, paid TEXT, deposit INTEGER, dep_st TEXT, memo TEXT, block INTEGER NOT NULL DEFAULT 1, uid INTEGER, at TEXT NOT NULL, updated_at TEXT, wiped INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS idx_host_books_code_d ON host_books(code, d)`,
   `CREATE INDEX IF NOT EXISTS idx_host_books_guest ON host_books(guest_id)`,
   `CREATE TABLE IF NOT EXISTS host_guests (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, name TEXT, phone TEXT, phone_key TEXT, memo TEXT, tags TEXT, last_d TEXT, at TEXT NOT NULL, updated_at TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_host_guests_code ON host_guests(code, phone_key)`,
   `CREATE INDEX IF NOT EXISTS idx_occ_ref ON occ(src, ref)`,
+  // v13: 손님 개인정보 열람 기록 — 관리자 화면에서 호스트 예약 장부·손님을 볼 때마다 누가·언제·무엇을 봤는지 (2년 보관)
+  `CREATE TABLE IF NOT EXISTS pii_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, uid INTEGER, who TEXT, act TEXT NOT NULL, code TEXT, target TEXT, n INTEGER, q TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_pii_log_at ON pii_log(at)`,
 ];
 
 let ready = null;
@@ -485,6 +488,7 @@ export async function housekeep(db) {
     db.prepare('UPDATE host_books SET guest_id = NULL WHERE guest_id IS NOT NULL AND guest_id NOT IN (SELECT id FROM host_guests)'),
     db.prepare('DELETE FROM host_books WHERE d < ?').bind(ago(365 * 3).slice(0, 10)),
     db.prepare(`DELETE FROM occ WHERE src = 'hbook' AND d < ?`).bind(ago(40).slice(0, 10)),
+    db.prepare('DELETE FROM pii_log WHERE at < ?').bind(ago(365 * 2 + 1)),
   ]);
   return true;
 }

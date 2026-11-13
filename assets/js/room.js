@@ -113,7 +113,7 @@
     const c = s.contact || {};
     const list = SP.contactWays(s);
     const host = (s.listing && s.listing.hostName) || '호스트';
-    return `<div class="ask-card host"><div class="ask-copy"><b>${esc(host)}가 직접 운영하는 지점이에요</b><p>예약·결제·환불·이용 문의는 호스트에게 바로 해 주세요. 쏘플 고객센터에서는 이 지점의 예약을 확인할 수 없어요.</p>${c.hours || c.note ? `<p class="ask-note">${c.hours ? `${icon('clock', 'sm')}문의 받는 시간 ${esc(c.hours)}` : ''}${c.hours && c.note ? '<br>' : ''}${c.note ? esc(c.note) : ''}</p>` : ''}</div>
+    return `<div class="ask-card host"><div class="ask-copy"><b>${esc(host)}가 직접 운영하는 지점이에요</b><p>예약·결제·환불·이용 문의는 호스트에게 바로 해 주세요. 예약 변경·취소·환불은 호스트만 할 수 있어요.</p>${c.hours || c.note ? `<p class="ask-note">${c.hours ? `${icon('clock', 'sm')}문의 받는 시간 ${esc(c.hours)}` : ''}${c.hours && c.note ? '<br>' : ''}${c.note ? esc(c.note) : ''}</p>` : ''}</div>
       <div class="ask-ways">${list.length ? list.map((w) => `<a class="btn ${w.cls}" href="${esc(w.href)}"${w.ext ? ' target="_blank" rel="noopener"' : ''} data-track="${s.code}|${w.k === 'sms' ? 'sms' : w.k === 'phone' ? 'call' : w.k}">${icon(w.ic, w.k === 'kakao' ? 'fill sm' : 'sm')}${esc(w.label)}${w.sub ? `<small>${esc(w.sub)}</small>` : ''}</a>`).join('') : '<p class="small muted">호스트 연락처가 아직 없어요. 아래 「지점에 물어보기」에 남겨 주시면 호스트가 답해요.</p>'}</div></div>`;
   }
   /** 떠 있는 문의 버튼 — 위탁형은 쏘플 카카오톡, 구독형은 「호스트에게 문의」 칸으로 */

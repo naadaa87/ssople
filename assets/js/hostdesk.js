@@ -107,7 +107,7 @@
           </section>
         </div>
       </div>
-      <p class="tiny faint hd-foot">예약 장부의 손님 이름·연락처는 이 지점 호스트만 볼 수 있어요. 이용일로부터 1년이 지나면 이름·연락처가 자동으로 지워져요.</p>`;
+      <p class="tiny faint hd-foot">예약 장부의 손님 이름·연락처는 이 지점 호스트와 쏘플 대표 관리자만 볼 수 있어요(쏘플은 손님 문의·분쟁 확인에만 쓰고, 볼 때마다 기록이 남아요). 이용일로부터 1년이 지나면 이름·연락처가 자동으로 지워져요.</p>`;
   }
   /** 날짜별로 묶은 예약 줄 */
   function dayGroups(list, today) {
@@ -256,7 +256,7 @@
           <div class="field"><span class="label">결제</span><div class="hd-chips sm" id="bkPaid">${Object.entries(M.paid || {}).map(([k, l]) => `<button type="button" class="chip${(b.paid || 'paid') === k ? ' on' : ''}" data-pd="${k}">${esc(l)}</button>`).join('')}</div></div>
           <div class="field"><label class="label" for="bkDep">보증금 <span class="opt">선택</span></label><div class="hd-won"><input class="input" id="bkDep" inputmode="numeric" maxlength="10" value="${b.deposit != null ? SP.fmt(b.deposit) : ''}" placeholder="0"><span>원</span></div></div>
           <div class="field"><span class="label">보증금 상태</span><div class="hd-chips sm" id="bkDepSt">${Object.entries(M.dep || {}).map(([k, l]) => `<button type="button" class="chip${(b.depSt || 'none') === k ? ' on' : ''}" data-ds="${k}">${esc(l)}</button>`).join('')}</div></div>
-          <div class="field full"><label class="label" for="bkMemo">메모 <span class="opt">호스트만 봐요</span></label><textarea class="textarea" id="bkMemo" rows="2" maxlength="500" placeholder="예) 케이크 반입, 풍선 장식 요청, 주차 1대">${esc(b.memo || '')}</textarea></div>
+          <div class="field full"><label class="label" for="bkMemo">메모 <span class="opt">손님에게는 안 보여요</span></label><textarea class="textarea" id="bkMemo" rows="2" maxlength="500" placeholder="예) 케이크 반입, 풍선 장식 요청, 주차 1대">${esc(b.memo || '')}</textarea></div>
           <label class="switch full"><input type="checkbox" id="bkBlock"${b.block !== false ? ' checked' : ''}><span>손님 화면 날짜 달력에 이 시간을 「마감」으로 표시</span></label>
         </div>
         <div class="form-err" id="bkErr" hidden></div>
@@ -620,7 +620,7 @@
         <div class="field"><label class="label" for="gName">이름</label><input class="input" id="gName" maxlength="30" value="${esc(g.name)}"></div>
         <div class="field"><label class="label" for="gPhone">연락처</label><input class="input" id="gPhone" maxlength="20" inputmode="tel" value="${esc(g.phone)}">${g.phone ? `<p class="help"><a class="link" href="tel:${esc(g.phone.replace(/[^\d]/g, ''))}">전화</a> · <a class="link" href="sms:${esc(g.phone.replace(/[^\d]/g, ''))}">문자</a></p>` : ''}</div>
         <div class="field full"><span class="label">표시</span><div class="hd-chips" id="gTags">${(d.tags || []).map((t) => `<button type="button" class="chip${g.tags.includes(t) ? ' on' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
-        <div class="field full"><label class="label" for="gMemo">메모 <span class="opt">호스트만 봐요</span></label><textarea class="textarea" id="gMemo" rows="2" maxlength="500" placeholder="예) 매년 3월 생일파티, 케이크는 직접 가져와요">${esc(g.memo)}</textarea></div>
+        <div class="field full"><label class="label" for="gMemo">메모 <span class="opt">손님에게는 안 보여요</span></label><textarea class="textarea" id="gMemo" rows="2" maxlength="500" placeholder="예) 매년 3월 생일파티, 케이크는 직접 가져와요">${esc(g.memo)}</textarea></div>
       </div>
       <div class="between" style="margin:16px 0 8px"><h3 class="h4">예약 기록</h3><button class="btn btn-line btn-sm" type="button" id="gNew">${icon('plus', 'sm')}이 손님 예약 추가</button></div>
       ${d.books.length ? `<div class="hd-list sm">${d.books.map((b) => bookLine(b, true)).join('')}</div>` : '<p class="small muted">예약 기록이 없어요.</p>'}
