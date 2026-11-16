@@ -1,4 +1,5 @@
 // 지점 — 목록·상세, 관리자 수정
+import { bumpContent } from './edge.js';
 import { HttpError, parseJSON, nowIso, str, int, url, isYmd, maskPhones, shuffle, oneOf, todayKST } from './util.js';
 import { seedOf, notiStmt, notiManyStmt, getSettings, hostPrices } from './db.js';
 import { regionPath, areaPath } from './slugs.js';
@@ -6,7 +7,8 @@ import { publicGallery, galleryAt, galleryRaw, photoKeys, coverOf, cleanGallery,
 
 let cache = null;
 let cacheAt = 0;
-export function invalidateSpaces() { cache = null; }
+// 지점이 바뀌면 이 서버의 기억을 지우고, 가장자리에 둔 공개 화면·데이터의 내용 버전도 올려요
+export function invalidateSpaces() { cache = null; bumpContent(); }
 
 /** 지점 사진 최대 장수 (아임웹 게시물 사진이 가장 많은 지점이 30장) */
 export const PHOTO_MAX = 40;

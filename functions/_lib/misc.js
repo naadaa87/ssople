@@ -5,7 +5,7 @@ import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
 import { loadSpaces, notifyStaff } from './spaces.js';
 import { imgUrl, checkText } from './community.js';
 
-export const APP_VERSION = '2026.11.16a';
+export const APP_VERSION = '2026.11.16b';
 
 export const INQUIRY_KINDS = {
   partner: '제휴 혜택 제공',
@@ -142,9 +142,17 @@ export function register(route) {
     const key = c.params.key;
     if (!/^u\/\d{6}\/[A-Za-z0-9]{8,24}\.(jpg|png|webp|gif)$/.test(key)) throw new HttpError(404, '사진을 찾을 수 없어요.');
     if (!c.env.PHOTOS) throw new HttpError(404, '사진을 찾을 수 없어요.');
+    // 사진 주소는 한 번 정해지면 내용이 바뀌지 않아요 — 가장자리에 저장해 두고, 다음 손님부터는 저장소까지 가지 않아요
+    let cache = null;
+    try { cache = typeof caches !== 'undefined' && caches.default ? caches.default : null; } catch { cache = null; }
+    const ck = new Request(c.url.origin + '/__edge/img/' + key);
+    if (cache) {
+      const hit = await cache.match(ck).catch(() => null);
+      if (hit) { const h = new Headers(hit.headers); h.set('x-sp-cache', 'HIT'); return new Response(hit.body, { status: 200, headers: h }); }
+    }
     const obj = await c.env.PHOTOS.get(key);
     if (!obj) throw new HttpError(404, '사진을 찾을 수 없어요.');
-    return new Response(obj.body, {
+    const res = new Response(obj.body, {
       headers: {
         'content-type': obj.httpMetadata?.contentType || 'image/jpeg',
         'cache-control': 'public, max-age=31536000, immutable',
@@ -152,6 +160,8 @@ export function register(route) {
         'x-content-type-options': 'nosniff',
       },
     });
+    if (cache) c.wait(cache.put(ck, res.clone()).catch(() => {}));
+    return res;
   });
 }
 

@@ -1,8 +1,9 @@
 // 예약 현황(빈 방 / 마감) 계산
 //  - occ 표: 호스트 동기화(host) · 엑셀 업로드(upload) · 수동 방막기(manual) · 수신 API(push)
 //  - 지점마다 패키지 시간(분 단위)을 겹쳐 보고 판단한다. 고객 개인정보는 다루지 않는다.
+import { bumpAvail } from './edge.js';
 import { HttpError, addDays, dayDiff, todayKST, kstMinuteOfDay, isYmd, weekdayOf, int, nowIso, parseJSON, str } from './util.js';
-import { getSettings, getMeta } from './db.js';
+import { getSettings, getMetas, getMeta } from './db.js';
 import { loadSpaces, hostCodes } from './spaces.js';
 
 export const DEF_SPAN = {
@@ -81,13 +82,12 @@ export function spaceStatus(space, rows, { from, days, nowAbs, detail }) {
 }
 
 /* ---------------- 살아 있는 데이터인지 ---------------- */
-export async function liveState(db, settings) {
+export async function liveState(db, settings, pre = null) {
   const mode = settings['avail.mode'] || 'auto';
   if (mode === 'off') return { show: false, live: false, mode };
   if (mode === 'on') return { show: true, live: true, mode };
-  const [hostOk, upAt, pushAt, coverRaw] = await Promise.all([
-    getMeta(db, 'host_ok_at'), getMeta(db, 'upload_at'), getMeta(db, 'push_at'), getMeta(db, 'upload_cover'),
-  ]);
+  const m = pre || await getMetas(db, ['host_ok_at', 'upload_at', 'push_at', 'upload_cover']);
+  const [hostOk, upAt, pushAt, coverRaw] = [m.host_ok_at, m.upload_at, m.push_at, m.upload_cover];
   const fresh = (iso, h) => iso && Date.now() - Date.parse(iso) < h * 3600e3;
   let live = !!(fresh(hostOk, 6) || fresh(pushAt, 24));
   if (!live && fresh(upAt, 72)) {
@@ -102,7 +102,8 @@ export async function liveState(db, settings) {
 
 /* ---------------- 짧은 캐시 ---------------- */
 const memo = new Map();
-export function clearAvailCache() { memo.clear(); }
+// 마감 칸이 바뀌면 이 서버의 기억을 지우고, 가장자리에 둔 「날짜 고르고 예약」 데이터도 새로
+export function clearAvailCache() { memo.clear(); bumpAvail(); }
 
 export async function computeAvail(db, { from, days, codes = null, detail = false }) {
   const key = [from, days, codes ? codes.join(',') : '*', detail ? 1 : 0].join('|');
@@ -144,17 +145,15 @@ export function register(route, { maybeSync }) {
     const code = c.q.get('code');
     const codes = code ? code.split(',').filter((x) => /^S-\d{4}$/.test(x)).slice(0, 50) : null;
     const detail = c.q.get('detail') === '1' && codes && codes.length === 1;
+    // 상태값 6개를 한 번에 읽어요 (예전엔 DB를 여러 번 오갔어요)
+    const m = await getMetas(c.db, ['host_ok_at', 'cron_at', 'upload_at', 'push_at', 'upload_cover']);
     if (maybeSync && c.env.HOSTDB) {
       // 10분마다 도는 실행기(ssople-sync)가 살아 있으면 고객 요청에서는 따로 읽지 않는다
-      const [last, cron] = await Promise.all([getMeta(c.db, 'host_ok_at'), getMeta(c.db, 'cron_at')]);
-      const cronOn = cron && Date.now() - Date.parse(cron) < 30 * 60e3;
-      if (!cronOn) {
-        // 실행기가 없으면: 마지막으로 잘 불러온 지 30분이 넘었을 때 이번 요청에서 먼저 새로 읽고 보여 준다 (밤사이 들어온 예약 반영)
-        if (!last || Date.now() - Date.parse(last) > 30 * 60e3) { try { await maybeSync(c.env, settings); } catch { /* 표시는 계속 */ } }
-        else c.wait(maybeSync(c.env, settings).catch(() => {}));
-      }
+      const cronOn = m.cron_at && Date.now() - Date.parse(m.cron_at) < 30 * 60e3;
+      // 실행기가 없으면 뒤에서 새로 읽어요 — 손님이 예약 DB 동기화를 기다리지 않게 (오래된 정보는 아래 liveState가 「네이버에서 확인」으로 돌려요)
+      if (!cronOn) c.wait(maybeSync(c.env, settings).catch(() => {}));
     }
-    const st = await liveState(c.db, settings);
+    const st = await liveState(c.db, settings, m);
     if (!st.show) return { show: false };
     const v = await computeAvail(c.db, { from, days, codes, detail });
     return { show: true, live: st.live, ...v, asOf: st.hostOk || st.pushAt || st.upAt || null };

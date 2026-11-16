@@ -1,8 +1,9 @@
 // 고객 홈페이지 전용 DB(ssople-web) — 표 자동 생성, 기본 지점 데이터, 설정값
+import { edgeGetJSON, edgePutJSON, bumpContent } from './edge.js';
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -75,6 +76,9 @@ const SCHEMA = [
   // v13: 손님 개인정보 열람 기록 — 관리자 화면에서 호스트 예약 장부·손님을 볼 때마다 누가·언제·무엇을 봤는지 (2년 보관)
   `CREATE TABLE IF NOT EXISTS pii_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, uid INTEGER, who TEXT, act TEXT NOT NULL, code TEXT, target TEXT, n INTEGER, q TEXT)`,
   `CREATE INDEX IF NOT EXISTS idx_pii_log_at ON pii_log(at)`,
+  // v14: 클릭 기록 색인 — 인기 지점 집계(최근 30일)와 조회수 중복 확인이 표 전체를 훑지 않게
+  `CREATE INDEX IF NOT EXISTS idx_clicks_at ON clicks(at, code)`,
+  `CREATE INDEX IF NOT EXISTS idx_clicks_view ON clicks(code, ih, at)`,
 ];
 
 let ready = null;
@@ -87,10 +91,15 @@ export function ensureSchema(env) {
   }
   if (!ready) {
     ready = (async () => {
+      // 가장자리에 「이 판까지 준비 끝」 표시가 있으면 DB를 읽지 않아요 (새로 뜬 서버마다 DB를 세 번 오가던 것을 없앰)
+      const flag = `schema-ok-${SCHEMA_VERSION}-${SEED_VERSION}-${BIZ_VERSION}`;
+      if (await edgeGetJSON(flag)) return;
       let v = 0;
+      let mv = {};
       try {
-        const r = await env.DB.prepare(`SELECT v FROM meta WHERE k='schema'`).first();
-        v = r ? Number(r.v) : 0;
+        const rs = (await env.DB.prepare(`SELECT k, v FROM meta WHERE k IN ('schema', 'seed', 'biz_v')`).all()).results || [];
+        mv = Object.fromEntries(rs.map((r) => [r.k, r.v]));
+        v = Number(mv.schema) || 0;
       } catch { v = 0; }
       if (v < SCHEMA_VERSION) {
         if (!v) {
@@ -148,9 +157,11 @@ export function ensureSchema(env) {
           .bind(String(SCHEMA_VERSION)).run();
         await env.DB.prepare(`INSERT INTO meta (k, v) VALUES ('installed_at', ?) ON CONFLICT(k) DO NOTHING`).bind(nowIso()).run();
       }
-      // 지점 기본 데이터가 새 판으로 바뀌었으면(예약 링크·운영 지점 목록) 한 번만 맞춘다
-      if ((await getMeta(env.DB, 'seed')) !== SEED_VERSION) await applySeedUpdate(env.DB);
-      if ((await getMeta(env.DB, 'biz_v')) !== BIZ_VERSION) await migrateBiz(env.DB);
+      // 지점 기본 데이터가 새 판으로 바뀌었으면(예약 링크·운영 지점 목록) 한 번만 맞춘다 (표를 새로 만들었으면 다시 읽어요)
+      const fresh = v < SCHEMA_VERSION;
+      if ((fresh ? await getMeta(env.DB, 'seed') : mv.seed) !== SEED_VERSION) await applySeedUpdate(env.DB);
+      if ((fresh ? await getMeta(env.DB, 'biz_v') : mv.biz_v) !== BIZ_VERSION) await migrateBiz(env.DB);
+      edgePutJSON(flag, { ok: 1 }, 86400);
     })().catch((e) => { ready = null; throw e; });
   }
   return ready;
@@ -310,6 +321,7 @@ export async function migrateBiz(db) {
   }
   if (drop.length) await db.batch(drop.map((k) => db.prepare('DELETE FROM settings WHERE k = ?').bind(k)));
   setCache = null;
+  if (drop.length) bumpContent();
   await setMeta(db, 'biz_v', BIZ_VERSION);
   return drop;
 }
@@ -448,12 +460,21 @@ export async function saveSettings(db, patch) {
   }
   if (stmts.length) await db.batch(stmts);
   setCache = null;
+  // 설정이 바뀌면 가장자리에 둔 공개 화면·데이터도 새로 (edge.js)
+  bumpContent();
 }
 
 /* ---------------- meta ---------------- */
 export async function getMeta(db, k, def = null) {
   const r = await db.prepare('SELECT v FROM meta WHERE k = ?').bind(k).first();
   return r ? r.v : def;
+}
+/** meta 여러 개를 한 번에 — { 키: 값 } (없는 키는 null) */
+export async function getMetas(db, keys) {
+  const rs = (await db.prepare(`SELECT k, v FROM meta WHERE k IN (${keys.map(() => '?').join(',')})`).bind(...keys).all()).results || [];
+  const out = Object.fromEntries(keys.map((k) => [k, null]));
+  for (const r of rs) out[r.k] = r.v;
+  return out;
 }
 export async function setMeta(db, k, v) {
   await db.prepare('INSERT INTO meta (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind(k, String(v)).run();

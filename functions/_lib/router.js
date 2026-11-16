@@ -1,6 +1,7 @@
 // API 라우터 — /api/* 요청을 각 기능으로 나눠 보낸다
 import { Ctx } from './ctx.js';
-import { HttpError } from './util.js';
+import { HttpError, getCookie } from './util.js';
+import { edgeServe, contentVersion, availVersion, setEdge, normQuery } from './edge.js';
 import { ensureSchema, housekeep } from './db.js';
 import * as spaces from './spaces.js';
 import * as avail from './avail.js';
@@ -57,7 +58,37 @@ hostdesk.register(route);
 // sendBeacon(클릭 기록)과 토큰 인증(수신 API)은 사용자 지정 헤더를 붙일 수 없어 예외
 const NO_CSRF = new Set(['/api/click', '/api/sync/push', '/api/sync/run']);
 
+// 누구에게나 같은 공개 데이터 — Cloudflare 가장자리에 잠깐 두고 나눠 써요 (로그인·회원별 데이터는 넣지 않아요)
+//  [주소, 보관 초, 버전(true: 지점·설정을 고치면 바로 새로, 'avail': 예약 마감 칸이 바뀌면 바로 새로)]
+const EDGE_API = [
+  [/^\/api\/site$/, 60, true],
+  [/^\/api\/spaces$/, 60, true],
+  [/^\/api\/spaces\/S-\d{4}$/, 60, true],
+  [/^\/api\/home$/, 60, true],
+  [/^\/api\/partners$/, 300, true],
+  [/^\/api\/avail$/, 30, 'avail'],
+];
+
 export async function handle(context) {
+  setEdge(context.request.url, context.env);
+  const method0 = context.request.method;
+  const path0 = new URL(context.request.url).pathname.replace(/\/+$/, '') || '/';
+  // 로그인하지 않은 손님의 「내 정보」 — DB를 거치지 않고 바로 (모든 화면이 부르는 요청이에요)
+  if (method0 === 'GET' && path0 === '/api/me' && !getCookie(context.request, 'sp_s')) {
+    return new Response(JSON.stringify({ ok: true, user: null }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+  }
+  if (method0 === 'GET') {
+    const hit = EDGE_API.find(([re]) => re.test(path0));
+    if (hit) {
+      const [, ttl, versioned] = hit;
+      const v = versioned === 'avail' ? await availVersion() : versioned ? await contentVersion() : '';
+      return edgeServe(context, `api${path0}?${normQuery(context.request.url)}#${v}`, () => run(context), { ttl, browser: 'no-store' });
+    }
+  }
+  return run(context);
+}
+
+async function run(context) {
   const c = new Ctx(context);
   const method = c.req.method === 'HEAD' ? 'GET' : c.req.method;
   const path = c.url.pathname.replace(/\/+$/, '') || '/';

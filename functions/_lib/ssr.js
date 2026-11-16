@@ -10,6 +10,7 @@ import { GAMES } from './games-index.js';
 import { OG_ROOMS, OG_AREAS, ogImg } from './og.js';
 import { publicGallery, photoKeys, galleryAt, isReal, galleryRaw } from './gallery.js';
 import { homeBlocks, roomsBlocks, locationsBlocks, areaChipsHtml, roomPriceHtml, roomBookHtml, nearRoomsHtml, galleryBlocks } from './ssr-lists.js';
+import { edgeServe, contentVersion, setEdge, normQuery, assetTag } from './edge.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
@@ -63,6 +64,9 @@ export async function renderPage(context, template, metaFn) {
       element(el) {
         if (verify) el.append(verify, { html: true });
         if (meta?.data) el.append(`<script>window.__SSR__=${safeJson(meta.data)}</script>`, { html: true });
+        // 지점 화면의 첫 사진 — 스크립트가 그리기 전에 미리 받기 시작해요 (화면에서 가장 큰 그림)
+        const first = meta?.data?.space?.photos?.[0];
+        if (typeof first === 'string' && /^(\/(api\/img|assets)\/|https:\/\/)/.test(first)) el.append(`<link rel="preload" as="image" href="${esc(first)}" fetchpriority="high">`, { html: true });
         if (meta?.noindex) el.append('<meta name="robots" content="noindex">', { html: true });
         for (const j of meta?.jsonld || []) el.append(jsonLdTag(j), { html: true });
       },
@@ -87,11 +91,36 @@ export function siteBase(url, st, isLive = false) {
   return url.origin;
 }
 
+/** 가장자리 캐시 시간 — 공개 화면은 60초 동안 그대로 나눠 쓰고, 10분 안에는 저장본을 먼저 보여 주며 뒤에서 새로 만들어요.
+ *  지점·설정을 고치면 내용 버전이 올라가서 바로 새로 만들어요 (edge.js) */
+export const HTML_EDGE = { ttl: 60, swr: 600 };
+
+/** 공개 화면 하나를 가장자리 캐시로 — 키: 주소 + 화면 틀 ETag + 내용 버전 */
+export async function edgeHtml(context, tag, build, { query = true } = {}) {
+  const url = new URL(context.request.url);
+  setEdge(url, context.env);
+  const cv = await contentVersion();
+  const q = query ? normQuery(url.toString()) : '';
+  return edgeServe(context, `html${url.pathname}?${q}#${tag}.${cv}`, build, HTML_EDGE);
+}
+/** 화면 틀 파일로 그리는 화면(지점 상세·지역별) — 틀 ETag를 붙여 가장자리 캐시로 */
+export async function edgePage(context, template, build) {
+  const url = new URL(context.request.url);
+  return edgeHtml(context, await assetTag(context.env, url.origin, template), build);
+}
+
 /** 고정 화면(홈·지점 찾기·파티 가이드 등) — 정식 주소·공유 주소·빵부스러기를 실제 대표 주소로 채운다 */
 export async function renderStatic(context) {
-  let res = await context.next();
+  const res = await context.next();
   const ct = res.headers.get('content-type') || '';
   if (!res.ok || !ct.includes('text/html')) return res;
+  // 이 화면들은 주소(경로)만으로 내용이 정해져요 — 쿼리는 캐시 키에서 빼요
+  const tag = (res.headers.get('etag') || '').replace(/[^\w-]/g, '').slice(0, 40);
+  return edgeHtml(context, tag, () => buildStatic(context, res), { query: false });
+}
+
+async function buildStatic(context, tpl) {
+  let res = tpl;
   const url = new URL(context.request.url);
   let st = {};
   let extra = '';

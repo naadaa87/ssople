@@ -522,7 +522,11 @@
       cv.width = w; cv.height = h;
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      cv.toBlob((b) => (b ? resolve(b) : reject(new Error('사진을 변환하지 못했어요.'))), 'image/jpeg', q);
+      // WebP로 저장할 수 있는 브라우저면 WebP(같은 화질에 용량이 30%쯤 작아요), 아니면(사파리 등) JPEG
+      const jpeg = () => cv.toBlob((b) => (b ? resolve(b) : reject(new Error('사진을 변환하지 못했어요.'))), 'image/jpeg', q);
+      try {
+        cv.toBlob((b) => { if (b && b.type === 'image/webp' && b.size > 64) resolve(b); else jpeg(); }, 'image/webp', Math.min(q, 0.82));
+      } catch { jpeg(); }
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('사진을 읽지 못했어요. 다른 사진으로 해 주세요.')); };
     img.src = url;

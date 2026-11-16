@@ -9,6 +9,7 @@ import { tierOf } from './account.js';
 import { loadPlan, summarize } from './seasons.js';
 import { getPlan, loadMarks, planSummary } from './season-plan.js';
 import { endGuestSessions } from './hostcenter.js';
+import { bumpContent } from './edge.js';
 
 export function register(route) {
   route('GET', '/api/admin/overview', async (c) => {
@@ -204,6 +205,7 @@ export function register(route) {
     const f = cleanPartner(await c.body());
     const r = await c.db.prepare('INSERT INTO partners (name, cat, benefit, body, url, img, region, tier, code, sort, active, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id')
       .bind(f.name, f.cat, f.benefit, f.body, f.url || null, f.img, f.region, f.tier, f.code, f.sort, f.active, nowIso()).first();
+    bumpContent();   // 제휴 목록 공개 데이터도 바로 새로
     return { ok: true, id: r.id };
   });
   route('PUT', '/api/admin/partners/:id', async (c) => {
@@ -211,11 +213,13 @@ export function register(route) {
     const f = cleanPartner(await c.body());
     await c.db.prepare('UPDATE partners SET name=?, cat=?, benefit=?, body=?, url=?, img=?, region=?, tier=?, code=?, sort=?, active=? WHERE id=?')
       .bind(f.name, f.cat, f.benefit, f.body, f.url || null, f.img, f.region, f.tier, f.code, f.sort, f.active, int(c.params.id, { min: 1 })).run();
+    bumpContent();
     return { ok: true };
   });
   route('DELETE', '/api/admin/partners/:id', async (c) => {
     await c.needAdmin();
     await c.db.prepare('DELETE FROM partners WHERE id = ?').bind(int(c.params.id, { min: 1 })).run();
+    bumpContent();
     return { ok: true };
   });
 

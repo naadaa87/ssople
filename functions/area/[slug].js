@@ -1,6 +1,6 @@
 // 지역·동네별 지점 모아 보기 — /area/sinchon, /area/seoul
 // 한글 주소(/area/신촌)·대문자·끝 슬래시로 들어오면 정식 주소(/area/sinchon)로 301 — 같은 화면이 여러 주소로 나뉘어 검색되지 않게
-import { renderPage, areaMeta } from '../_lib/ssr.js';
+import { renderPage, areaMeta, edgePage } from '../_lib/ssr.js';
 import { loadSpaces } from '../_lib/spaces.js';
 import { ensureSchema } from '../_lib/db.js';
 import { findArea, regionPath, areaPath } from '../_lib/seo.js';
@@ -8,7 +8,9 @@ import { REGION_SLUGS, AREA_SLUGS } from '../_lib/slugs.js';
 
 const norm = (p) => { try { return decodeURIComponent(p); } catch { return String(p); } };
 
-export const onRequestGet = async (context) => {
+export const onRequestGet = (context) => edgePage(context, '/area', () => build(context));
+
+async function build(context) {
   try {
     const { env, params, request } = context;
     if (env.DB) {
@@ -34,6 +36,6 @@ export const onRequestGet = async (context) => {
     }
   } catch { /* DB를 못 읽으면 그대로 그린다 */ }
   return renderPage(context, '/area', areaMeta);
-};
+}
 
-export const onRequestHead = onRequestGet;
+export const onRequestHead = (context) => build(context);

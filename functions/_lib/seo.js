@@ -1,4 +1,5 @@
 // 검색 노출용 — 지역 페이지 주소, 구조화 데이터(JSON-LD), 검색엔진 소유 확인 태그
+import { contentVersion, edgeGetJSON, edgePutJSON } from './edge.js';
 import { getSettings, getMeta, setMeta } from './db.js';
 import { photoUrl } from './spaces.js';
 import { photoKeys } from './gallery.js';
@@ -255,13 +256,15 @@ export async function domainLive(env) {
 /** 테스트용 — 기억해 둔 연결 상태를 지운다 */
 export function _resetDomainCache() { live = null; liveAt = 0; }
 /** ssople.com·www.ssople.com 으로 들어온 요청이면 "도메인 연결됨"을 남긴다 */
-export async function markDomainLive(env, url) {
+export async function markDomainLive(env, url, wait) {
   if (live === true || !env || !env.DB) return;
   if (url.hostname.toLowerCase().replace(/^www\./, '') !== PRIMARY_HOST) return;
-  try {
+  // 대표 도메인으로 들어온 요청이면 이미 연결된 거예요 — 기록은 손님을 기다리게 하지 않고 뒤에서
+  live = true;
+  const p = (async () => {
     if (!(await getMeta(env.DB, 'domain_live'))) await setMeta(env.DB, 'domain_live', new Date().toISOString());
-    live = true;
-  } catch { /* meta 표가 아직 없으면 다음 요청에서 다시 */ }
+  })().catch(() => { /* meta 표가 아직 없으면 다음 요청에서 다시 */ });
+  if (wait) wait(p); else await p;
 }
 /** 지금 쓸 대표 도메인 — 설정값 > 연결된 ssople.com > (없음: 접속한 주소 그대로) */
 export function canonicalHostOf(url, st, isLive) {
@@ -308,11 +311,21 @@ export async function recordPreviewHit(env, request, url, status) {
   } catch { /* 기록은 없어도 된다 */ }
 }
 
-export async function canonicalRedirect(env, request) {
+export async function canonicalRedirect(env, request, wait) {
   const url = new URL(request.url);
+  // 대표 주소 설정 하나만 필요해요 — 가장자리에 그 값만 짧게 둬서 DB까지 가지 않게 (비공개 설정은 넣지 않아요)
   let st = {};
-  try { if (env && env.DB) st = await getSettings(env.DB); } catch { st = {}; }
-  await markDomainLive(env, url);
+  try {
+    const name = 'canon-' + (await contentVersion());
+    const e = await edgeGetJSON(name);
+    if (e) st = { 'seo.canonical_host': e.h || '' };
+    else if (env && env.DB) {
+      const all = await getSettings(env.DB);
+      st = { 'seo.canonical_host': all['seo.canonical_host'] || '' };
+      edgePutJSON(name, { h: st['seo.canonical_host'] }, 600);
+    }
+  } catch { st = {}; }
+  await markDomainLive(env, url, wait);
   const host = canonicalHostOf(url, st, await domainLive(env));
   if (!host) return null;
   const bare = (h) => h.replace(/^www\./, '');
