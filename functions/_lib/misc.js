@@ -2,10 +2,10 @@
 import { naverBotHits } from './seo.js';
 import { HttpError, str, nowIso, todayKST, addDays, slug, kstNow, maskPhones, parseJSON, dispNick } from './util.js';
 import { getSettings, publicSettings, SCHEMA_VERSION, getMeta } from './db.js';
-import { loadSpaces } from './spaces.js';
+import { loadSpaces, notifyStaff } from './spaces.js';
 import { imgUrl, checkText } from './community.js';
 
-export const APP_VERSION = '2026.11.14b';
+export const APP_VERSION = '2026.11.16a';
 
 export const INQUIRY_KINDS = {
   partner: '제휴 혜택 제공',
@@ -13,7 +13,7 @@ export const INQUIRY_KINDS = {
   space: '공간 입점·위탁형 상담',
   host_listing: '구독형 입점 신청 (호스트)',
   host_managed: '위탁형 신청',
-  startup: '창업 상담',
+  startup: '쏘플창업 문의',
   academy: '공간 아카데미 참여',
   collab: '브랜드 협업·촬영',
   etc: '기타 문의',
@@ -95,9 +95,12 @@ export function register(route) {
     if (!b.agree) throw new HttpError(400, '개인정보 수집·이용에 동의해 주세요.');
     await checkText(c.db, body);
     const u = await c.user();
-    await c.db.prepare('INSERT INTO inquiries (kind, name, org, contact, body, status, uid, ih, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    const r = await c.db.prepare('INSERT INTO inquiries (kind, name, org, contact, body, status, uid, ih, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .bind(kind, name, org || null, contact, body, 'new', u?.id || null, await c.ih(), nowIso()).run();
-    return { ok: true };
+    const id = (r && r.meta && r.meta.last_row_id) || null;
+    // 창업 문의는 운영진 회원 계정에 바로 알림 (관리자 → 문의함)
+    if (kind === 'startup') await notifyStaff(c, `새 쏘플창업 문의가 왔어요 — ${name}${org ? ' · ' + org : ''}`, '/admin#inquiries');
+    return { ok: true, id };
   });
 
   /* ---------- 사진 ---------- */

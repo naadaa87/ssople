@@ -1,13 +1,14 @@
 /* 로그인 · 회원 가입 */
 (function () {
   const { $, $$ } = SP;
-  const next = (() => { const n = SP.qs().next || '/'; return /^\/(?!\/)/.test(n) && !/^\/(login|signup)/.test(n) ? n : '/'; })();
+  // 갈 곳을 따로 정하지 않았으면, 마지막으로 호스트센터를 쓰던 회원은 호스트센터로 이어져요
+  const next = (() => { const n = SP.qs().next || (SP.mode() === 'host' ? '/myspace' : '/'); return /^\/(?!\/)/.test(n) && !/^\/(login|signup)/.test(n) ? n : '/'; })();
   const go = () => { try { sessionStorage.clear(); } catch { /* 무시 */ } location.href = next; };
   if ($('#toSignup')) $('#toSignup').href = '/signup?next=' + encodeURIComponent(next);
   if ($('#toLogin')) $('#toLogin').href = '/login?next=' + encodeURIComponent(next);
   SP.me().then((m) => { if (m.user) go(); });
   // 호스트센터에서 넘어온 가입·로그인 — 끝나면 공간 등록 신청서로 바로 이어진다는 걸 먼저 알려 줘요
-  if (/^\/(myspace|hostcenter)/.test(next)) {
+  if (/^\/(myspace|hostcenter|host)/.test(next)) {
     const box = document.querySelector('#signupForm, #loginForm');
     if (box) {
       const n = document.createElement('div');

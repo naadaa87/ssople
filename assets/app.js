@@ -206,6 +206,9 @@
     if (onOpen) onOpen(api);
     return api;
   };
+  /* 고객 화면 ↔ 호스트센터 — 마지막 화면 기억 (기기마다, 지워져도 문제없는 편의 기능) */
+  SP.mode = () => { try { return localStorage.getItem('sp.mode') === 'host' ? 'host' : 'customer'; } catch { return 'customer'; } };
+  SP.setMode = (m) => { try { localStorage.setItem('sp.mode', m === 'host' ? 'host' : 'customer'); } catch { /* 무시 */ } };
   SP.confirm = (msg, { ok = '확인', danger } = {}) => new Promise((resolve) => {
     let done = false;
     const m = SP.modal({
@@ -604,25 +607,42 @@
       }
     });
 
+    // 호스트센터 화면(data-area="host")과 고객 화면은 머리글이 달라요. 로그인한 회원은 버튼 하나로 오가요.
+    const hostArea = document.body.dataset.area === 'host';
     SP.me().then((m) => {
       const u = m.user;
       SP.user = u;
       document.documentElement.classList.toggle('is-in', !!u);
+      if (u && hostArea) SP.setMode('host');
       const slot = SP.$('#hdUser');
       const bell = SP.$('#bellBtn');
+      const here = encodeURIComponent(location.pathname + location.search);
       if (slot) {
         slot.innerHTML = u
-          ? `<a class="hd-user" href="/mypage">${SP.avatar(u.avatar, 'sm')}<span>${SP.esc(u.nick)}</span></a>`
-          : '<a class="btn btn-ink btn-sm" href="/login">로그인</a>';
+          ? `<a class="hd-user" href="/mypage">${SP.avatar(u.avatar, 'sm')}<span>${SP.esc(u.nick)}</span></a>${hostArea ? '' : `<a class="btn btn-line btn-sm hd-switch" href="/myspace" data-mode="host" title="예약 장부 · 고객 · 내 공간 관리">${SP.icon('swap', 'sm')}<span>호스트센터로 전환</span></a>`}`
+          : hostArea ? `<a class="btn btn-ghost btn-sm" href="/login?next=${here}">로그인</a>` : '<a class="btn btn-ink btn-sm" href="/login">로그인</a>';
       }
       const dslot = SP.$('#drawerUser');
-      if (dslot) dslot.innerHTML = u ? `<a href="/mypage">${SP.avatar(u.avatar, 'sm')} ${SP.esc(u.nick)}님</a>${(u.hostCodes || []).length ? '<a href="/myspace" class="sub">호스트센터 (예약·고객·공간)</a>' : ''}${u.admin ? '<a href="/admin" class="sub">관리자 화면</a>' : ''}<a href="#" class="sub" data-logout>로그아웃</a>` : '<a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a>';
+      if (dslot) {
+        dslot.innerHTML = u
+          ? `<a href="/mypage">${SP.avatar(u.avatar, 'sm')} ${SP.esc(u.nick)}님</a>${hostArea ? '' : `<a href="/myspace" class="dr-switch-host" data-mode="host">${SP.icon('swap')}<span><b>호스트센터로 전환</b><small>예약 장부 · 고객 · 공간 등록과 관리</small></span></a>`}${u.admin ? '<a href="/admin" class="sub">관리자 화면</a>' : ''}<a href="#" class="sub" data-logout>로그아웃</a>`
+          : hostArea ? `<a href="/login?next=${here}">로그인</a><a href="/signup?next=${here}" class="sub">회원 가입</a>` : '<a href="/login">로그인</a><a href="/signup" class="sub">회원 가입</a>';
+      }
+      // 고객 화면 메뉴의 「호스트센터」 — 로그인했으면 바로 내 호스트센터로
+      if (u) SP.$$('[data-hc-link]').forEach((a) => { a.href = '/myspace'; a.dataset.mode = 'host'; });
+      // 휴대폰 머리글에도 전환 버튼 (PC는 #hdUser 안에 있어요)
+      const act = SP.$('.hd-act');
+      if (u && !hostArea && act && !SP.$('.hd-switch-m', act)) act.insertAdjacentHTML('afterbegin', `<a class="btn btn-line btn-sm hd-switch-m" href="/myspace" data-mode="host" aria-label="호스트센터로 전환">${SP.icon('swap', 'sm')}호스트센터</a>`);
+      // 호스트센터 로고 — 로그인 전이면 입점 안내로
+      if (!u) SP.$$('[data-hc-home]').forEach((a) => { a.href = '/host'; });
       if (bell) {
         bell.hidden = !u;
         if (u && m.unread) bell.insertAdjacentHTML('beforeend', `<span class="dot">${m.unread > 9 ? '9+' : m.unread}</span>`);
         bell.addEventListener('click', openNotis);
       }
     });
+    // 화면 전환 버튼 — 마지막으로 쓴 화면을 기억해 두면 다음에 로그인할 때 그 화면으로 이어져요
+    document.addEventListener('click', (e) => { const a = e.target.closest('[data-mode]'); if (a) SP.setMode(a.dataset.mode); });
     document.addEventListener('click', async (e) => {
       if (!e.target.closest('[data-logout]')) return;
       e.preventDefault();

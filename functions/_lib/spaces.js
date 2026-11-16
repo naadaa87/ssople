@@ -275,7 +275,7 @@ async function myApp(c, id) {
   return { u, r };
 }
 /** 운영진(관리자·스태프 회원)에게 알림 — 대표 관리자 비밀번호로만 들어오는 경우엔 관리자 화면 숫자로 확인해요 */
-async function notifyStaff(c, text, link) {
+export async function notifyStaff(c, text, link) {
   try {
     const ids = ((await c.db.prepare(`SELECT id FROM users WHERE role IN ('admin', 'staff') AND status = 'active' LIMIT 30`).all()).results || []).map((x) => x.id);
     const st = notiManyStmt(c.db, ids, 'admin', text, link);

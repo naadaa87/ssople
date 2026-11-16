@@ -120,13 +120,16 @@
 
   /* ---------- 지점도 신청서도 없을 때 ---------- */
   function landing() {
+    const feat = (ic, t, d, tag = '') => `<div class="hs-feat">${icon(ic)}<div><b>${t}${tag ? ` <span class="badge mute">${tag}</span>` : ''}</b><p>${d}</p></div></div>`;
     root.innerHTML = `<div class="hs-land">
       <div class="hs-land-copy">
-        <span class="eyebrow">호스트센터</span>
-        <h2 class="h2">어떤 걸 하러 오셨나요?</h2>
+        <span class="eyebrow">호스트센터에 오신 걸 환영해요</span>
+        <h2 class="h2">내 공간을 쏘플에 올리고, 여기서 관리해요</h2>
+        <p class="muted" style="margin-top:8px">손님 계정 그대로 호스트 기능을 함께 써요. 공간을 등록하면 이 화면이 내 지점 대시보드로 바뀌어요.</p>
         <div class="hs-choice">
           <button type="button" class="hs-choice-i main" id="hsStart" ${applyOpen ? '' : 'disabled'}>${icon('plus')}<span><b>새 공간 등록 신청</b><small>운영 중이거나 준비 중인 파티룸을 쏘플에 올려요. 6단계, 10분이면 돼요.</small></span>${icon('chev-r', 'sm')}</button>
           <button type="button" class="hs-choice-i" id="hsLink">${icon('key')}<span><b>운영 중인 쏘플 지점 연결</b><small>이미 쏘플에 있는 지점의 점주·매니저라면 내 계정에 지점을 연결해요.</small></span>${icon('chev-r', 'sm')}</button>
+          <a class="hs-choice-i" href="/startup">${icon('building')}<span><b>아직 공간이 없어요</b><small>쏘플창업에서 매물 찾기부터 오픈까지 같이 준비해요.</small></span>${icon('chev-r', 'sm')}</a>
         </div>
         ${applyOpen ? '' : '<p class="callout small" style="margin:12px 0 0">지금은 새 공간 등록 신청을 잠시 받지 않고 있어요. 쏘플 카카오톡 채널로 문의해 주세요.</p>'}
         <h3 class="h4" style="margin:26px 0 10px">새 공간 등록은 이렇게 진행돼요</h3>
@@ -136,9 +139,21 @@
           <li><b>이용 기간 고르고 제출</b><span>1·3·6·12개월 중 고르고, 손님 화면 미리보기로 확인한 뒤 제출해요</span></li>
           <li><b>운영팀 검수 → 승인</b><span>보통 1~3일 안에 알림으로 알려 드려요. 승인되면 이 화면에서 바로 관리해요</span></li>
         </ol>
-        <p class="tiny faint" style="margin-top:12px">등록 요금은 <a class="link" href="/host#plans">호스트 모집</a>에서 볼 수 있고, 월 요금 외 수수료는 없어요. 결제 방법은 승인 안내 때 알려 드려요.</p>
+        <p class="tiny faint" style="margin-top:12px">등록 요금은 <a class="link" href="/host#plans">입점 · 요금 안내</a>에서 볼 수 있고, 월 요금 외 수수료는 없어요. 결제 방법은 승인 안내 때 알려 드려요.</p>
       </div>
-    </div>`;
+    </div>
+    <section class="hs-sec">
+      <div class="between" style="margin-bottom:12px;gap:8px;flex-wrap:wrap"><h2 class="h3">호스트센터에서 할 수 있는 일</h2><a class="sec-more" href="/hostcenter">사용법 자세히 보기</a></div>
+      <div class="hs-feats">
+        ${feat('calendar', '예약 장부', '네이버·스페이스클라우드·전화로 받은 예약을 한곳에 적어요. 확정된 시간은 손님 화면 달력에 마감으로 표시돼요.', '구독형')}
+        ${feat('users', '고객 관리', '같은 연락처는 한 손님으로 묶여요. 다시 온 손님, 단골·주의 표시, 메모까지 남겨요.', '구독형')}
+        ${feat('edit', '공간 정보 관리', '사진·소개·요금·예약 방식·비품을 고치면 1분 안에 손님 화면에 반영돼요.')}
+        ${feat('chat', '손님 문의 답변', '지점 화면 「지점에 물어보기」에 올라온 질문에 바로 답하고, 손님에게 알림이 가요.')}
+        ${feat('chart', '성과 보기', '내 지점 화면을 본 수와 예약 버튼을 누른 수를 날짜별로 봐요.')}
+        ${feat('won', '노출 기간 · 결제', '노출 기간과 결제 내역을 확인하고, 끝나기 전에 연장을 신청해요.')}
+      </div>
+      <p class="tiny faint" style="margin-top:12px">「구독형」 표시는 호스트가 직접 운영하는 공간에서 쓰는 기능이에요. 위탁형 지점은 예약과 손님 응대를 쏘플이 맡아요. 차이는 <a class="link" href="/host#compare">입점 · 요금 안내</a>에서 볼 수 있어요.</p>
+    </section>`;
     $('#hsStart').onclick = startApp;
     $('#hsLink').onclick = linkModal;
   }

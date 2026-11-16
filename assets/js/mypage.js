@@ -15,7 +15,7 @@
       <div class="grow"><h1>${esc(me.nick)}</h1>
         <div class="row wrap-ok small muted" style="gap:8px;margin-top:4px"><span class="badge ${t.tier === 'gold' ? 'sun' : t.tier === 'silver' ? 'moon' : 'mute'}">쏘플 클럽 ${TIER[t.tier]}</span>${me.region ? `<span>${esc(me.region)}</span>` : ''}${since ? `<span>${esc(since)} 가입</span>` : ''}</div>
         ${me.intro ? `<p class="small" style="margin-top:6px">${esc(me.intro)}</p>` : ''}</div>
-      <div class="row wrap-ok">${me.admin ? `<a class="btn btn-soft btn-sm" href="/admin">${icon('sliders', 'sm')}관리자 화면</a>` : ''}${(me.hostCodes || []).length ? `<a class="btn btn-red btn-sm" href="/myspace">${icon('key', 'sm')}호스트센터</a>` : ''}<button class="btn btn-line btn-sm" type="button" data-go-tab="account">${icon('edit', 'sm')}프로필 고치기</button></div>`;
+      <div class="row wrap-ok">${me.admin ? `<a class="btn btn-soft btn-sm" href="/admin">${icon('sliders', 'sm')}관리자 화면</a>` : ''}<a class="btn btn-ink btn-sm" href="/myspace" data-mode="host">${icon('swap', 'sm')}호스트센터로 전환</a><button class="btn btn-line btn-sm" type="button" data-go-tab="account">${icon('edit', 'sm')}프로필 고치기</button></div>`;
     const next = t.tier === 'gold' ? '가장 높은 등급이에요' : `${t.tier === 'welcome' ? '실버' : '골드'}까지 ${t.toNext}번`;
     $('#meQuick').innerHTML = `
       <a class="mq" href="/membership"><span class="mq-k">방문 인증</span><b>${t.n}번</b><small>${esc(next)}</small></a>
