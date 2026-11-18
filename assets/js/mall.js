@@ -24,15 +24,20 @@
       return `<section class="ml-sec" id="c-${c.id}" data-cat="${c.id}"><div class="ml-sec-hd"><span class="ml-sec-ic">${icon(c.icon)}</span><div><h2 class="h3">${esc(c.name)}</h2><p>${esc(c.desc)}</p></div><span class="ml-sec-n">${ps.length}가지</span></div>
         <div class="ml-grid">${ps.map((p) => card(p, first++ < 4)).join('')}</div></section>`;
     }).join('');
-    $('#mallSets').innerHTML = d.sets.map((s) => {
+    const setCard = (s) => {
       const all = list.filter((p) => p.tags.includes(s.id));
       if (!all.length) return '';
       const pics = [...all.filter((p) => p.pick && p.img), ...all.filter((p) => !p.pick && p.img)].slice(0, 4);
       return `<a class="ml-set" href="/mall?set=${s.id}#catalog" data-set="${s.id}"><span class="ml-set-pics">${pics.map((p) => `<img src="${esc(p.img)}" alt="" width="492" height="492" loading="lazy" decoding="async">`).join('')}</span>
-        <span class="ml-set-tx"><b>${esc(s.name)}</b><small>${esc(s.desc)}</small><span class="ml-set-n">준비물 ${all.length}가지 보기${icon('chev-r', 'sm')}</span></span></a>`;
+        <span class="ml-set-tx"><b>${icon(s.icon, 'sm')}${esc(s.name)}</b><small>${esc(s.desc)}</small><span class="ml-set-n">준비물 ${all.length}가지 보기${icon('chev-r', 'sm')}</span></span></a>`;
+    };
+    $('#mallSets').innerHTML = (d.groups || []).map((g) => {
+      const cards = d.sets.filter((s) => s.group === g.id).map(setCard).join('');
+      return cards ? `<div class="ml-group" data-group="${g.id}"><div class="ml-group-hd"><h3 class="h3">${esc(g.title)}</h3><p>${esc(g.desc)}</p></div><div class="ml-sets ml-sets-${g.id}">${cards}</div></div>` : '';
     }).join('');
     $('#mallChips').innerHTML = `<a class="chip sm on" href="#catalog" data-cat-go="">전체 <b>${list.length}</b></a>` + d.cats.filter((c) => list.some((p) => p.cat === c.id)).map((c) => `<a class="chip sm" href="#c-${c.id}" data-cat-go="${c.id}">${esc(c.name)}</a>`).join('');
     const t = $('#mallTotal'); if (t) t.textContent = list.length;
+    const cn = $('#mallCatN'); if (cn) cn.textContent = d.cats.filter((c) => list.some((p) => p.cat === c.id)).length;
   }
   async function ensure() {
     if (root.querySelector('.ml-card')) return;
@@ -97,7 +102,7 @@
   }
 
   ensure().then(() => {
-    $$('.ml-set').forEach((a) => { const b = $('b', a); if (b) names[a.dataset.set] = b.textContent; });
+    $$('.ml-set').forEach((a) => { const b = $('b', a); if (b) names[a.dataset.set] = b.textContent.trim(); });
     const q = new URLSearchParams(location.search).get('set');
     if (q && names[q]) applySet(q, { scroll: location.hash === '#catalog' });
     spy();

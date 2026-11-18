@@ -470,18 +470,25 @@ export async function saveSettings(db, patch) {
 }
 
 /* ---------------- 쏘플파티몰 첫 상품 ---------------- */
-/** 판이 바뀌면 아직 없는 상품만 더해요 (관리자가 고친 상품·직접 넣은 상품은 그대로) */
+/** 판이 바뀌면 아직 없는 상품을 더하고, 관리자가 한 번도 고치지 않은 첫 상품은 새 판의 분류·이름·소개·상황을 따라가요.
+ *  관리자가 고친 상품(updated_at ≠ created_at)과 직접 넣은 상품은 그대로 둬요. */
 export async function applyMallSeed(db) {
-  const have = new Set(((await db.prepare('SELECT pid FROM mall_items WHERE pid IS NOT NULL').all()).results || []).map((r) => r.pid));
+  const rows = (await db.prepare('SELECT pid, created_at, updated_at FROM mall_items WHERE pid IS NOT NULL').all()).results || [];
+  const have = new Map(rows.map((r) => [r.pid, r]));
   const at = nowIso();
   const add = MALL_SEED.filter((p) => !have.has(p.pid));
-  for (const part of chunk(add, 20)) {
-    await db.batch(part.map((p) => db.prepare('INSERT INTO mall_items (pid, cat, name, note, url, img, tags, pick, sort, active, clicks, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)')
-      .bind(p.pid, p.cat, p.name, p.note || null, p.url, p.img || null, (p.tags || []).join(' ') || null, p.pick ? 1 : 0, p.sort || 0, at, at)));
-  }
+  const upd = MALL_SEED.filter((p) => { const r = have.get(p.pid); return r && r.updated_at === r.created_at; });
+  const tags = (p) => (p.tags || []).join(' ') || null;
+  const stmts = [
+    ...add.map((p) => db.prepare('INSERT INTO mall_items (pid, cat, name, note, url, img, tags, pick, sort, active, clicks, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)')
+      .bind(p.pid, p.cat, p.name, p.note || null, p.url, p.img || null, tags(p), p.pick ? 1 : 0, p.sort || 0, at, at)),
+    ...upd.map((p) => db.prepare('UPDATE mall_items SET cat = ?, name = ?, note = ?, url = ?, img = ?, tags = ?, pick = ?, sort = ?, created_at = ?, updated_at = ? WHERE pid = ?')
+      .bind(p.cat, p.name, p.note || null, p.url, p.img || null, tags(p), p.pick ? 1 : 0, p.sort || 0, at, at, p.pid)),
+  ];
+  for (const part of chunk(stmts, 20)) await db.batch(part);
   await setMeta(db, 'mall_seed', MALL_SEED_VERSION);
-  if (add.length) bumpContent();
-  return add.length;
+  if (stmts.length) bumpContent();
+  return { added: add.length, updated: upd.length };
 }
 
 /* ---------------- meta ---------------- */
