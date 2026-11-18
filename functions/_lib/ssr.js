@@ -11,6 +11,7 @@ import { OG_ROOMS, OG_AREAS, ogImg } from './og.js';
 import { publicGallery, photoKeys, galleryAt, isReal, galleryRaw } from './gallery.js';
 import { homeBlocks, roomsBlocks, locationsBlocks, areaChipsHtml, roomPriceHtml, roomBookHtml, nearRoomsHtml, galleryBlocks } from './ssr-lists.js';
 import { edgeServe, contentVersion, setEdge, normQuery, assetTag } from './edge.js';
+import { loadMall, mallBlocks } from './mall.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
 const LS = new RegExp(String.fromCharCode(0x2028), 'g');
@@ -140,6 +141,8 @@ async function buildStatic(context, tpl) {
       const spaces = await loadSpaces(context.env.DB);
       if (spaces.length) blocks = page === '/rooms' ? roomsBlocks(spaces) : page === '/locations' ? locationsBlocks(spaces) : page === '/gallery' ? galleryBlocks(spaces) : homeBlocks(spaces, st);
     }
+    // 쏘플파티몰 — 상품 카드를 서버가 미리 그려요 (손님 화면은 mall.js 가 거르기만 해요)
+    if (context.env.DB && page === '/mall') blocks = mallBlocks(await loadMall(context.env.DB));
   } catch { blocks = null; }
   const base = siteBase(url, st, await domainLive(context.env));
   const abs = (u) => (!u ? u : /^https?:\/\//.test(u) ? u : base + (u.startsWith('/') ? u : '/' + u));
@@ -332,7 +335,7 @@ async function baseOf(env, url) {
 export async function sitemap(context) {
   const { env, request } = context;
   const origin = await baseOf(env, new URL(request.url));
-  const pages = ['/', '/rooms', '/locations', '/gallery', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/live', '/live/requests', '/planner', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
+  const pages = ['/', '/rooms', '/locations', '/gallery', '/startup', '/host', '/academy', '/event', '/meetups', '/crew', '/community', '/play', '/live', '/live/requests', '/planner', '/mall', '/invite', '/membership', '/partners', '/corporate', '/guide', '/about', '/ceo',
     '/purpose-birthday', '/purpose-bridal', '/purpose-yearend', '/purpose-workshop', '/purpose-filming', '/purpose-reunion', '/terms', '/privacy', '/policy', '/host-terms'];
   const urls = pages.map((p) => ({ loc: origin + p }));
   urls.push({ loc: origin + '/magazine' });

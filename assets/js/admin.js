@@ -33,6 +33,7 @@
     ['visits', '방문 인증', 'badge'],
     ['inquiries', '문의함', 'megaphone'],
     ['partners', '제휴', 'handshake'],
+    ['mall', '쏘플파티몰', 'bag'],
     ['settings', '설정', 'sliders'],
   ];
   const SLOTK = { all: '하루 전체', day: '낮', night: '밤' };
@@ -2315,6 +2316,75 @@ async function run(env) {
     if (del) del.onclick = async () => { if (!(await SP.confirm('이 제휴처를 지울까요?', { ok: '지우기', danger: true }))) return; try { await SP.del('/api/admin/partners/' + p.id); m.close(); partners(); } catch (e) { SP.fail(e); } };
   }
 
+  /* ================= 쏘플파티몰 ================= */
+  // 쿠팡 파트너스 링크로 거는 파티 준비물. 결제·배송은 쿠팡에서 해요.
+  let MALL = null;
+  async function mall() {
+    const d = await SP.get('/api/admin/mall');
+    MALL = d;
+    const catName = Object.fromEntries(d.cats.map((c) => [c.id, c.name]));
+    const setName = Object.fromEntries(d.sets.map((x) => [x.id, x.name]));
+    const on = d.items.filter((x) => x.active).length;
+    const clicks = d.items.reduce((a, x) => a + (x.clicks || 0), 0);
+    main.innerHTML = hd('쏘플파티몰', `공개 ${on}개 · 숨김 ${d.items.length - on}개 · 「쿠팡에서 보기」 누른 수 ${clicks.toLocaleString('ko-KR')}번. 상품 화면의 쿠팡 파트너스 대가성 문구는 자동으로 붙어요.`,
+      `<a class="btn btn-line btn-sm" href="/mall" target="_blank" rel="noopener">${icon('ext', 'sm')}쏘플파티몰 보기</a><button class="btn btn-red btn-sm" type="button" data-new>${icon('plus', 'sm')}상품 추가</button>`)
+      + `<div class="a-card" style="margin-bottom:14px"><p class="a-note">새 상품은 <a class="link" href="https://partners.coupang.com/" target="_blank" rel="noopener">쿠팡 파트너스</a> → 링크 생성 → 상품 검색 → 「링크 생성」에서 만든 <b>단축 URL</b>을 붙여 넣으면 돼요. 같은 화면의 「블로그용 태그」 HTML을 통째로 붙여 넣으면 링크와 사진 주소를 자동으로 찾아 줘요.<br>파트너스 사이트는 분당 요청이 50회를 넘으면 이용이 제한될 수 있어요. 링크는 한두 개씩 천천히 만들어 주세요.</p></div>`
+      + `<div class="chips scroll" style="margin-bottom:12px" id="mlCats"><button class="chip sm on" type="button" data-mc="">전체 ${d.items.length}</button>${d.cats.map((c) => `<button class="chip sm" type="button" data-mc="${c.id}">${esc(c.name)} ${d.items.filter((x) => x.cat === c.id).length}</button>`).join('')}</div>`
+      + `<div class="a-tbl-wrap"><table class="a-tbl"><thead><tr><th>사진</th><th>상품</th><th>상황</th><th class="r">순서</th><th class="r">누른 수</th><th>공개</th><th></th></tr></thead><tbody id="mlRows">
+      ${d.items.map((p) => `<tr data-cat="${p.cat}"><td>${p.img ? `<img src="${esc(p.img)}" alt="" width="56" height="56" loading="lazy" style="width:56px;height:56px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#fff">` : '-'}</td>
+        <td><b>${esc(p.name)}</b>${p.pick ? ' ' + B('ok', '쏘플 추천') : ''}<span class="sub">${esc(catName[p.cat] || p.cat)} · <a class="link" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url.replace('https://', ''))}</a></span></td>
+        <td class="small">${p.tags.map((t) => esc(setName[t] || t)).join(', ') || '-'}</td><td class="r">${p.sort}</td><td class="r">${(p.clicks || 0).toLocaleString('ko-KR')}</td>
+        <td>${p.active ? B('ok', '공개') : B('mute', '숨김')}</td><td><div class="a-acts"><button class="btn btn-line btn-sm" type="button" data-edit="${p.id}">고치기</button></div></td></tr>`).join('') || emptyRow(7, '아직 상품이 없어요.')}</tbody></table></div>`;
+    main.onclick = (e) => {
+      if (e.target.closest('[data-new]')) { mallForm(null); return; }
+      const c = e.target.closest('[data-mc]');
+      if (c) { main.querySelectorAll('[data-mc]').forEach((x) => x.classList.toggle('on', x === c)); main.querySelectorAll('#mlRows tr[data-cat]').forEach((tr) => { tr.hidden = !!c.dataset.mc && tr.dataset.cat !== c.dataset.mc; }); return; }
+      const b = e.target.closest('[data-edit]'); if (b) mallForm(d.items.find((x) => String(x.id) === b.dataset.edit));
+    };
+  }
+  function mallForm(p) {
+    const d = MALL;
+    const v = p || { cat: d.cats[0].id, active: 1, pick: 0, sort: 0, tags: [] };
+    const m = SP.modal({
+      title: p ? '상품 고치기' : '상품 추가', wide: true,
+      body: `<form class="form-grid" id="mlf">
+        <div class="field full"><label class="label" for="ml0">쿠팡 파트너스 HTML 붙여 넣기 <span class="opt">선택</span></label><textarea class="textarea" id="ml0" style="min-height:64px" placeholder="「블로그용 태그」 HTML을 붙여 넣으면 링크와 사진 주소를 아래 칸에 채워 줘요"></textarea></div>
+        <div class="field full"><label class="label" for="ml1">쿠팡 파트너스 단축 URL</label><input class="input" id="ml1" name="url" value="${esc(v.url || '')}" placeholder="https://link.coupang.com/a/..."></div>
+        <div class="field full"><label class="label" for="ml2">상품 사진 주소</label><input class="input" id="ml2" name="img" value="${esc(v.img || '')}" placeholder="https://...coupangcdn.com/..."><p class="small muted" style="margin-top:6px">파트너스 화면의 상품 사진에서 마우스 오른쪽 → 이미지 주소 복사로 가져와도 돼요.</p><img id="mlPrev" alt="" style="margin-top:8px;width:120px;height:120px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff${v.img ? '' : ';display:none'}" src="${esc(v.img || '')}"></div>
+        <div class="field"><label class="label" for="ml3">분류</label><select class="select" id="ml3" name="cat">${d.cats.map((c) => `<option value="${c.id}"${v.cat === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label class="label" for="ml4">상품 이름 (40자)</label><input class="input" id="ml4" name="name" maxlength="40" value="${esc(v.name || '')}" placeholder="예) 할리갈리"></div>
+        <div class="field full"><label class="label" for="ml5">한 줄 소개 (80자) <span class="opt">선택</span></label><input class="input" id="ml5" name="note" maxlength="80" value="${esc(v.note || '')}" placeholder="파티룸에서 왜 좋은지 한 줄로"></div>
+        <div class="field full"><span class="label">상황별 준비물에 넣기</span><div class="row wrap-ok" style="gap:8px 16px">${d.sets.map((x) => `<label class="check"><input type="checkbox" name="tag_${x.id}"${(v.tags || []).includes(x.id) ? ' checked' : ''}><span>${esc(x.name)}</span></label>`).join('')}</div></div>
+        <div class="field"><label class="label" for="ml6">순서 (작을수록 앞)</label><input class="input" id="ml6" name="sort" type="number" min="0" max="9999" value="${v.sort || 0}"></div>
+        <div class="field"><span class="label">표시</span><div style="display:grid;gap:10px"><label class="switch"><input type="checkbox" name="active"${v.active ? ' checked' : ''}><span>쏘플파티몰에 보여요</span></label><label class="switch"><input type="checkbox" name="pick"${v.pick ? ' checked' : ''}><span>「쏘플 추천」 표시</span></label></div></div>
+      </form><div class="form-err" id="mlErr" hidden></div>`,
+      foot: `${p ? `<button class="btn btn-ghost btn-sm" type="button" id="mlDel" style="margin-right:auto">지우기</button>` : ''}<button class="btn btn-soft" data-x>닫기</button><button class="btn btn-red" type="button" id="mlGo">저장</button>`,
+    });
+    const prev = m.$('#mlPrev');
+    const showPrev = () => { const u = m.$('#ml2').value.trim(); prev.src = u; prev.style.display = u ? '' : 'none'; };
+    m.$('#ml2').addEventListener('input', showPrev);
+    m.$('#ml0').addEventListener('input', (e) => {
+      const t = e.target.value;
+      const link = (t.match(/https:\/\/(?:link\.coupang\.com\/a\/|coupa\.ng\/)[A-Za-z0-9_-]+/) || [])[0];
+      const img = (t.match(/https:\/\/[a-z0-9.-]+\.coupangcdn\.com\/[^\s"'<>]+/) || [])[0];
+      const alt = (t.match(/alt="([^"]{2,80})"/) || [])[1];
+      if (link) m.$('#ml1').value = link;
+      if (img) { m.$('#ml2').value = img; showPrev(); }
+      if (alt && !m.$('#ml4').value) m.$('#ml4').value = alt.slice(0, 40);
+    });
+    m.$('#mlGo').onclick = async () => {
+      const f = SP.formData(m.$('#mlf'));
+      const body = { url: f.url, img: f.img, cat: f.cat, name: f.name, note: f.note, sort: Number(f.sort) || 0, active: !!f.active, pick: !!f.pick, tags: d.sets.filter((x) => f['tag_' + x.id]).map((x) => x.id) };
+      try { if (p) await SP.put('/api/admin/mall/' + p.id, body); else await SP.post('/api/admin/mall', body); m.close(); SP.toast('저장했어요. 쏘플파티몰에 바로 반영돼요.'); mall(); }
+      catch (e) { const er = m.$('#mlErr'); er.textContent = e.message; er.hidden = false; }
+    };
+    const del = m.$('#mlDel');
+    if (del) del.onclick = async () => {
+      if (!(await SP.confirm(p.seed ? '처음 넣어 둔 상품이에요. 지우는 대신 「쏘플파티몰에 보여요」를 끄면 나중에 다시 켤 수 있어요. 그래도 지울까요?' : '이 상품을 지울까요?', { ok: '지우기', danger: true }))) return;
+      try { await SP.del('/api/admin/mall/' + p.id); m.close(); mall(); } catch (e) { SP.fail(e); }
+    };
+  }
+
   /* ================= 설정 ================= */
   async function settings() {
     const [d] = await Promise.all([SP.get('/api/admin/settings'), spaces()]);
@@ -2372,6 +2442,6 @@ async function run(env) {
     };
   }
 
-  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, bills: billsView, hostdesk: hostdeskView, events, community, groups, live, users, visits, inquiries, partners, settings };
+  const VIEWS = { overview, season, avail, data, spaces: spacesView, apps, bills: billsView, hostdesk: hostdeskView, events, community, groups, live, users, visits, inquiries, partners, mall, settings };
   boot();
 })();

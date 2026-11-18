@@ -1,9 +1,10 @@
 // 고객 홈페이지 전용 DB(ssople-web) — 표 자동 생성, 기본 지점 데이터, 설정값
 import { edgeGetJSON, edgePutJSON, bumpContent } from './edge.js';
 import { SEED_SPACES, SEED_VERSION, SEED_PREV } from './seed-spaces.js';
+import { MALL_SEED, MALL_SEED_VERSION } from './mall-seed.js';
 import { HttpError, lit, nowIso, parseJSON, chunk } from './util.js';
 
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`,
@@ -79,6 +80,9 @@ const SCHEMA = [
   // v14: 클릭 기록 색인 — 인기 지점 집계(최근 30일)와 조회수 중복 확인이 표 전체를 훑지 않게
   `CREATE INDEX IF NOT EXISTS idx_clicks_at ON clicks(at, code)`,
   `CREATE INDEX IF NOT EXISTS idx_clicks_view ON clicks(code, ih, at)`,
+  // v15: 쏘플파티몰 — 쏘플이 고른 파티 준비물 (쿠팡 파트너스 링크). pid: 첫 상품 목록(mall-seed.js)에서 온 상품 표시
+  `CREATE TABLE IF NOT EXISTS mall_items (id INTEGER PRIMARY KEY AUTOINCREMENT, pid TEXT, cat TEXT NOT NULL, name TEXT NOT NULL, note TEXT, url TEXT NOT NULL, img TEXT, tags TEXT, pick INTEGER NOT NULL DEFAULT 0, sort INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, clicks INTEGER NOT NULL DEFAULT 0, created_at TEXT, updated_at TEXT)`,
+  `CREATE INDEX IF NOT EXISTS idx_mall_items ON mall_items(active, cat, sort)`,
 ];
 
 let ready = null;
@@ -92,12 +96,12 @@ export function ensureSchema(env) {
   if (!ready) {
     ready = (async () => {
       // 가장자리에 「이 판까지 준비 끝」 표시가 있으면 DB를 읽지 않아요 (새로 뜬 서버마다 DB를 세 번 오가던 것을 없앰)
-      const flag = `schema-ok-${SCHEMA_VERSION}-${SEED_VERSION}-${BIZ_VERSION}`;
+      const flag = `schema-ok-${SCHEMA_VERSION}-${SEED_VERSION}-${BIZ_VERSION}-${MALL_SEED_VERSION}`;
       if (await edgeGetJSON(flag)) return;
       let v = 0;
       let mv = {};
       try {
-        const rs = (await env.DB.prepare(`SELECT k, v FROM meta WHERE k IN ('schema', 'seed', 'biz_v')`).all()).results || [];
+        const rs = (await env.DB.prepare(`SELECT k, v FROM meta WHERE k IN ('schema', 'seed', 'biz_v', 'mall_seed')`).all()).results || [];
         mv = Object.fromEntries(rs.map((r) => [r.k, r.v]));
         v = Number(mv.schema) || 0;
       } catch { v = 0; }
@@ -161,6 +165,7 @@ export function ensureSchema(env) {
       const fresh = v < SCHEMA_VERSION;
       if ((fresh ? await getMeta(env.DB, 'seed') : mv.seed) !== SEED_VERSION) await applySeedUpdate(env.DB);
       if ((fresh ? await getMeta(env.DB, 'biz_v') : mv.biz_v) !== BIZ_VERSION) await migrateBiz(env.DB);
+      if ((fresh ? await getMeta(env.DB, 'mall_seed') : mv.mall_seed) !== MALL_SEED_VERSION) await applyMallSeed(env.DB);
       edgePutJSON(flag, { ok: 1 }, 86400);
     })().catch((e) => { ready = null; throw e; });
   }
@@ -462,6 +467,21 @@ export async function saveSettings(db, patch) {
   setCache = null;
   // 설정이 바뀌면 가장자리에 둔 공개 화면·데이터도 새로 (edge.js)
   bumpContent();
+}
+
+/* ---------------- 쏘플파티몰 첫 상품 ---------------- */
+/** 판이 바뀌면 아직 없는 상품만 더해요 (관리자가 고친 상품·직접 넣은 상품은 그대로) */
+export async function applyMallSeed(db) {
+  const have = new Set(((await db.prepare('SELECT pid FROM mall_items WHERE pid IS NOT NULL').all()).results || []).map((r) => r.pid));
+  const at = nowIso();
+  const add = MALL_SEED.filter((p) => !have.has(p.pid));
+  for (const part of chunk(add, 20)) {
+    await db.batch(part.map((p) => db.prepare('INSERT INTO mall_items (pid, cat, name, note, url, img, tags, pick, sort, active, clicks, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)')
+      .bind(p.pid, p.cat, p.name, p.note || null, p.url, p.img || null, (p.tags || []).join(' ') || null, p.pick ? 1 : 0, p.sort || 0, at, at)));
+  }
+  await setMeta(db, 'mall_seed', MALL_SEED_VERSION);
+  if (add.length) bumpContent();
+  return add.length;
 }
 
 /* ---------------- meta ---------------- */

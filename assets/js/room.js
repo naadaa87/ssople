@@ -58,7 +58,7 @@
           <section class="room-sec" id="hostNews" hidden><div class="between" style="margin-bottom:12px"><h2 style="margin:0">지점 소식</h2><a class="sec-more" href="/community?b=host&code=${s.code}">소식 전체</a></div><div id="hnList"></div></section>
           <section class="room-sec" id="r-price"><h2>${s.hourly && !(s.pkgs || []).length ? '시간제 요금' : s.hourly ? '요금' : '패키지와 요금'}</h2>${priceTable(s)}</section>
           <section class="room-sec" id="r-feat"><h2>편의시설</h2>${amenities(s)}</section>
-          ${(s.items || []).length ? `<section class="room-sec" id="r-items"><div class="between" style="margin-bottom:12px"><h2 style="margin:0">비품·물품</h2><span class="small muted">${s.items.length}가지</span></div>${SP.itemsView(s.items)}<p class="tiny faint" style="margin-top:12px">호스트가 직접 적은 목록이에요. 수량은 바뀔 수 있으니 꼭 필요한 물품은 <a class="link" href="#r-qna">지점에 물어보기</a>로 확인해 주세요.</p></section>` : ''}
+          ${(s.items || []).length ? `<section class="room-sec" id="r-items"><div class="between" style="margin-bottom:12px"><h2 style="margin:0">비품·물품</h2><span class="small muted">${s.items.length}가지</span></div>${SP.itemsView(s.items)}<p class="tiny faint" style="margin-top:12px">호스트가 직접 적은 목록이에요. 수량은 바뀔 수 있으니 꼭 필요한 물품은 <a class="link" href="#r-qna">지점에 물어보기</a>로 확인해 주세요. 부족한 준비물은 <a class="link" href="/mall">쏘플파티몰</a>에서 챙길 수 있어요.</p></section>` : ''}
           <section class="room-sec" id="r-rules"><h2>이용 전에 확인해 주세요</h2>${rules(s)}</section>
           <section class="room-sec" id="r-route"><h2>찾아오는 길</h2>${route(s)}</section>
           ${isHost(s) ? `<section class="room-sec" id="r-host"><h2>호스트 정보</h2>${hostInfo(s)}</section>` : ''}
