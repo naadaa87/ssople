@@ -285,7 +285,10 @@ export async function postMeta(env, params) {
   if (!p) return null;
   if (p.hidden || p.board === 'mb') return { title: '커뮤니티', desc: '쏘플파티룸 커뮤니티', noindex: true };
   const imgs = parseJSON(p.imgs, []);
-  return { title: p.title || '커뮤니티 글', desc: String(p.body).replace(/\s+/g, ' ').slice(0, 110), image: imgs[0] ? imgUrl(imgs[0]) : null };
+  // 제목(h1)·본문을 서버가 먼저 그려 둔다 — 스크립트를 읽지 않는 검색 로봇도 글을 읽고, 화면에는 post.js 가 같은 자리를 다시 그린다
+  const title = p.title || '커뮤니티 글';
+  const html = { '#postRoot': `<article class="article"><h1>${esc(title)}</h1><div class="body" style="white-space:pre-wrap">${esc(String(p.body || '').slice(0, 4000))}</div></article>` };
+  return { title, desc: String(p.body).replace(/\s+/g, ' ').slice(0, 110), image: imgs[0] ? imgUrl(imgs[0]) : null, html };
 }
 
 export async function meetupMeta(env, params) {

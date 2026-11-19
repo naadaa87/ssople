@@ -19,6 +19,8 @@ export const onRequestGet = async ({ request, env }) => {
     'Disallow: /login',
     'Disallow: /signup',
     'Disallow: /i/',
+    // Cloudflare 가 메일 주소를 가리려고 만드는 내부 주소 — 검색 로봇이 따라가면 404 로 잡힌다
+    'Disallow: /cdn-cgi/',
     `Sitemap: ${origin}/sitemap.xml`,
     '',
   ].join('\n');

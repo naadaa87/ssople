@@ -1,7 +1,7 @@
 // 옛 아임웹 홈페이지 주소 → 새 홈페이지 주소 (301 영구 이동)
 // ssople.com 을 새 홈페이지로 옮기면 검색엔진에 쌓여 있던 옛 주소가 404가 되지 않고, 쌓아 둔 검색 점수가 새 주소로 넘어가게 한다.
 // 옛 주소는 2026년 10월 검색 결과에 잡힌 것 기준. 이 표의 주소는 _routes.json 에도 있어야 서버 기능을 거친다.
-// _routes.json 은 Cloudflare 한도(규칙 100개)에 가까우니, 새로 찾은 옛 주소는 _redirects 파일에 한 줄씩 더한다 (/140·/corp·/ansan·/94 등).
+// _routes.json 은 Cloudflare 한도(규칙 100개)에 가까우니, 새로 찾은 옛 주소는 _redirects 파일에 한 줄씩 더한다 (/140·/corp·/ansan·/94·/eventboard·/howtouse 등).
 
 /** 경로만 보고 옮기는 주소 (대소문자 무시, 끝의 / 무시) */
 export const LEGACY_PATHS = {
@@ -77,5 +77,9 @@ export function legacyTarget(url) {
   }
   if ((path === '/home' || path === '/map') && q.has('category')) return LEGACY_CATEGORIES[q.get('category')] || '/rooms';
   if (path === '/event' && (q.has('q') || q.has('t'))) return '/event';
-  return LEGACY_PATHS[path] || null;
+  if (LEGACY_PATHS[path]) return LEGACY_PATHS[path];
+  // 아임웹이 붙이던 게시판·검색 꼬리표(?bmode=…, ?idx=…, ?t=board, ?q=YTo…)가 새 화면 주소에 붙어 들어온 경우
+  // — 같은 화면이 꼬리표마다 다른 주소로 잡히지 않게 꼬리표를 뗀 주소로 보낸다 (새 홈페이지는 이 이름들을 쓰지 않는다)
+  if (q.has('bmode') || q.has('idx') || q.get('t') === 'board' || /^YTo/.test(q.get('q') || '')) return raw;
+  return null;
 }
